@@ -87,6 +87,72 @@ const envVars = [
   { name: 'KV_REST_API_URL / KV_REST_API_TOKEN / KV_REST_API_READ_ONLY_TOKEN', required: 'Yes, in production', desc: 'Upstash Redis REST endpoint + tokens. Leave all three blank locally to use the automatic disk-based fallback instead — zero Redis account needed for local dev.' },
 ];
 
+const deploySteps = [
+  {
+    n: '0',
+    title: 'Before you start',
+    body: 'You need a Rancher account on rancher.nstsdc.org and a GitHub account with push access to the K8s copy repo. No SSH access, no downloaded kubeconfig, no local kubectl install — Rancher\'s web UI has a browser-based terminal already authenticated as you.',
+  },
+  {
+    n: '1',
+    title: 'Create your own Upstash Redis database',
+    body: 'Sign up at upstash.com (free tier), create a Redis database, and copy its REST URL, REST Token, and Read-Only REST Token. This must be your own instance — never the production database — so you can experiment freely without any risk to the live leaderboard.',
+  },
+  {
+    n: '2',
+    title: 'Register a GitHub OAuth App (optional)',
+    body: 'Powers "Sign in with GitHub". Skippable at first — the app works fully without it. If you do this: Homepage URL https://oss-tracker.nstsdc.org, callback URL https://oss-tracker.nstsdc.org/api/auth/github/callback.',
+  },
+  {
+    n: '3',
+    title: 'Let CI build the image',
+    body: 'Nothing to do except push to main — the repo\'s build-and-push.yml workflow already builds the Docker image and pushes it to GHCR using GitHub\'s built-in token. Make the GHCR package public (Package settings → Change visibility) — simplest, and safe since no secrets are baked into the image.',
+  },
+  {
+    n: '4',
+    title: 'Open the Rancher kubectl shell',
+    body: 'On rancher.nstsdc.org, open the "local" cluster, then click the small terminal icon (>_) in the top-right corner. This opens a real terminal, already authenticated as you, running inside the cluster. Every command below gets pasted into that shell.',
+  },
+  {
+    n: '5',
+    title: 'Create the namespace',
+    body: 'This repo is public, so manifests can be applied directly from GitHub — no need to clone it onto the cluster.',
+    code: `kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/00-namespace.yaml`,
+  },
+  {
+    n: '6',
+    title: 'Create the real Secret',
+    body: 'Fill in your own values from steps 1–2 and 3, then paste this as one single line (the web terminal can mangle multi-line pastes with backslash continuations — press Ctrl+C to cancel and retry if a paste seems to hang).',
+    code: `kubectl create secret generic opensource-tracker-secrets --namespace=opensource-tracker --from-literal=GITHUB_TOKEN="<your GitHub PAT>" --from-literal=ADMIN_PASSWORD="<pick anything>" --from-literal=GITHUB_CLIENT_ID="<from step 2, or leave empty>" --from-literal=GITHUB_CLIENT_SECRET="<from step 2, or leave empty>" --from-literal=CRON_SECRET="<any random string>" --from-literal=KV_REST_API_URL="<from step 1>" --from-literal=KV_REST_API_TOKEN="<from step 1>" --from-literal=KV_REST_API_READ_ONLY_TOKEN="<from step 1>"`,
+  },
+  {
+    n: '7',
+    title: 'Apply the Deployment, Service, and Ingress',
+    body: 'Before applying the Ingress, run `kubectl get ingress -A` and confirm oss-tracker.nstsdc.org isn\'t already claimed by someone else\'s app on this shared cluster.',
+    code: `kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/02-deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/03-service.yaml
+kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/04-ingress.yaml`,
+  },
+  {
+    n: '8',
+    title: 'Verify',
+    body: 'Wait for the pod to show Running and 1/1 Ready, then try the real URL directly — the Cloudflare Tunnel routing is already live cluster-wide, no DNS/cert step to wait on.',
+    code: `kubectl -n opensource-tracker get pods
+curl -i https://oss-tracker.nstsdc.org/api/health`,
+  },
+  {
+    n: '9',
+    title: 'Wire up the incremental refresh cron',
+    body: 'The leaderboard only updates when something calls /api/refresh/incremental. In the K8s repo\'s GitHub Settings → Secrets and variables → Actions, add APP_URL (your hostname) and CRON_SECRET (matching what you used in step 6). Never share a GitHub token between this cron and production\'s — both run every 15 minutes and would compete for the same rate limit.',
+  },
+  {
+    n: '10',
+    title: 'Tearing it down',
+    body: 'Everything lives inside the opensource-tracker namespace, so removing it all is one command — fully reversible, redoing the walkthrough from step 4 brings it right back.',
+    code: `kubectl delete namespace opensource-tracker`,
+  },
+];
+
 const gotchas = [
   { title: 'The refresh backlog is real, and by design', body: 'With only the single fallback GitHub token in the pool (the current state, since OAuth login has never actually populated it), a full refresh cycle across the roster takes on the order of 16 hours. This scales down roughly proportionally as real students log in and contribute tokens — it\'s a capacity tradeoff, not a bug to silence.' },
   { title: 'A zero-stat leaderboard card doesn\'t mean zero contributions', body: 'If a student has never been successfully refreshed, their card shows an all-zero placeholder — indistinguishable from a genuine zero without checking the profile cache directly.' },
@@ -151,6 +217,7 @@ export default function DocsPage() {
             <a href="#database" className="text-xs px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15] transition-all">🗄️ Database</a>
             <a href="#env" className="text-xs px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15] transition-all">🔑 Env Vars</a>
             <a href="#production" className="text-xs px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15] transition-all">🚀 Production</a>
+            <a href="#deploy" className="text-xs px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15 transition-all">⎈ Deploy to Rancher</a>
             <a href="#gotchas" className="text-xs px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 hover:text-red-300 hover:bg-red-500/15 transition-all">⚠️ Gotchas</a>
           </div>
         </div>
@@ -329,6 +396,43 @@ git push → Vercel build                git push → GHCR image build
           </div>
         </section>
 
+        {/* Deploy to Rancher */}
+        <section id="deploy" className="space-y-8 scroll-mt-20">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <Badge color="blue">Step-by-step</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">How to Deploy to the NST SDC Cluster</h2>
+            <p className="text-white/40 text-sm max-w-xl mx-auto">
+              Taking the K8s copy repo from &quot;runs on my laptop&quot; to live at oss-tracker.nstsdc.org. No prior Kubernetes experience assumed — read this alongside Rancher&apos;s browser kubectl shell.
+            </p>
+          </div>
+
+          <div className="relative border-l border-white/[0.08] ml-4 pl-8 space-y-10 py-2">
+            {deploySteps.map((step) => (
+              <div key={step.n} className="relative group">
+                <div className="absolute -left-[42px] top-0 w-6 h-6 rounded-full bg-[#030712] border-2 border-emerald-400 flex items-center justify-center text-[10px] font-bold text-emerald-400" />
+                <div className="space-y-2.5">
+                  <h3 className="font-bold text-white/95 text-base flex items-center gap-2">
+                    <span className="text-emerald-400/80 font-mono text-sm">Step {step.n}:</span> {step.title}
+                  </h3>
+                  <p className="text-white/50 text-xs md:text-sm leading-relaxed max-w-2xl">{step.body}</p>
+                  {step.code && (
+                    <pre className="bg-black/40 border border-emerald-500/15 rounded-xl px-4 py-3 text-[11px] text-emerald-300/90 font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">
+                      {step.code}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-5 py-4 flex gap-3">
+            <span className="text-blue-400 flex-shrink-0 text-base">💡</span>
+            <div className="text-white/50 text-xs leading-relaxed">
+              Every one of these steps was actually run once, end-to-end, before being written down here — including the CPU-throttling fix in the Decision Log above. For cluster-specific troubleshooting (Traefik, DNS, kubectl connectivity), the cluster&apos;s own <code className="text-white/60">nst-sdc/nst-cluster-docs</code> repo is the source of truth.
+            </div>
+          </div>
+        </section>
+
         {/* Gotchas */}
         <section id="gotchas" className="space-y-6 scroll-mt-20">
           <div className="border border-red-500/15 bg-red-500/[0.015] rounded-3xl p-8 space-y-6">
@@ -350,7 +454,7 @@ git push → Vercel build                git push → GHCR image build
         <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.02] to-transparent p-8 md:p-10 text-center">
           <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3 tracking-tight">Want the full detail?</h2>
           <p className="text-white/40 text-sm max-w-lg mx-auto mb-2 leading-relaxed">
-            This page is a curated summary. The repository&apos;s markdown docs go much deeper — every page, every API route, the full admin system, and a step-by-step Kubernetes deployment walkthrough.
+            This page covers the deploy walkthrough in full, but the repository&apos;s markdown docs go even deeper — every page, every API route, and the full admin system.
           </p>
           <p className="text-white/30 text-xs max-w-lg mx-auto mb-8 leading-relaxed">
             <code className="text-white/50">DOCUMENTATION.md</code> · <code className="text-white/50">docs/ARCHITECTURE.md</code> · <code className="text-white/50">docs/DEPLOYMENT.md</code> — a GitHub repo link will be added here soon.
