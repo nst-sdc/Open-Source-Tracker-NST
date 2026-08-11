@@ -56,7 +56,7 @@ Every command in the rest of this guide gets pasted into that shell.
 ## 5. Create the namespace
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/00-namespace.yaml
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/00-namespace.yaml
 ```
 
 You should see `namespace/opensource-tracker created`.
@@ -88,8 +88,8 @@ You'd also need to add an `imagePullSecrets:` block back to `k8s/02-deployment.y
 Check the **Packages** tab on your GitHub profile for the exact, lowercased image name GHCR assigned (it may not exactly match this repo's display name), then apply the manifests as-is — `k8s/02-deployment.yaml` in this repo already points at the correct image for this repo:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/02-deployment.yaml
-kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/03-service.yaml
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/02-deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/03-service.yaml
 ```
 
 Before applying the Ingress, double-check the hostname isn't already claimed by someone else's app on this shared cluster:
@@ -101,7 +101,7 @@ kubectl get ingress -A
 Look for `oss-tracker.nstsdc.org` anywhere in the output. If it's taken, edit the `host:` field in `k8s/04-ingress.yaml` (in your own fork/clone) to something else before applying.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/04-ingress.yaml
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/04-ingress.yaml
 ```
 
 ## 9. Verify

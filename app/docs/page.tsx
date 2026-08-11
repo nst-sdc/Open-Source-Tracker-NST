@@ -117,7 +117,7 @@ const deploySteps = [
     n: '5',
     title: 'Create the namespace',
     body: 'This repo is public, so manifests can be applied directly from GitHub — no need to clone it onto the cluster.',
-    code: `kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/00-namespace.yaml`,
+    code: `kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/00-namespace.yaml`,
   },
   {
     n: '6',
@@ -129,9 +129,9 @@ const deploySteps = [
     n: '7',
     title: 'Apply the Deployment, Service, and Ingress',
     body: 'Before applying the Ingress, run `kubectl get ingress -A` and confirm oss-tracker.nstsdc.org isn\'t already claimed by someone else\'s app on this shared cluster.',
-    code: `kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/02-deployment.yaml
-kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/03-service.yaml
-kubectl apply -f https://raw.githubusercontent.com/saiudayagiri/OpenSource_NST_Tracker-k8s/main/k8s/04-ingress.yaml`,
+    code: `kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/02-deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/03-service.yaml
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/04-ingress.yaml`,
   },
   {
     n: '8',
