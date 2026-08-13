@@ -7,6 +7,12 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+# Local-dev disk cache fallback (see lib/kv.ts) — must never ship in an image.
+# 841 stale files from an old local dev session were once accidentally
+# committed to git here; this exclusion is defense-in-depth even after
+# untracking them, so a future local re-creation of these files never gets
+# baked into a build again.
+data/kv/
 # Unlike the original repo's .dockerignore, .git IS excluded here — this repo's
 # Dockerfile is for the Kubernetes deployment, and a production image has no
 # use for git history (only makes the image larger and copies commit metadata

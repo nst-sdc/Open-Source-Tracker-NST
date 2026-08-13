@@ -17,6 +17,7 @@ import {
 } from '@/lib/summary-cache';
 import { readProfileCache, writeProfileCache } from '@/lib/profile-cache';
 import { getRepoCache } from '@/lib/repo-cache';
+import { getExceptionRepoSetForUser } from '@/lib/kv-own-repo-exceptions';
 import { kvGet, kvSet } from '@/lib/kv';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
@@ -127,12 +128,13 @@ export async function POST(request: Request) {
         );
 
         if (updatedCache) {
+          const ownRepoExceptions = await getExceptionRepoSetForUser(username);
           const periods = ['all', 'week', 'month'];
           for (const p of periods) {
             const existingCache = await readSummaryCache(p);
             if (existingCache) {
               const dateQuery = buildDateQuery(p);
-              const freshSummary = getSummaryFromCache(updatedCache, dateQuery, flaggedPRIds, repoCache);
+              const freshSummary = getSummaryFromCache(updatedCache, dateQuery, flaggedPRIds, repoCache, ownRepoExceptions);
               if (student) {
                 freshSummary.year = student.year;
                 freshSummary.campus = student.campus;

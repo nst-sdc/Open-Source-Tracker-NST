@@ -5,6 +5,7 @@ import { writeSummaryCache, readSummaryCache } from '@/lib/summary-cache';
 import { readProfileCache } from '@/lib/profile-cache';
 import { getRepoCache } from '@/lib/repo-cache';
 import { getStudentsKV } from '@/lib/kv-students';
+import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,7 @@ async function performIncrementalRefresh() {
   const flaggedPRIds = await getFlaggedPRIdSet();
   const repoCache = await getRepoCache();
   const students = await getStudentsKV();
+  const ownRepoExceptionMap = buildOwnRepoExceptionMap(await getOwnRepoExceptions());
   const periods = ['all', 'week', 'month'];
 
   for (const period of periods) {
@@ -45,7 +47,8 @@ async function performIncrementalRefresh() {
       if (!updatedCache) continue;
 
       const student = students.find(s => s.github.toLowerCase() === username.toLowerCase());
-      const freshSummary = getSummaryFromCache(updatedCache, dateQuery, flaggedPRIds, repoCache);
+      const ownRepoExceptions = ownRepoExceptionMap.get(username.toLowerCase()) ?? EMPTY_REPO_SET;
+      const freshSummary = getSummaryFromCache(updatedCache, dateQuery, flaggedPRIds, repoCache, ownRepoExceptions);
       if (student) {
         freshSummary.year = student.year;
         freshSummary.campus = student.campus;

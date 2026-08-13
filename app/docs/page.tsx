@@ -77,6 +77,12 @@ const decisions = [
     title: 'GitHub OAuth login was never actually configured — even in production',
     body: 'Investigating why the leaderboard\'s refresh cycle takes as long as it does surfaced that GITHUB_CLIENT_ID/SECRET are empty strings in production too — "Sign in with GitHub" has been silently returning a config error on the live site the whole time. This matters beyond login convenience: the token-pool refresh system was specifically designed to speed up automatically as real students log in and contribute their own tokens. With the pool always empty, every deployment has been running at the system\'s slowest tier (a single fallback token, ~16 hours for a full roster refresh) without anyone realizing it.',
   },
+  {
+    tag: 'Integrity',
+    color: 'red',
+    title: 'Own-repo PRs count only via admin-curated exception, not an automated threshold',
+    body: 'A student who builds a genuinely impressive open source project deserves credit for self-authored merges into it — but an automated bar like "5 stars and some forks" doesn\'t actually protect against gaming in a small, socially-connected student community, where coordinating a handful of friends to star and fork a throwaway repo during, say, Hacktoberfest is trivial and completely undetectable by any such metric. Instead, own-repo PRs stay excluded by default, and an admin can explicitly approve a specific {student, repo} pair after personally reviewing the project (Admin Dashboard → Own-Repo PRs). Only that exact repo\'s self-authored merges count from then on, and the star-validation check is bypassed for it — a human\'s judgment, not a number, is the gate here.',
+  },
 ];
 
 const envVars = [

@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getStudentsKV, removeStudent } from './kv-students';
+import { getExceptionRepoSetForUser, getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from './kv-own-repo-exceptions';
 import { getRepoCache, saveRepoCache } from './repo-cache';
 import { readProfileCache, writeProfileCache, type ProfileCacheEntry } from './profile-cache';
 import { execSync } from 'child_process';
@@ -454,26 +455,72 @@ export async function getStudentPRs(username: string, token?: string): Promise<S
     page++;
   }
 
+  // Admin-approved own-repo PRs (see lib/kv-own-repo-exceptions.ts) — merged
+  // in here so every caller (leaderboard refresh, /check-work, achiever
+  // profiles, manual refresh) gets them consistently, without each needing
+  // to remember to ask for them separately.
+  const exceptionRepos = await getExceptionRepoSetForUser(username);
+  if (exceptionRepos.size > 0) {
+    const ownRepoPRs = await getOwnRepoExceptionPRs(username, exceptionRepos, token);
+    allPRs.push(...ownRepoPRs);
+  }
+
   return allPRs;
+}
+
+/**
+ * PRs a student opened against their own repos, restricted to the specific
+ * repos an admin has explicitly approved (see lib/kv-own-repo-exceptions.ts).
+ * Only called when the student has at least one approved repo — zero extra
+ * API cost for the vast majority of students who have none. Deliberately not
+ * gated on star/fork counts: those are gameable by the repo's own owner in a
+ * small, socially-connected student community, so admin review is the only
+ * check used here.
+ */
+async function getOwnRepoExceptionPRs(username: string, allowedRepos: Set<string>, token?: string): Promise<StudentPR[]> {
+  const allPRs: StudentPR[] = [];
+  let page = 1;
+  const maxPages = (token || GITHUB_TOKEN) ? 10 : 3;
+
+  while (page <= maxPages) {
+    const data = await githubSearch<StudentPR>(
+      `is:pr author:${username} user:${username}`,
+      page,
+      100,
+      true,
+      token
+    );
+    if (!data) break;
+    allPRs.push(...data.items);
+    if (allPRs.length >= data.total_count || data.items.length < 100) break;
+    page++;
+  }
+
+  return allPRs.filter((pr) => pr.repository_url && allowedRepos.has(repoFromUrl(pr.repository_url).toLowerCase()));
 }
 
 export function getSummaryFromCache(
   cached: ProfileCacheEntry,
   dateQuery: string,
   flaggedPRIds: Set<string>,
-  repoCacheMap: import('./repo-cache').RepoCacheMap = {}
+  repoCacheMap: import('./repo-cache').RepoCacheMap = {},
+  ownRepoExceptions: Set<string> = new Set()
 ): StudentSummary {
   let prs = cached.prs || [];
   let issues = cached.issues || [];
 
   // Strip out junk entirely — manually flagged PRs, or PRs merged into repos that
   // failed star validation — so it never counts toward anything displayed,
-  // not just the ranking score.
+  // not just the ranking score. Admin-approved own-repo exceptions
+  // (lib/kv-own-repo-exceptions.ts) bypass the star-validation exclusion
+  // specifically — an admin already vetted that repo individually, so a low
+  // star count shouldn't silently undo the approval.
   prs = prs.filter((pr) => {
     if (!pr.repository_url) return true;
     const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
     const key = `${repo}#${pr.number}`;
     if (flaggedPRIds.has(key)) return false;
+    if (ownRepoExceptions.has(repo.toLowerCase())) return true;
     const repoEntry = repoCacheMap[repo];
     if (repoEntry && repoEntry.valid === false) return false;
     return true;
@@ -532,6 +579,11 @@ export async function getAllStudentSummaries(
 
   const repoCache = await getRepoCache();
   const summaries: StudentSummary[] = [];
+  // Fetched once regardless of roster size — the exceptions list itself is
+  // expected to stay small (a handful of admin-approved repos), so this is a
+  // single cheap KV read shared across every student's summary computation
+  // below, rather than one read per student.
+  const ownRepoExceptionMap = buildOwnRepoExceptionMap(await getOwnRepoExceptions());
 
   // ── Phase 1: Resolve from individual profile caches (zero API calls) ──
   if (!forceLive) {
@@ -566,7 +618,8 @@ export async function getAllStudentSummaries(
 
     for (const { student, cached } of cachedResults) {
       if (cached) {
-        const summary = getSummaryFromCache(cached, dateQuery, flaggedPRIds, repoCache);
+        const ownRepoExceptions = ownRepoExceptionMap.get(student.github.toLowerCase()) ?? EMPTY_REPO_SET;
+        const summary = getSummaryFromCache(cached, dateQuery, flaggedPRIds, repoCache, ownRepoExceptions);
         summary.year = student.year;
         summary.campus = student.campus;
         summaries.push(summary);
@@ -664,7 +717,8 @@ export async function getAllStudentSummaries(
 
     if (!isSuccess && cached) {
       // Fallback to stale cache if this student's fetch failed
-      const summary = getSummaryFromCache(cached, dateQuery, flaggedPRIds, repoCache);
+      const ownRepoExceptions = ownRepoExceptionMap.get(lowerName) ?? EMPTY_REPO_SET;
+      const summary = getSummaryFromCache(cached, dateQuery, flaggedPRIds, repoCache, ownRepoExceptions);
       summary.year = student.year;
       summary.campus = student.campus;
       summaries.push(summary);
@@ -793,7 +847,12 @@ export async function refreshStudentCache(username: string, token?: string): Pro
     throw new Error(`Failed to fetch contributions for user: ${username}`);
   }
 
-  // Validate any new repos found in PRs
+  // Validate any new repos found in PRs. Note: admin-approved own-repo
+  // exception PRs (merged into `prs` inside getStudentPRs) will also pass
+  // through here — that's fine, since a repo the student owns and an admin
+  // has already vetted individually doesn't need the automated star-count
+  // check to also pass; validateNewRepos only ever excludes on a failed
+  // check, it never un-approves an admin exception.
   const currentRepoCache = await getRepoCache();
   const { updated, map } = await validateNewRepos(prs, currentRepoCache, token);
   if (updated) {

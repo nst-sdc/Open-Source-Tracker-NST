@@ -435,7 +435,7 @@ interface Props {
   students: string[];
 }
 
-type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests';
+type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos';
 
 export default function AdminDashboardClient({ flaggedPRs: initialFlagged, reviewedPRIds: initialReviewed, students }: Props) {
   const router = useRouter();
@@ -614,6 +614,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             { id: 'students', label: '👥 Students', badge: null },
             { id: 'events',   label: '📅 Events',   badge: null },
             { id: 'achievers',label: '🏆 Achievers',badge: null },
+            { id: 'ownRepos', label: '🌱 Own-Repo PRs', badge: null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
               className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -856,6 +857,9 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
         {/* ── Requests Tab ── */}
         {tab === 'requests' && <RequestsTab onCountChange={setPendingReqCount} />}
+
+        {/* ── Own-Repo Exceptions Tab ── */}
+        {tab === 'ownRepos' && <OwnReposTab />}
       </div>
 
       {/* Flag modal */}
@@ -1187,6 +1191,149 @@ function StudentsTab() {
               </button>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Own-Repo Exceptions Tab ────────────────────────────────────────────────
+// Self-authored PRs into a student's own repos are excluded from scoring by
+// default (closes the trivial "make a repo, merge your own PRs" gaming
+// vector). This is the one deliberate exception: a student who's built a
+// genuinely used open source project can share it with an admin, who reviews
+// it personally and adds it here. Not gated on stars/forks — in a small,
+// socially-connected student community, those are easy to coordinate around
+// (ask a few friends to star+fork), so a human actually looking at the
+// project is the only check that can't be gamed that way.
+interface OwnRepoException {
+  username: string;
+  repo: string;
+  addedAt: string;
+  note?: string;
+}
+
+function OwnReposTab() {
+  const [exceptions, setExceptions] = useState<OwnRepoException[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newUsername, setNewUsername] = useState('');
+  const [newRepo, setNewRepo] = useState('');
+  const [newNote, setNewNote] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const res = await fetch('/api/admin/own-repos');
+    if (res.ok) setExceptions(await res.json());
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newUsername.trim() || !newRepo.trim()) return;
+    setAdding(true); setError(''); setSuccess('');
+    const res = await fetch('/api/admin/own-repos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: newUsername.trim(), repo: newRepo.trim(), note: newNote.trim() || undefined }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setSuccess(`Approved ${newRepo.trim()} for @${newUsername.trim()}`);
+      setNewUsername(''); setNewRepo(''); setNewNote('');
+      await load();
+    } else {
+      setError(data.error ?? 'Failed to add exception');
+    }
+    setAdding(false);
+  }
+
+  async function executeRemove(username: string, repo: string) {
+    setConfirmRemove(null);
+    setError(''); setSuccess('');
+    const res = await fetch(`/api/admin/own-repos?username=${encodeURIComponent(username)}&repo=${encodeURIComponent(repo)}`, { method: 'DELETE' });
+    if (res.ok) { setSuccess(`Revoked ${repo} for @${username}`); await load(); }
+    else setError('Failed to remove exception');
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-white font-semibold">Own-Repo PR Exceptions</h2>
+        <p className="text-white/35 text-sm mt-0.5">
+          By default, a student&apos;s own-repo PRs never count toward their score. Add a specific repo here — after actually
+          reviewing the project — to let that one student&apos;s self-authored merged PRs into that one repo count.
+        </p>
+      </div>
+
+      <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-3 mb-6">
+        <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)}
+          placeholder="GitHub username" id="new-own-repo-username"
+          className="flex-1 bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+
+        <input type="text" value={newRepo} onChange={(e) => setNewRepo(e.target.value)}
+          placeholder="owner/repo (e.g. octocat/hello-world)" id="new-own-repo-name"
+          className="flex-1 bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+
+        <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)}
+          placeholder="Note (optional)" id="new-own-repo-note"
+          className="flex-1 bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+
+        <button type="submit" disabled={adding || !newUsername.trim() || !newRepo.trim()} id="add-own-repo-btn"
+          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer whitespace-nowrap">
+          {adding ? 'Adding…' : '+ Approve'}
+        </button>
+      </form>
+
+      {error && <div className="mb-4 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</div>}
+      {success && <div className="mb-4 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</div>}
+
+      {loading ? (
+        <div className="text-white/30 text-sm py-8 text-center">Loading…</div>
+      ) : exceptions.length === 0 ? (
+        <div className="text-white/25 text-sm py-12 text-center border border-white/[0.06] rounded-2xl bg-white/[0.015]">
+          No exceptions yet — nothing counts from a student&apos;s own repos until you add one here.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {exceptions.map((e) => {
+            const key = `${e.username}::${e.repo}`;
+            return (
+              <div key={key} className="flex items-center justify-between gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3">
+                <div className="min-w-0">
+                  <div className="text-sm text-white/85">
+                    <span className="font-semibold">@{e.username}</span>
+                    <span className="text-white/30 mx-1.5">→</span>
+                    <span className="text-purple-400/90 font-mono text-xs">{e.repo}</span>
+                  </div>
+                  {e.note && <div className="text-white/35 text-xs mt-1">{e.note}</div>}
+                  <div className="text-white/20 text-[10px] mt-1">Added {new Date(e.addedAt).toLocaleDateString()}</div>
+                </div>
+                {confirmRemove === key ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => executeRemove(e.username, e.repo)}
+                      className="text-red-400 hover:text-red-300 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-all cursor-pointer">
+                      Confirm revoke
+                    </button>
+                    <button onClick={() => setConfirmRemove(null)}
+                      className="text-white/40 hover:text-white/70 text-xs px-3 py-1.5 rounded-lg hover:bg-white/[0.06] transition-all cursor-pointer">
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmRemove(key)}
+                    className="text-white/30 hover:text-red-400 text-xs px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-all cursor-pointer shrink-0">
+                    Revoke
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

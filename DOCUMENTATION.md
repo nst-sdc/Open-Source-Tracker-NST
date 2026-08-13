@@ -360,7 +360,9 @@ See Section 11 for the full picture — in short: a logged-in visitor's own OAut
 | `getAllStudentSummaries(dateQuery, flagged, forceLive)` | Reads `profile_cache` per student (default), or fetches live per-student if `forceLive: true` | Full ranked leaderboard array |
 | `refreshStudentCache(username)` | Profile + PRs + issues, sequentially | Writes to `profile_cache`, used by the incremental cron |
 
-**Search query design — why `-user:X`:** excludes PRs/issues in repos owned by the student themselves. Self-contributions to your own repos don't count toward the score. Intentional, and closes an obvious gaming vector.
+**Search query design — why `-user:X`:** excludes PRs/issues in repos owned by the student themselves. Self-contributions to your own repos don't count toward the score by default. Intentional, and closes an obvious gaming vector — without it, anyone could create a repo and merge their own PRs into it with zero external review.
+
+**The one exception — own-repo PR allowlist (`lib/kv-own-repo-exceptions.ts`):** a student who's built a genuinely used open source project can share it with an admin, who reviews it personally and adds the specific `{username, repo}` pair via the admin dashboard's **Own-Repo PRs** tab (`/api/admin/own-repos`). Once approved, `getStudentPRs` runs a second, separate search (`is:pr author:X user:X`) scoped to just that student's own repos, and keeps only PRs matching an allowlisted repo. Deliberately **not** gated on an automated metric like star or fork counts — in a small, socially-connected student community, coordinating a handful of friends to star+fork a throwaway repo is trivial and completely undetectable by any such metric. A human actually looking at the project is the only check that can't be gamed this way. `getSummaryFromCache` bypasses the star-validation exclusion specifically for allowlisted repos, so a low star count on an admin-approved project doesn't silently undo the approval.
 
 ### 6.3 Pagination Strategy
 
@@ -481,6 +483,10 @@ List and act on pending join requests and the PR review queue.
 
 CRUD for the events timeline and Hall of Fame entries.
 
+### `GET/POST/DELETE /api/admin/own-repos`
+
+CRUD for the own-repo PR exception allowlist (see Section 6.2) — which specific students' specific own repos have been manually approved to count self-authored merged PRs.
+
 ### `GET /api/auth/github` · `GET /api/auth/github/callback` · `GET /api/auth/session` · `GET /api/auth/logout`
 
 See Section 11 in full.
@@ -507,6 +513,7 @@ Supplementary read-only views built on top of cached summary/profile data.
 - Add/edit/remove tracked students (year, campus).
 - Review and approve/reject pending join requests.
 - Manage the events timeline and Hall of Fame entries.
+- Approve a specific student's specific own-repo as an exception, so their self-authored merged PRs into that repo count (see Section 6.2) — revocable at any time.
 
 ### Flagging Philosophy
 
