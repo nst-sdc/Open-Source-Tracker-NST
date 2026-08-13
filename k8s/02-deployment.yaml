@@ -32,6 +32,15 @@ spec:
           envFrom:
             - secretRef:
                 name: opensource-tracker-secrets
+          env:
+            # Cloudflare Tunnel (fronting this cluster's public HTTPS) kills
+            # HTTP connections around ~100s — shorter than the refresh
+            # route's default 150s processing budget, confirmed via a real
+            # 524 timeout where the refresh had actually completed
+            # successfully server-side moments after the client gave up.
+            # See lib/github.ts's TICK_DEADLINE_MS comment for the full story.
+            - name: TICK_DEADLINE_MS
+              value: "80000"
           readinessProbe:
             httpGet:
               path: /api/health

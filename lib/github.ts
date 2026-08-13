@@ -887,7 +887,14 @@ const MAX_TOTAL_BATCH = 400;
 // many were selected — kept well under the route's maxDuration (180s) so a
 // slow student (or several) can never push the whole tick into a platform
 // timeout. Each token's group checks this before starting its next student.
-const TICK_DEADLINE_MS = 150_000;
+// Overridable via env var: Vercel's own infra has no shorter proxy timeout,
+// so it just uses the 150s default, but a Cloudflare-Tunnel-fronted
+// deployment (e.g. the NST SDC K8s cluster) sees Cloudflare kill the HTTP
+// connection around ~100s — confirmed via a real 524 timeout even though the
+// refresh had actually completed successfully server-side just after. That
+// deployment sets TICK_DEADLINE_MS=80000 (or similar) so the response always
+// returns before the tunnel's own timeout fires.
+const TICK_DEADLINE_MS = Number(process.env.TICK_DEADLINE_MS) || 150_000;
 
 /**
  * How many candidates to select for one incremental tick, given how many
