@@ -1,0 +1,43 @@
+# Runs the incremental refresh every 15 minutes, natively inside the cluster
+# — see docs/DEPLOYMENT.md for why: GitHub Actions' scheduled (cron) trigger
+# never fired for this repo even though the workflow is active and manual
+# triggers work fine, most likely an org-level policy restricting scheduled
+# runs specifically. This CronJob has no dependency on GitHub Actions at all.
+#
+# Talks directly to the in-cluster Service on its ClusterIP (not the public
+# oss-tracker.nstsdc.org hostname) — this also sidesteps the Cloudflare
+# Tunnel's shorter proxy timeout entirely, since internal cluster networking
+# has no such constraint.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: opensource-tracker-refresh
+  namespace: opensource-tracker
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 170
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: trigger-refresh
+              image: curlimages/curl:8.10.1
+              command:
+                - sh
+                - -c
+                - |
+                  curl -X POST "http://opensource-tracker/api/refresh/incremental" \
+                    -H "x-cron-secret: $(CRON_SECRET)" \
+                    -H "Content-Type: application/json" \
+                    -f --max-time 160
+              env:
+                - name: CRON_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: opensource-tracker-secrets
+                      key: CRON_SECRET
