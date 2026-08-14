@@ -345,7 +345,14 @@ export async function validateNewRepos(
         repoCacheMap[repoFullName] = { stars: 0, forks: 0, valid: false };
         updated = true;
       } else if (res.status === 401 && token) {
-        throw new InvalidTokenError();
+        // A 401 on a single repo lookup usually means this specific repo
+        // became inaccessible to the token (e.g. went private), not that the
+        // token itself is broken — a genuinely dead token fails earlier, in
+        // githubSearch/getStudentProfile, before validateNewRepos ever runs.
+        // Treat it like the 404 case: skip this one repo, keep validating
+        // the rest instead of aborting the whole batch.
+        repoCacheMap[repoFullName] = { stars: 0, forks: 0, valid: false };
+        updated = true;
       } else if (res.status === 403 || res.status === 429) {
         // This endpoint (GET /repos/:owner/:repo) is core-API, not search — its
         // budget is 5000/hr, so a 403/429 here is almost always GitHub's secondary
@@ -365,7 +372,6 @@ export async function validateNewRepos(
         await new Promise((r) => setTimeout(r, 2000));
       }
     } catch (err) {
-      if (err instanceof InvalidTokenError) throw err;
       console.error(`Failed to check repo ${repoFullName}:`, err);
     }
 
@@ -1030,13 +1036,16 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
             updatedUsernames.push(username);
           } else if (err instanceof InvalidTokenError) {
             // Only reachable when `token` was explicitly passed (see
-            // githubSearch/getStudentProfile/validateNewRepos) — the
-            // system/cookie/pool fallback path never throws this.
+            // githubSearch/getStudentProfile) — the system/cookie/pool
+            // fallback path never throws this. Evict the token so it isn't
+            // handed to a future tick, but keep processing this group's
+            // remaining students — with only one token available, stopping
+            // the worker here would mean stopping the entire tick over what
+            // might be one transient rejection.
             if (token) {
-              console.warn(`Token for worker ${groupIndex} was rejected — evicting and stopping this worker for the tick.`);
+              console.warn(`Token for worker ${groupIndex} was rejected on ${username} — evicting from the pool.`);
               await removePoolToken(token);
             }
-            break; // remaining students in this group stay stale, retried next tick by another worker
           } else {
             console.error(`Failed to refresh cache for ${username}:`, err);
             // Do NOT write a fallback cache on Rate Limit or network errors.

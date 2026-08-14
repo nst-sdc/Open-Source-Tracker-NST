@@ -33,14 +33,18 @@ spec:
             - secretRef:
                 name: opensource-tracker-secrets
           env:
-            # Cloudflare Tunnel (fronting this cluster's public HTTPS) kills
-            # HTTP connections around ~100s — shorter than the refresh
-            # route's default 150s processing budget, confirmed via a real
-            # 524 timeout where the refresh had actually completed
-            # successfully server-side moments after the client gave up.
-            # See lib/github.ts's TICK_DEADLINE_MS comment for the full story.
+            # This only bounds the incremental-refresh CronJob (05-refresh-
+            # cronjob.yaml), which calls the in-cluster Service directly and
+            # never touches the Cloudflare Tunnel's ~100s proxy limit — so
+            # this is set close to that Job's own ceiling instead
+            # (curl --max-time 160 / activeDeadlineSeconds 170), maximizing
+            # how many students a single token can get through per tick.
+            # A manual refresh through the public site still goes through
+            # Cloudflare and can still 524 client-side even though the
+            # server-side work completes moments later — see
+            # lib/github.ts's TICK_DEADLINE_MS comment for that history.
             - name: TICK_DEADLINE_MS
-              value: "80000"
+              value: "150000"
           readinessProbe:
             httpGet:
               path: /api/health
