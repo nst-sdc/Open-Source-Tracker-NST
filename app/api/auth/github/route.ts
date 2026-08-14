@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getPublicOrigin } from '@/lib/request-origin';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
       path: '/',
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.redirect(new URL('/', getPublicOrigin(request)));
   }
 
   // Generate GitHub login URL

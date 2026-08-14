@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getPublicOrigin } from '@/lib/request-origin';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,7 +82,7 @@ export async function GET(request: Request) {
     }
 
     // Redirect to home/dashboard page
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.redirect(new URL('/', getPublicOrigin(request)));
   } catch (error) {
     console.error('GitHub OAuth callback exchange error:', error);
     return NextResponse.json({ error: 'An error occurred during code exchange.' }, { status: 500 });
