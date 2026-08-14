@@ -8,10 +8,10 @@ This document covers everything you need to run the project locally, understand 
 
 This exact codebase runs in two independent places:
 
-| | Vercel (production) | This repo → NST SDC Kubernetes cluster |
+| | NST SDC Kubernetes cluster |
 |---|---|
 | **URL** | `oss-tracker.nstsdc.org` |
-| **Owner repo** |  `nst-sdc/Open-Source-Tracker-NST` (this one) |
+| **Owner repo** |  `nst-sdc/Open-Source-Tracker-NST` |
 | **Database** | A separate, dedicated Upstash Redis — never shared with production |
 | **Refresh trigger** | A native Kubernetes CronJob (15 min) — GitHub Actions' own scheduled trigger doesn't fire on this repo (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
 | **Deploys on push?** | No — see below |
