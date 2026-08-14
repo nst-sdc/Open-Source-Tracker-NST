@@ -902,6 +902,19 @@ const MAX_TOTAL_BATCH = 400;
 // returns before the tunnel's own timeout fires.
 const TICK_DEADLINE_MS = Number(process.env.TICK_DEADLINE_MS) || 150_000;
 
+const FAIL_STATE_KEY = 'refresh_fail_state';
+/** Consecutive fetch failures (e.g. a private GitHub profile) before a
+ * never-cached student stops being retried on every single tick. Without
+ * this, one permanently-unfetchable student sits at the front of the
+ * "never cached" priority lane forever — since a failed fetch never earns a
+ * cachedAt, it never ages out — and blocks every other never-cached student
+ * behind it in the same fixed list order. */
+const FAIL_COOLDOWN_THRESHOLD = 3;
+interface FailState {
+  count: number;
+  lastAttempt: string; // ISO timestamp
+}
+
 /**
  * How many candidates to select for one incremental tick, given how many
  * distinct GitHub tokens are currently available. Scales automatically as
@@ -932,6 +945,15 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
   } catch {
     queue = [];
   }
+
+  // Read per-student consecutive-failure counters (see FAIL_COOLDOWN_THRESHOLD)
+  let failState: Record<string, FailState> = {};
+  try {
+    failState = (await kvGet<Record<string, FailState>>(FAIL_STATE_KEY)) || {};
+  } catch {
+    failState = {};
+  }
+  let failStateChanged = false;
 
   const studentUsernamesSet = new Set(students.map(s => s.github.toLowerCase()));
   const validQueue = queue.filter(username => studentUsernamesSet.has(username.toLowerCase()));
@@ -972,13 +994,25 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
       if (excludedSet.has(lower)) continue;
 
       const cachedAtStr = cacheMap.get(lower);
-      if (!cachedAtStr) {
-        neverCached.push(student.github);
-      } else {
+      if (cachedAtStr) {
         const cachedAtTime = new Date(cachedAtStr).getTime();
         if (now - cachedAtTime >= STALE_THRESHOLD_MS) {
           staleCached.push({ username: student.github, cachedAtTime });
         }
+        continue;
+      }
+
+      // Never successfully cached. Past the failure threshold, treat it like
+      // any other stale profile — eligible again after STALE_THRESHOLD_MS
+      // since the last attempt — instead of retrying it first on every tick.
+      const fail = failState[lower];
+      if (fail && fail.count >= FAIL_COOLDOWN_THRESHOLD) {
+        const lastAttemptTime = new Date(fail.lastAttempt).getTime();
+        if (now - lastAttemptTime >= STALE_THRESHOLD_MS) {
+          staleCached.push({ username: student.github, cachedAtTime: lastAttemptTime });
+        }
+      } else {
+        neverCached.push(student.github);
       }
     }
 
@@ -1025,15 +1059,24 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
           console.log(`Worker ${groupIndex} hit the tick deadline — stopping; remaining students stay stale for the next tick.`);
           break;
         }
+        const lower = username.toLowerCase();
         try {
           await refreshStudentCache(username, token);
           updatedUsernames.push(username);
+          if (failState[lower]) {
+            delete failState[lower];
+            failStateChanged = true;
+          }
         } catch (err: any) {
           if (err instanceof NotFoundError || err.name === 'NotFoundError') {
             console.error(`Removing invalid GitHub ID from tracking: ${username}`);
             await removeStudent(username);
             // We consider it "updated" so it gets removed from the refresh queue
             updatedUsernames.push(username);
+            if (failState[lower]) {
+              delete failState[lower];
+              failStateChanged = true;
+            }
           } else if (err instanceof InvalidTokenError) {
             // Only reachable when `token` was explicitly passed (see
             // githubSearch/getStudentProfile) — the system/cookie/pool
@@ -1050,6 +1093,9 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
             console.error(`Failed to refresh cache for ${username}:`, err);
             // Do NOT write a fallback cache on Rate Limit or network errors.
             // It will remain stale and get retried in the next batch automatically.
+            const prevCount = failState[lower]?.count ?? 0;
+            failState[lower] = { count: prevCount + 1, lastAttempt: new Date().toISOString() };
+            failStateChanged = true;
           }
         }
         // Pace requests within this token's own group — each group uses a
@@ -1067,6 +1113,14 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
       await kvSet('refresh_queue', remainingQueue);
     } catch (err) {
       console.error('Failed to update refresh_queue KV after stale processing:', err);
+    }
+  }
+
+  if (failStateChanged) {
+    try {
+      await kvSet(FAIL_STATE_KEY, failState);
+    } catch (err) {
+      console.error('Failed to update refresh_fail_state KV after stale processing:', err);
     }
   }
 
