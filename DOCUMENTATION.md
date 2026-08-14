@@ -1,6 +1,8 @@
 # Opensource Tracker NST — Project Documentation
 
-> **Last updated:** July 2026 | **Version:** v2 | **Framework:** Next.js 16 (App Router)
+> **Last updated:** August 2026 | **Version:** v3 | **Framework:** Next.js 16 (App Router)
+>
+> This document describes the application code, which is identical between this repo's Kubernetes deployment (`oss-tracker.nstsdc.org`) and the separate Vercel production deployment. Where the two genuinely differ (deployment mechanics, scheduling), each is called out explicitly — see Section 12.
 
 A comprehensive technical reference for current and future contributors. Covers architecture, design decisions, data flow, every page and component, and operational notes.
 
@@ -55,9 +57,9 @@ A comprehensive technical reference for current and future contributors. Covers 
 | Language | **TypeScript** | Type safety for GitHub API shapes and data transforms |
 | Styling | **TailwindCSS v4** | Utility-first rapid UI; v4 uses `@tailwindcss/postcss` |
 | Fonts | **Geist + Geist Mono** (`next/font/google`) | Clean, modern, developer-centric aesthetic |
-| Caching | **Vercel KV (Upstash Redis)** + local disk fallback | Serverless-compatible persistent cache; avoids GitHub rate limits |
-| Deployment | **Vercel** (manual + git-triggered deploys) | Zero-config Next.js hosting |
-| Scheduling | **GitHub Actions** (primary) + one legacy Vercel cron | See Section 12 |
+| Caching | **Upstash Redis** (REST API) + local disk fallback | Serverless-compatible persistent cache; avoids GitHub rate limits |
+| Deployment | **Vercel** (production) *or* **Docker → GHCR → Kubernetes** (this repo, NST SDC cluster) | Two independent deployments of the same code — see Section 12 |
+| Scheduling | Vercel: GitHub Actions cron + a daily fallback. This repo: a native **Kubernetes CronJob** | See Section 12 — GitHub Actions' own scheduled trigger doesn't fire on this repo |
 | Data files | **JSON files** in `/data/` — **seed data only**, see Section 4 | Simple, git-trackable initial state |
 | Images | Next.js `<Image>` with `avatars.githubusercontent.com` allowed | Automatic optimization of GitHub avatar images |
 
@@ -133,6 +135,7 @@ OpenSource_NST_Tracker/
 │   │       ├── page.tsx              # Dashboard wrapper (Server)
 │   │       └── AdminDashboardClient.tsx  # Full admin UI (Client)
 │   │
+│   ├── health/route.ts               # GET — trivial {"ok":true}, used by the K8s liveness/readiness probes
 │   └── api/
 │       ├── refresh/
 │       │   ├── route.ts              # GET/POST — cache status & single-student/period refresh
@@ -154,10 +157,11 @@ OpenSource_NST_Tracker/
 │           ├── join-requests/route.ts # List/manage pending join requests
 │           ├── queue/route.ts        # Unreviewed-PR review queue
 │           ├── events/route.ts       # CRUD for events
-│           └── achievers/route.ts    # CRUD for Hall of Fame entries
+│           ├── achievers/route.ts    # CRUD for Hall of Fame entries
+│           └── own-repos/route.ts    # CRUD for the own-repo PR exception allowlist (Section 6.2)
 │
 ├── lib/                               # Shared server-side utilities
-│   ├── github.ts                      # GitHub API types, fetch functions, scoring (~800 lines)
+│   ├── github.ts                      # GitHub API types, fetch functions, scoring (~1000 lines)
 │   ├── kv.ts                          # KV cache abstraction (Upstash or disk fallback)
 │   ├── profile-cache.ts               # Per-student PR/issue cache read/write
 │   ├── summary-cache.ts               # Leaderboard summary cache (one blob per period)
@@ -166,9 +170,11 @@ OpenSource_NST_Tracker/
 │   ├── kv-join-requests.ts            # KV-backed join-request queue
 │   ├── kv-events.ts                   # KV-backed events list
 │   ├── kv-achievers.ts                # KV-backed Hall of Fame entries
+│   ├── kv-own-repo-exceptions.ts      # KV-backed own-repo PR exception allowlist (Section 6.2)
 │   ├── flagged.ts                     # KV-backed flagged-PR list
 │   ├── reviewed.ts                    # KV-backed admin-reviewed PR list
 │   ├── admin-auth.ts                  # Shared admin cookie check — import this, don't re-implement it
+│   ├── request-origin.ts              # Reliable public-origin resolution behind a reverse proxy (Section 11.2)
 │   ├── data.ts                        # PROGRAM_MAP + achiever/event JSON helpers
 │   └── types.ts                       # Shared TypeScript interfaces (EventItem)
 │
@@ -179,14 +185,28 @@ OpenSource_NST_Tracker/
 │   ├── flagged_prs.json
 │   └── reviewed_prs.json
 │
-├── data/kv/                            # Local-dev-only disk cache (gitignored), mirrors KV keys
+├── data/kv/                            # Local-dev-only disk cache (gitignored + dockerignored), mirrors KV keys
 │
 ├── proxy.ts                            # Middleware equivalent in this Next.js version — gates
 │                                        # only /api/refresh/incremental behind CRON_SECRET
-├── vercel.json                         # Legacy daily cron (see Section 12)
+├── vercel.json                         # Vercel-only legacy daily cron — inert in this repo's own K8s deployment
+├── Dockerfile                          # Multi-stage build → Next.js standalone output (K8s deployment only)
+├── .dockerignore
+├── k8s/                                 # Kubernetes manifests for the NST SDC cluster — see docs/DEPLOYMENT.md
+│   ├── 00-namespace.yaml
+│   ├── 01-secret.yaml.example
+│   ├── 02-deployment.yaml
+│   ├── 03-service.yaml
+│   ├── 04-ingress.yaml
+│   └── 05-refresh-cronjob.yaml         # The actual working 15-min refresh trigger for this deployment
+├── docs/
+│   ├── ARCHITECTURE.md
+│   └── DEPLOYMENT.md                   # Step-by-step Rancher/Kubernetes deployment walkthrough
+├── HOW_IT_WORKS.md                     # Platform mechanics: rate limits, login vs. guest, request lifecycle
 └── .github/workflows/
-    ├── refresh-cache.yml               # PRIMARY: incremental refresh every 15 min
-    └── refresh.yml                     # Manual-only full reseed (see Section 12 — do not re-enable its schedule)
+    ├── refresh-cache.yml               # Vercel's primary refresh trigger; scheduled trigger doesn't fire on this repo (Section 12)
+    ├── refresh.yml                     # Manual-only full reseed (see Section 12 — do not re-enable its schedule)
+    └── build-and-push.yml              # Builds + pushes the Docker image to GHCR (needs org Actions permissions fixed — Section 12)
 ```
 
 ---
@@ -451,6 +471,10 @@ Unchanged from prior documentation for `Nav`, `FilterBar`, `RefreshButton`, `Sha
 
 ## 9. API Routes
 
+### `GET /api/health`
+
+Trivial `{"ok":true}`, no auth, no dependencies. Exists for the Kubernetes deployment's liveness/readiness probes (`k8s/02-deployment.yaml`) — no equivalent need on Vercel's serverless model.
+
 ### `GET /api/refresh` · `POST /api/refresh`
 
 Cache status and manual refresh trigger. See Section 5.6 for cooldown rules. `POST` with `?username=X` refreshes one student; without it, refreshes the `?period=` summary (defaults to `all`) from whatever's currently in each student's `profile_cache` (no live GitHub calls unless `forceLive` is explicitly requested by the caller — the public route never does).
@@ -537,7 +561,9 @@ One shared password gates `/admin/dashboard` and every `/api/admin/*` route, via
 2. `GET /api/auth/github/callback` exchanges the code for an access token, stores it in an HTTP-only `github_oauth_token` cookie (30-day expiry), then fetches the user's GitHub login and **adds `{ [login]: accessToken }` into the shared `github_token_pool` KV map**.
 3. From then on, `getGitHubHeaders()` in `lib/github.ts` uses *your* token for *your* requests (personal 5,000 req/hr core limit, 30 req/min search), and *any guest's* request may randomly draw *your* token from the pool.
 
-This means logging in is simultaneously a personal upgrade (unlimited refresh cooldowns, see Section 5.6) and a contribution to shared capacity for every other visitor. **As of this writing, the token pool is empty in production** — nobody has logged in in a way that populated it, so 100% of guest traffic runs on the single fallback `GITHUB_TOKEN`. If guest-facing rate limiting becomes a recurring problem, driving actual logins (or seeding the pool manually) is the highest-leverage fix available without code changes.
+This means logging in is simultaneously a personal upgrade (unlimited refresh cooldowns, see Section 5.6) and a contribution to shared capacity for every other visitor. Each deployment's pool starts empty and grows only as real people log in — if guest-facing rate limiting becomes a recurring problem on any deployment, driving actual logins is the highest-leverage fix available without code changes.
+
+**Redirect handling behind a reverse proxy (`lib/request-origin.ts`):** the login, callback, and logout routes all redirect back to `/` afterward. Building that redirect from `request.url` directly is unreliable behind a reverse proxy (Traefik + Cloudflare Tunnel, on the K8s deployment) — it can resolve to the container's own internal bind address instead of the real public hostname (observed directly: redirects landing on `0.0.0.0:3000`). `getPublicOrigin()` prefers the standard `X-Forwarded-Host`/`X-Forwarded-Proto` headers instead, falling back to `request.url`'s own origin if those aren't present (e.g. on Vercel, where this was never an issue in the first place).
 
 ### 11.3 Guests
 
@@ -547,23 +573,48 @@ Everything is public without logging in — `proxy.ts` (this Next.js version's m
 
 ## 12. Deployment & Infrastructure
 
-### Vercel Setup
+This application deploys to two genuinely independent places. Both run the exact same `app/`/`lib/` code — everything in this section is about what's *different* between them.
 
-Connect the repo, set environment variables (Section 13), link an Upstash-backed KV store, deploy.
+### Vercel (production — `opensource-nst-tracker.vercel.app`)
 
-### Scheduling — GitHub Actions is primary, Vercel cron is legacy
+Connect the repo, set environment variables (Section 13), link an Upstash-backed KV store, deploy. Zero-config beyond that — Vercel builds and runs the app itself.
 
-**`.github/workflows/refresh-cache.yml`** — runs every 15 minutes, `POST`s `/api/refresh/incremental` with `x-cron-secret`. This is the primary, always-on refresh mechanism (Section 5.4, Generation 3).
+**Scheduling on Vercel:** `.github/workflows/refresh-cache.yml` runs every 15 minutes, `POST`s `/api/refresh/incremental` with `x-cron-secret` — the primary, always-on refresh mechanism there (Section 5.4, Generation 3). `.github/workflows/refresh.yml` is `workflow_dispatch`-only (manual trigger from the Actions tab); running it on a schedule alongside `refresh-cache.yml` was the direct cause of a real production incident (both hit the same shared GitHub token, combined exceeding the 30 req/min search ceiling) — **do not re-add a `schedule:` trigger to it.** `vercel.json` also configures a native Vercel cron hitting the same endpoint once daily, as a redundant fallback if the GitHub Actions cron ever stops firing.
 
-**`.github/workflows/refresh.yml`** — `workflow_dispatch` only (manual trigger from the Actions tab). Runs `scripts/seed-all.js`, which calls the same incremental endpoint in a tight loop until the whole roster is caught up. **Do not add a `schedule:` trigger back to this file** — running it concurrently with `refresh-cache.yml` was the direct cause of a real production incident: both hit the same shared GitHub token, and combined they exceeded the 30 req/min search ceiling, causing intermittent rate-limit failures for whichever student's refresh happened to be in flight at the time.
+### This repo — NST SDC Kubernetes cluster (`oss-tracker.nstsdc.org`)
 
-**`vercel.json`** still configures a native Vercel cron hitting `/api/refresh/incremental` once daily — redundant with the 15-minute GitHub Actions workflow, low-impact (once/day), left in place but not the mechanism to reason about if you're debugging refresh timing.
+Unlike Vercel, Kubernetes has no build pipeline of its own — it only runs pre-built container images. The path from source to running app:
+
+```
+git push to main
+   │
+   ▼
+.github/workflows/build-and-push.yml  (docker build → push to ghcr.io/nst-sdc/open-source-tracker-nst)
+   │  currently requires manual `docker build`/`docker push` instead — the org's Actions
+   │  "Workflow permissions" are locked read-only, blocking CI from pushing to GHCR.
+   │  Needs an org owner to fix (org Settings → Actions → General → Read and write).
+   ▼
+kubectl apply -f k8s/  (manual — no GitOps/Fleet auto-deploy configured yet)
+   │
+   ▼
+Deployment (1 pod) → Service → Ingress (Traefik) → Cloudflare Tunnel → oss-tracker.nstsdc.org
+```
+
+Full step-by-step walkthrough: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md). Architecture/decision context: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) and [HOW_IT_WORKS.md](./HOW_IT_WORKS.md).
+
+**Scheduling on this deployment:** a native **Kubernetes CronJob** (`k8s/05-refresh-cronjob.yaml`), not GitHub Actions. Confirmed directly: `refresh-cache.yml`'s `schedule:` trigger has never fired on this repo (0 scheduled runs ever, despite the workflow being `active` and manual `workflow_dispatch` triggers succeeding) — most likely an org-level policy restricting scheduled Actions runs specifically. The CronJob has no dependency on GitHub Actions at all, and calls the in-cluster Service directly rather than the public hostname (which also sidesteps the Cloudflare Tunnel timeout note below).
+
+**Two K8s-specific fixes worth knowing about if either regresses:**
+- **CPU limits**: the container needs `1000m` (one full CPU core), not the `500m` it originally shipped with — confirmed via the container's own cgroup stats (`cat /sys/fs/cgroup/cpu.stat` inside the pod; `throttled_usec` was exceeding `usage_usec`, meaning the pod spent more time paused than running) while rendering the large leaderboard page.
+- **`TICK_DEADLINE_MS` override**: Cloudflare Tunnel's proxy kills HTTP connections around ~100 seconds, shorter than the refresh route's 150-second default processing budget — confirmed via a real `524` timeout on a refresh that had actually completed successfully server-side moments later. `k8s/02-deployment.yaml` sets `TICK_DEADLINE_MS=80000` as an env var to keep responses inside that window. (This env var is a no-op on Vercel, which has no such shorter proxy timeout.)
+
+**Data isolation:** this deployment uses its own, separate Upstash Redis database — never production's. See Section 4 and `docs/ARCHITECTURE.md` for why.
 
 ### Scaling Characteristics
 
 - Cache hit (KV read): ~10–50ms.
 - Cache miss (live GitHub fetch): ~200–1000ms, and bounded by the 30 req/min shared-token ceiling — this, not compute, is the bottleneck at current scale.
-- The incremental cron's 5-students/15-minutes throughput (~480/day) is below what a full daily refresh of ~1,900 students needs — see Section 5.4. This is a known, accepted gap, not an oversight to "fix" reflexively; changing it is a capacity/frequency tradeoff decision, not a bug fix.
+- The incremental refresh auto-scales its batch size by available token count (Section 5.4) — with a single token, that's roughly ~28-31 students per 15-minute tick, covering the full ~1,800+ roster once every ~16 hours in the worst case. This is a known, accepted capacity tradeoff, not a bug — it shrinks proportionally as more students log in and contribute tokens to the shared pool.
 
 ---
 
@@ -576,6 +627,7 @@ Connect the repo, set environment variables (Section 13), link an Upstash-backed
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Yes (for OAuth login) | GitHub OAuth App credentials — without these, `/api/auth/github` returns a config error in production. |
 | `CRON_SECRET` | Yes (for incremental refresh) | Must match `x-cron-secret` sent by `refresh-cache.yml` / manual `refresh.yml` runs; checked in `proxy.ts`. |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Yes (production) | Upstash Redis REST endpoint + token. Without them, falls back to `data/kv/*.json` on disk. |
+| `TICK_DEADLINE_MS` | No (defaults to `150000`) | Overrides the incremental refresh's wall-clock safety cutoff (Section 5.4). Only set on the K8s deployment (`80000`, see Section 12) to stay under Cloudflare Tunnel's shorter proxy timeout. |
 
 **Local `.env.local` example:**
 ```bash

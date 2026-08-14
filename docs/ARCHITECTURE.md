@@ -59,17 +59,22 @@ GitHub push to main
    ▼
 .github/workflows/build-and-push.yml
    → docker build (multi-stage, next.config.ts output:'standalone')
-   → push image to ghcr.io/<owner>/<repo>:latest
+   → push image to ghcr.io/nst-sdc/open-source-tracker-nst:latest
+     (currently fails: org Actions "Workflow permissions" are locked
+      read-only, blocking the push — needs an org owner to fix. Until
+      then this step is done manually: docker build + docker push.)
                                      │
-                                     ▼ (manual, see DEPLOYMENT.md)
+                                     ▼ (manual either way, see DEPLOYMENT.md)
                 kubectl apply -f k8s/  (via Rancher's browser-based kubectl shell)
                                      │
                     ┌────────────────┴────────────────┐
                     ▼                                  ▼
         Deployment (opensource-tracker)      Secret (opensource-tracker-secrets)
         1 pod, health-probed on /api/health   GITHUB_TOKEN, ADMIN_PASSWORD,
-                    │                          GITHUB_CLIENT_ID/SECRET, CRON_SECRET,
-                    ▼                          KV_REST_API_URL/TOKEN(_READ_ONLY)
+        imagePullSecrets: ghcr-pull-secret    GITHUB_CLIENT_ID/SECRET, CRON_SECRET,
+        (package is currently private)        KV_REST_API_URL/TOKEN(_READ_ONLY)
+                    │                          
+                    ▼                          
         Service (ClusterIP, port 80→3000)
                     │
                     ▼
@@ -82,20 +87,23 @@ GitHub push to main
                     ▼
               https://oss-tracker.nstsdc.org
 
-GitHub Actions (refresh.yml / a future refresh-cache.yml copy)
-   → POST https://oss-tracker.nstsdc.org/api/refresh/incremental
+k8s/05-refresh-cronjob.yaml  (native K8s CronJob, every 15 min)
+   → POST http://opensource-tracker/api/refresh/incremental (in-cluster Service, not the public hostname)
+   (NOT GitHub Actions — its scheduled trigger never fires on this repo, see DOCUMENTATION.md §12)
 ```
 
 Key differences from Vercel, explained:
 
 | Aspect | Vercel | This repo (K8s) |
 |---|---|---|
-| Build | Vercel's own pipeline | Docker multi-stage build (`Dockerfile`) → GHCR |
+| Build | Vercel's own pipeline | Docker multi-stage build (`Dockerfile`) → GHCR (currently manual — see above) |
 | Runtime | Serverless functions | A single long-running Node process (`node server.js`, the Next.js standalone output) in one pod |
 | Public HTTPS | Automatic (`*.vercel.app`) | Ingress + Cloudflare Tunnel (`*.nstsdc.org`), automatic once the Ingress exists |
-| Deploy trigger | Git push (automatic) | Git push builds the image (automatic); rolling it out to the cluster is a manual `kubectl apply`/`kubectl rollout restart` for now — see DEPLOYMENT.md's closing section on the Fleet/GitOps upgrade path |
+| Deploy trigger | Git push (automatic) | Fully manual right now: build+push the image, then `kubectl apply`/`kubectl rollout restart` — see DEPLOYMENT.md's closing section on the Fleet/GitOps upgrade path |
+| Refresh scheduling | GitHub Actions cron (works) | Kubernetes CronJob (works) — GitHub Actions' own scheduled trigger doesn't fire on this repo |
 | Data store | Vercel's Upstash KV integration (production data) | Your **own, separate** Upstash Redis instance — see DEPLOYMENT.md. Never point this at the production database. |
 | Health check | N/A (serverless) | `GET /api/health` → `{"ok":true}`, used by the Deployment's liveness/readiness probes |
+| Own-repo PR scoring | Same feature, same code | Same feature, same code — admin-curated allowlist, see DOCUMENTATION.md §6.2 |
 
 ### Why a Secret, not NST Init
 
