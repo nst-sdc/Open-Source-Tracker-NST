@@ -4,6 +4,8 @@ import {
   getStudentProfile,
   StudentPR,
   StudentIssue,
+  FAIL_STATE_KEY,
+  FailState,
 } from '@/lib/github';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -113,6 +115,11 @@ export default async function ContributorPage({
   let allPRs: StudentPR[] = [];
   let issues: StudentIssue[] = [];
   let cachedAt: string | null = null;
+  // Set when a sync was actually attempted (live, for logged-in viewers) and
+  // failed outright — distinct from simply "not synced yet" — so the
+  // initializing page can tell a visitor the truth instead of always saying
+  // "check back in a few minutes" for profiles that will never resolve.
+  let syncFailed = false;
 
   // Detect if user is logged in — logged-in users use their own OAuth token
   // (personal 5,000 req/hr quota) so live fetches are safe for them.
@@ -180,14 +187,30 @@ export default async function ContributorPage({
           
           await writeProfileCache(username, freshProfile, allPRs, freshIssues);
           cachedAt = new Date().toISOString();
+        } else {
+          // We actually made the live calls and one came back empty/failed —
+          // not "not synced yet," a real failure just happened right here.
+          syncFailed = true;
         }
       } catch (err) {
         console.error(`Logged-in live fetch failed for ${username}:`, err);
+        syncFailed = true;
         queueBackgroundRefresh(username);
       }
     } else {
-      // Anonymous: queue background refresh, show initializing state.
+      // Anonymous: queue background refresh, show initializing state — unless
+      // the background worker has already attempted (and failed on) this
+      // student at least once (see refresh_fail_state in lib/github.ts), in
+      // which case "check back in a few minutes" would just be misleading —
+      // it's still retried on the normal cycle, just not about to resolve
+      // in the next few minutes the way a genuinely-new student would.
       queueBackgroundRefresh(username);
+      try {
+        const failState = await kvGet<FailState>(FAIL_STATE_KEY);
+        if (failState?.[username.toLowerCase()]) {
+          syncFailed = true;
+        }
+      } catch { /* fail open to the normal "queued" message */ }
     }
   }
 
@@ -202,10 +225,22 @@ export default async function ContributorPage({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
             </svg>
           </div>
-          <h1 className="text-lg font-semibold text-white/80 mb-2">Profile Initializing</h1>
+          <h1 className="text-lg font-semibold text-white/80 mb-2">
+            {syncFailed ? "Couldn't Sync This Profile" : 'Profile Initializing'}
+          </h1>
           <p className="text-sm text-white/40 mb-6">
-            <span className="font-mono text-white/60">@{username}</span> has been queued for data sync.
-            Check back in a few minutes — the background worker will populate this profile shortly.
+            {syncFailed ? (
+              <>
+                We couldn't fetch data for <span className="font-mono text-white/60">@{username}</span> from
+                GitHub. This usually means the account is private, restricted, or doesn't exist. We'll keep
+                retrying periodically — if this is your profile, check that it's public on GitHub.
+              </>
+            ) : (
+              <>
+                <span className="font-mono text-white/60">@{username}</span> has been queued for data sync.
+                Check back in a few minutes — the background worker will populate this profile shortly.
+              </>
+            )}
           </p>
           <a
             href={`https://github.com/${username}`}

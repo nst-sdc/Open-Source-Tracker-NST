@@ -902,18 +902,19 @@ const MAX_TOTAL_BATCH = 400;
 // returns before the tunnel's own timeout fires.
 const TICK_DEADLINE_MS = Number(process.env.TICK_DEADLINE_MS) || 150_000;
 
-const FAIL_STATE_KEY = 'refresh_fail_state';
-/** Consecutive fetch failures (e.g. a private GitHub profile) before a
- * never-cached student stops being retried on every single tick. Without
- * this, one permanently-unfetchable student sits at the front of the
- * "never cached" priority lane forever — since a failed fetch never earns a
- * cachedAt, it never ages out — and blocks every other never-cached student
- * behind it in the same fixed list order. */
-const FAIL_COOLDOWN_THRESHOLD = 3;
-interface FailState {
-  count: number;
-  lastAttempt: string; // ISO timestamp
-}
+export const FAIL_STATE_KEY = 'refresh_fail_state';
+// Tracks, per username, the last time a fetch was *attempted* for a student
+// who has never once had a successful fetch (no real cachedAt yet). Without
+// this, a student whose fetch keeps failing (private/restricted profile,
+// transient GitHub error, etc.) never earns a cachedAt, so they'd stay
+// classified as "never cached" — the highest-priority lane, selected in
+// fixed list order — on every single tick, forever, crowding out every
+// other never-cached student behind them in the list. This is not a
+// cooldown or a strike count: one attempt, success or failure, is enough to
+// rotate a student into the normal round-robin cycle. They keep getting
+// retried like everyone else — nothing here ever removes a student. Only a
+// confirmed-invalid username (404, see NotFoundError below) is ever removed.
+export type FailState = Record<string, string>; // username (lower) -> lastAttempt ISO timestamp
 
 /**
  * How many candidates to select for one incremental tick, given how many
@@ -946,10 +947,10 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
     queue = [];
   }
 
-  // Read per-student consecutive-failure counters (see FAIL_COOLDOWN_THRESHOLD)
-  let failState: Record<string, FailState> = {};
+  // Read per-student last-attempt times for students with no successful fetch yet
+  let failState: FailState = {};
   try {
-    failState = (await kvGet<Record<string, FailState>>(FAIL_STATE_KEY)) || {};
+    failState = (await kvGet<FailState>(FAIL_STATE_KEY)) || {};
   } catch {
     failState = {};
   }
@@ -1002,12 +1003,13 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
         continue;
       }
 
-      // Never successfully cached. Past the failure threshold, treat it like
-      // any other stale profile — eligible again after STALE_THRESHOLD_MS
-      // since the last attempt — instead of retrying it first on every tick.
-      const fail = failState[lower];
-      if (fail && fail.count >= FAIL_COOLDOWN_THRESHOLD) {
-        const lastAttemptTime = new Date(fail.lastAttempt).getTime();
+      // Never successfully cached. If we've never even attempted it, it's
+      // genuinely first-priority. If we have, treat that attempt like any
+      // other stale profile — eligible again after STALE_THRESHOLD_MS since
+      // the attempt — instead of retrying it first on every single tick.
+      const lastAttemptStr = failState[lower];
+      if (lastAttemptStr) {
+        const lastAttemptTime = new Date(lastAttemptStr).getTime();
         if (now - lastAttemptTime >= STALE_THRESHOLD_MS) {
           staleCached.push({ username: student.github, cachedAtTime: lastAttemptTime });
         }
@@ -1092,9 +1094,11 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
           } else {
             console.error(`Failed to refresh cache for ${username}:`, err);
             // Do NOT write a fallback cache on Rate Limit or network errors.
-            // It will remain stale and get retried in the next batch automatically.
-            const prevCount = failState[lower]?.count ?? 0;
-            failState[lower] = { count: prevCount + 1, lastAttempt: new Date().toISOString() };
+            // Record that an attempt happened so this student rotates into
+            // the normal round-robin cycle instead of being retried first on
+            // every tick — the student is never removed for this; only a
+            // confirmed-invalid username (NotFoundError, above) ever is.
+            failState[lower] = new Date().toISOString();
             failStateChanged = true;
           }
         }
