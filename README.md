@@ -9,12 +9,12 @@ This document covers everything you need to run the project locally, understand 
 This exact codebase runs in two independent places:
 
 | | Vercel (production) | This repo → NST SDC Kubernetes cluster |
-|---|---|---|
-| **URL** | `opensource-nst-tracker.vercel.app` | `oss-tracker.nstsdc.org` |
-| **Owner repo** | `saiudayagiri/OpenSource_NST_Tracker` (personal) | `nst-sdc/Open-Source-Tracker-NST` (this one) |
-| **Database** | Its own production Upstash Redis | A separate, dedicated Upstash Redis — never shared with production |
-| **Refresh trigger** | GitHub Actions cron (15 min) + a daily Vercel-native fallback cron | A native Kubernetes CronJob (15 min) — GitHub Actions' own scheduled trigger doesn't fire on this repo (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
-| **Deploys on push?** | Yes, automatically | No — see below |
+|---|---|
+| **URL** | `oss-tracker.nstsdc.org` |
+| **Owner repo** |  `nst-sdc/Open-Source-Tracker-NST` (this one) |
+| **Database** | A separate, dedicated Upstash Redis — never shared with production |
+| **Refresh trigger** | A native Kubernetes CronJob (15 min) — GitHub Actions' own scheduled trigger doesn't fire on this repo (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
+| **Deploys on push?** | No — see below |
 
 **Important: pushing to `main` in this repo does not automatically deploy.** Two separate steps are needed for a change to actually go live here:
 1. Someone builds and pushes a new Docker image (normally automatic via `.github/workflows/build-and-push.yml`, but this currently requires manual `docker build`/`docker push` — see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for why and how).
