@@ -127,12 +127,28 @@ are the two commands that explain almost every failure mode (crash loop, image p
 
 ## 10. Wire up the incremental refresh cron
 
-The leaderboard only updates when something calls `/api/refresh/incremental` — that's this repo's `.github/workflows/refresh.yml` and `refresh-cache.yml`, already pointed at `secrets.APP_URL` rather than a hardcoded domain. In this repo's GitHub **Settings → Secrets and variables → Actions**, add:
+The leaderboard only updates when something calls `/api/refresh/incremental` every 15 minutes. There are two ways to trigger it — use the CronJob; the GitHub Actions option is documented for completeness but doesn't actually work on this repo (explained below).
+
+**Use the Kubernetes CronJob (recommended, and what's actually running):**
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/05-refresh-cronjob.yaml
+```
+
+This runs entirely inside the cluster, talking directly to the in-cluster Service (not the public hostname), and has zero dependency on GitHub Actions. To test it immediately instead of waiting up to 15 minutes for the first tick:
+
+```bash
+kubectl -n opensource-tracker create job --from=cronjob/opensource-tracker-refresh test-refresh-1
+kubectl -n opensource-tracker get jobs      # wait for STATUS=Complete
+kubectl -n opensource-tracker logs job/test-refresh-1
+```
+
+**Why not GitHub Actions, like the Vercel deployment uses?** This repo's `.github/workflows/refresh-cache.yml` is set up identically (pointed at `secrets.APP_URL`/`secrets.CRON_SECRET`) and manual `workflow_dispatch` triggers do work — but its `schedule:` trigger has never fired on its own, even though the workflow shows as `active`. Most likely an org-level policy restricting scheduled Actions runs specifically (unconfirmed — would need an org owner to check). If you want to try it anyway or investigate further, the same two repo secrets apply:
 
 - `APP_URL` = `https://oss-tracker.nstsdc.org` (or whatever hostname you used)
 - `CRON_SECRET` = the exact same value you used for `CRON_SECRET` in step 6's Secret command
 
-**Careful if you're ever tempted to reuse the production `GITHUB_TOKEN`** for a deployment that has this cron wired up: `refresh-cache.yml` runs automatically every 15 minutes, and if it shares a GitHub token with the production Vercel app's own 15-minute cron, both will compete for the same rate limit — this is a real, previously-documented incident pattern (see `DOCUMENTATION.md` Section 5.6). Always use your own token when the automatic schedule is live.
+**Careful if you're ever tempted to reuse the production `GITHUB_TOKEN`** for a deployment that has any automatic 15-minute trigger wired up (CronJob or Actions): if it shares a GitHub token with the production Vercel app's own 15-minute cron, both will compete for the same rate limit — this is a real, previously-documented incident pattern (see `DOCUMENTATION.md` Section 5.6). Always use your own token when an automatic schedule is live.
 
 ## Performance notes: why this might feel slower than Vercel
 
