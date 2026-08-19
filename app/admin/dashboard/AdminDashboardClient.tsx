@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { FlaggedPR, FlagReason } from '@/lib/flagged';
+import type { ContributeItem, ContributeType } from '@/lib/kv-contribute';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -435,19 +436,29 @@ interface Props {
   students: string[];
 }
 
-type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos';
+type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'contribute';
 
 export default function AdminDashboardClient({ flaggedPRs: initialFlagged, reviewedPRIds: initialReviewed, students }: Props) {
   const router = useRouter();
 
   const [tab, setTab] = useState<DashboardTab>('queue');
   const [pendingReqCount, setPendingReqCount] = useState<number | null>(null);
+  const [pendingContributeCount, setPendingContributeCount] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/join-requests')
       .then(res => res.json())
       .then((data: any[]) => {
         setPendingReqCount(data.filter(r => r.status === 'pending').length);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/admin/contribute')
+      .then(res => res.json())
+      .then((data: any[]) => {
+        setPendingContributeCount(data.filter(r => r.status === 'pending').length);
       })
       .catch(() => {});
   }, []);
@@ -615,6 +626,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             { id: 'events',   label: '📅 Events',   badge: null },
             { id: 'achievers',label: '🏆 Achievers',badge: null },
             { id: 'ownRepos', label: '🌱 Own-Repo PRs', badge: null },
+            { id: 'contribute', label: '🧭 Contribute', badge: pendingContributeCount && pendingContributeCount > 0 ? pendingContributeCount : null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
               className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -857,6 +869,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
         {/* ── Requests Tab ── */}
         {tab === 'requests' && <RequestsTab onCountChange={setPendingReqCount} />}
+        {tab === 'contribute' && <ContributeTab onCountChange={setPendingContributeCount} />}
 
         {/* ── Own-Repo Exceptions Tab ── */}
         {tab === 'ownRepos' && <OwnReposTab />}
@@ -1778,6 +1791,228 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Contribute (Issues / Repositories) ────────────────────────────────────────
+
+function ContributeTab({ onCountChange }: { onCountChange: (count: number) => void }) {
+  const [items, setItems] = useState<ContributeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    const res = await fetch('/api/admin/contribute');
+    if (res.ok) {
+      const data = await res.json() as ContributeItem[];
+      data.sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+      });
+      setItems(data);
+      onCountChange(data.filter((i) => i.status === 'pending').length);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleAction(id: string, action: 'approve' | 'reject') {
+    setProcessing(id);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/contribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action }),
+      });
+      if (res.ok) {
+        setSuccess(`Successfully ${action === 'approve' ? 'approved' : 'rejected'} submission`);
+        await load();
+      } else {
+        const d = await res.json();
+        setError(d.error ?? `Failed to ${action} submission`);
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setProcessing(null);
+    }
+  }
+
+  const pending = items.filter((i) => i.status === 'pending');
+  const history = items.filter((i) => i.status !== 'pending');
+
+  return (
+    <div>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-white font-semibold">Contribute Board</h2>
+          <p className="text-white/35 text-sm mt-0.5">Approve or reject submitted issues/repos, or add one directly (skips the queue).</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAddForm((v) => !v)}
+          className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.09] text-white/80 hover:bg-white/[0.09] transition-all font-semibold shrink-0"
+        >
+          {showAddForm ? 'Close' : '+ Add Directly'}
+        </button>
+      </div>
+
+      {showAddForm && <AdminAddContributeForm onAdded={() => { setShowAddForm(false); load(); }} />}
+
+      {error && <p className="text-red-400 text-sm mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
+      {success && <p className="text-emerald-400 text-sm mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</p>}
+
+      {loading ? (
+        <div className="text-center py-12 text-white/25">Loading…</div>
+      ) : (
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Pending Queue ({pending.length})</h3>
+            <div className="space-y-2">
+              {pending.map((item) => (
+                <div key={item.id} className="flex items-start justify-between gap-4 bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 hover:bg-white/[0.04] transition-all">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${item.type === 'issue' ? 'bg-purple-500/15 text-purple-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                        {item.type}
+                      </span>
+                      <a href={item.repoLink} target="_blank" rel="noopener noreferrer" className="text-white/80 text-sm font-medium hover:text-purple-400 truncate">
+                        {item.repoLink}
+                      </a>
+                    </div>
+                    <p className="text-white/40 text-xs mt-1 line-clamp-2">{item.description}</p>
+                    <p className="text-white/25 text-[10px] mt-1">by @{item.submittedBy} · {new Date(item.submittedAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      disabled={processing !== null}
+                      onClick={() => handleAction(item.id, 'approve')}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all font-semibold disabled:opacity-50 cursor-pointer"
+                    >
+                      {processing === item.id ? '...' : 'Approve'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={processing !== null}
+                      onClick={() => handleAction(item.id, 'reject')}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all font-semibold disabled:opacity-50 cursor-pointer"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {pending.length === 0 && (
+                <div className="text-center py-8 bg-white/[0.01] border border-white/[0.04] rounded-xl text-white/25 text-sm">
+                  Nothing pending.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {history.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-white/[0.05]">
+              <h3 className="text-white/60 text-xs font-semibold uppercase tracking-wider">History</h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
+                {history.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-4 bg-white/[0.015] border border-white/[0.05] rounded-xl px-4 py-2 text-white/50">
+                    <div className="min-w-0 flex items-center gap-2">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${item.type === 'issue' ? 'bg-purple-500/10 text-purple-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                        {item.type}
+                      </span>
+                      <span className="text-xs truncate">{item.repoLink}</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
+                      item.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminAddContributeForm({ onAdded }: { onAdded: () => void }) {
+  const [type, setType] = useState<ContributeType>('issue');
+  const [repoLink, setRepoLink] = useState('');
+  const [description, setDescription] = useState('');
+  const [siteLink, setSiteLink] = useState('');
+  const [issueLink, setIssueLink] = useState('');
+  const [screenshotUrl, setScreenshotUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/contribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', type, repoLink, description, siteLink, issueLink, screenshotUrl }),
+      });
+      if (res.ok) {
+        setRepoLink(''); setDescription(''); setSiteLink(''); setIssueLink(''); setScreenshotUrl('');
+        onAdded();
+      } else {
+        const d = await res.json();
+        setError(d.error ?? 'Failed to add');
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const fieldClass = 'w-full bg-white/[0.04] border border-white/[0.09] rounded-xl px-3 py-2 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40 transition-all';
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-6 space-y-3 bg-white/[0.02] border border-white/[0.07] rounded-xl p-4">
+      <div className="flex gap-2">
+        {(['issue', 'repo'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setType(t)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              type === t ? 'bg-white/[0.1] text-white' : 'bg-white/[0.03] text-white/40'
+            }`}
+          >
+            {t === 'issue' ? 'Issue' : 'Repository'}
+          </button>
+        ))}
+      </div>
+      <input required type="url" placeholder="Repository link" value={repoLink} onChange={(e) => setRepoLink(e.target.value)} className={fieldClass} />
+      {type === 'issue' && (
+        <>
+          <input type="url" placeholder="Issue link (optional)" value={issueLink} onChange={(e) => setIssueLink(e.target.value)} className={fieldClass} />
+          <input type="url" placeholder="Site link (optional)" value={siteLink} onChange={(e) => setSiteLink(e.target.value)} className={fieldClass} />
+          <input type="url" placeholder="Screenshot URL (optional)" value={screenshotUrl} onChange={(e) => setScreenshotUrl(e.target.value)} className={fieldClass} />
+        </>
+      )}
+      <textarea required placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={`${fieldClass} resize-none`} />
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+      <button type="submit" disabled={loading} className="text-xs px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/25 text-purple-300 hover:bg-purple-500/25 transition-all font-semibold disabled:opacity-50">
+        {loading ? 'Adding…' : 'Add (published immediately)'}
+      </button>
+    </form>
   );
 }
 

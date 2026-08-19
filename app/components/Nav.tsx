@@ -14,6 +14,7 @@ const LINKS = [
   { href: '/achievers',    label: 'Hall of Fame' },
   { href: '/programs',     label: 'Programs'     },
   { href: '/get-started',  label: 'Get Started'  },
+  { href: '/contribute',   label: 'Contribute'   },
   { href: '/issues',       label: 'Issues'       },
 ];
 
