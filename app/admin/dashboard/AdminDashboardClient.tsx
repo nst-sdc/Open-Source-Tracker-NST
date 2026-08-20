@@ -436,7 +436,7 @@ interface Props {
   students: string[];
 }
 
-type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'contribute';
+type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'contribute' | 'admins';
 
 export default function AdminDashboardClient({ flaggedPRs: initialFlagged, reviewedPRIds: initialReviewed, students }: Props) {
   const router = useRouter();
@@ -569,10 +569,14 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
     }
   }
 
-  async function handleLogout() {
+  function handleExitAdmin() {
     setLogoutLoading(true);
-    await fetch('/api/admin/auth', { method: 'DELETE' });
-    router.push('/admin');
+    // Admin access is tied to the GitHub session, not a separate login — there's
+    // nothing to log out of here. This just flips the nav's Admin/User toggle
+    // back to User mode and returns to the normal site. Signing out of GitHub
+    // entirely is still available from the profile menu in the nav.
+    try { localStorage.setItem('adminViewMode', 'user'); } catch {}
+    router.push('/');
   }
 
   const displayedBrowsePRs = browsePRs.filter((pr) => {
@@ -603,12 +607,12 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
           <div className="flex items-center gap-2">
             <span className="text-white/25 text-xs hidden sm:inline">{allFlagged.length} flagged</span>
-            <button onClick={handleLogout} disabled={logoutLoading} id="admin-logout-btn"
+            <button onClick={handleExitAdmin} disabled={logoutLoading} id="admin-logout-btn"
               className="text-white/40 hover:text-white/70 text-sm px-3 py-1.5 rounded-lg hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition-all flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              {logoutLoading ? 'Logging out…' : 'Logout'}
+              Exit Admin Mode
             </button>
           </div>
         </div>
@@ -627,6 +631,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             { id: 'achievers',label: '🏆 Achievers',badge: null },
             { id: 'ownRepos', label: '🌱 Own-Repo PRs', badge: null },
             { id: 'contribute', label: '🧭 Contribute', badge: pendingContributeCount && pendingContributeCount > 0 ? pendingContributeCount : null },
+            { id: 'admins', label: '🔑 Admins', badge: null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
               className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -870,6 +875,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
         {/* ── Requests Tab ── */}
         {tab === 'requests' && <RequestsTab onCountChange={setPendingReqCount} />}
         {tab === 'contribute' && <ContributeTab onCountChange={setPendingContributeCount} />}
+        {tab === 'admins' && <AdminsTab />}
 
         {/* ── Own-Repo Exceptions Tab ── */}
         {tab === 'ownRepos' && <OwnReposTab />}
@@ -2013,6 +2019,170 @@ function AdminAddContributeForm({ onAdded }: { onAdded: () => void }) {
         {loading ? 'Adding…' : 'Add (published immediately)'}
       </button>
     </form>
+  );
+}
+
+// ─── Admins ─────────────────────────────────────────────────────────────────
+
+function AdminsTab() {
+  const [seed, setSeed] = useState<string[]>([]);
+  const [dynamic, setDynamic] = useState<string[]>([]);
+  const [me, setMe] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [newUsername, setNewUsername] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  async function load() {
+    setLoading(true);
+    const [adminsRes, sessionRes] = await Promise.all([
+      fetch('/api/admin/admins'),
+      fetch('/api/auth/session'),
+    ]);
+    if (adminsRes.ok) {
+      const data = await adminsRes.json();
+      setSeed(data.seed ?? []);
+      setDynamic(data.dynamic ?? []);
+    }
+    if (sessionRes.ok) {
+      const data = await sessionRes.json();
+      setMe(data.user?.username ?? '');
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setAdding(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ github: newUsername }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(`Added @${newUsername} as an admin.`);
+        setNewUsername('');
+        await load();
+      } else {
+        setError(data.error ?? 'Failed to add admin');
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleRemove(github: string) {
+    setRemoving(github);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch(`/api/admin/admins?github=${encodeURIComponent(github)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(`Removed @${github}'s admin access.`);
+        await load();
+      } else {
+        setError(data.error ?? 'Failed to remove admin');
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setRemoving(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-white font-semibold">Admins</h2>
+        <p className="text-white/35 text-sm mt-0.5">
+          Admin access is tied to GitHub sign-in — no separate password. Add a GitHub username here to grant it.
+        </p>
+      </div>
+
+      <form onSubmit={handleAdd} className="flex gap-2 mb-6">
+        <input
+          type="text"
+          required
+          placeholder="GitHub username"
+          value={newUsername}
+          onChange={(e) => setNewUsername(e.target.value)}
+          className="flex-1 bg-white/[0.04] border border-white/[0.09] rounded-xl px-3 py-2 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40 transition-all"
+        />
+        <button
+          type="submit"
+          disabled={adding}
+          className="text-xs px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/25 text-purple-300 hover:bg-purple-500/25 transition-all font-semibold disabled:opacity-50 shrink-0"
+        >
+          {adding ? 'Adding…' : '+ Add Admin'}
+        </button>
+      </form>
+
+      {error && <p className="text-red-400 text-sm mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
+      {success && <p className="text-emerald-400 text-sm mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</p>}
+
+      {loading ? (
+        <div className="text-center py-12 text-white/25">Loading…</div>
+      ) : (
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Seed Admins (deploy config, not removable here)</h3>
+            <div className="space-y-2">
+              {seed.map((u) => (
+                <div key={u} className="flex items-center justify-between gap-4 bg-white/[0.015] border border-white/[0.05] rounded-xl px-4 py-2.5">
+                  <span className="text-white/70 text-sm font-medium">
+                    @{u} {u.toLowerCase() === me.toLowerCase() && <span className="text-white/30 text-xs">(you)</span>}
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.05] text-white/40 font-semibold uppercase">Seed</span>
+                </div>
+              ))}
+              {seed.length === 0 && (
+                <div className="text-center py-6 bg-white/[0.01] border border-white/[0.04] rounded-xl text-white/25 text-sm">
+                  No seed admins configured (SEED_ADMIN_USERNAMES).
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Granted Admins ({dynamic.length})</h3>
+            <div className="space-y-2">
+              {dynamic.map((u) => (
+                <div key={u} className="flex items-center justify-between gap-4 bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-2.5 hover:bg-white/[0.04] transition-all">
+                  <span className="text-white/80 text-sm font-medium">
+                    @{u} {u.toLowerCase() === me.toLowerCase() && <span className="text-white/30 text-xs">(you)</span>}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={removing !== null || u.toLowerCase() === me.toLowerCase()}
+                    onClick={() => handleRemove(u)}
+                    title={u.toLowerCase() === me.toLowerCase() ? "You can't remove your own access" : undefined}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all font-semibold disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {removing === u ? '...' : 'Remove'}
+                  </button>
+                </div>
+              ))}
+              {dynamic.length === 0 && (
+                <div className="text-center py-6 bg-white/[0.01] border border-white/[0.04] rounded-xl text-white/25 text-sm">
+                  No admins granted yet beyond the seed list.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

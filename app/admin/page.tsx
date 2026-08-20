@@ -1,48 +1,24 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { checkAdminAuth } from '@/lib/admin-auth';
+import { getSessionUser } from '@/lib/session';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+export const dynamic = 'force-dynamic';
 
-export default function AdminLoginPage() {
-  const router = useRouter();
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+export default async function AdminEntryPage() {
+  const [user, isAdmin] = await Promise.all([getSessionUser(), checkAdminAuth()]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
-      if (res.ok) {
-        router.push('/admin/dashboard');
-      } else {
-        const data = await res.json();
-        setError(data.error ?? 'Login failed');
-      }
-    } catch {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
+  if (isAdmin) {
+    redirect('/admin/dashboard');
   }
 
   return (
     <main className="min-h-screen bg-[#030712] flex items-center justify-center px-4">
-      {/* Background glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-purple-600/10 blur-[120px] rounded-full" />
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Card */}
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 backdrop-blur-sm shadow-2xl shadow-black/40">
-          {/* Icon */}
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 backdrop-blur-sm shadow-2xl shadow-black/40 text-center">
           <div className="flex items-center justify-center mb-6">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/30 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
               <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,59 +28,33 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-white text-center mb-1">Admin Access</h1>
-          <p className="text-white/35 text-sm text-center mb-8">Enter the admin password to continue</p>
+          <h1 className="text-2xl font-bold text-white mb-1">Admin Access</h1>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="admin-password" className="block text-xs text-white/40 mb-2 font-medium uppercase tracking-wider">
-                Password
-              </label>
-              <input
-                id="admin-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                required
-                autoFocus
-                className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.06] transition-all text-sm"
-              />
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
-                <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                </svg>
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !password}
-              id="admin-login-btn"
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-900/30 hover:shadow-purple-900/50 hover:-translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in…
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </form>
+          {user ? (
+            <>
+              <p className="text-white/40 text-sm mb-1">
+                Signed in as <span className="text-white/70 font-medium">@{user.username}</span>
+              </p>
+              <p className="text-white/35 text-sm">
+                This account isn&apos;t on the admin list. Ask an existing admin to add you from the
+                dashboard&apos;s Admins tab.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-white/35 text-sm mb-8">
+                Admin access is tied to your GitHub account. Sign in first — if that account is on the
+                admin list, you&apos;ll land straight in the dashboard.
+              </p>
+              <a
+                href="/api/auth/github"
+                className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-900/30 hover:shadow-purple-900/50 hover:-translate-y-0.5"
+              >
+                Sign in with GitHub
+              </a>
+            </>
+          )}
         </div>
-
-        <p className="text-center text-white/20 text-xs mt-6">
-          Restricted access — authorized personnel only
-        </p>
       </div>
     </main>
   );

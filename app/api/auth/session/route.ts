@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { isAdminUsername } from '@/lib/admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +27,10 @@ export async function GET() {
     }
 
     const userData = await userRes.json();
+    const isAdmin = await isAdminUsername(userData.login);
     return NextResponse.json({
       authenticated: true,
+      isAdmin,
       user: {
         username: userData.login,
         name: userData.name || userData.login,

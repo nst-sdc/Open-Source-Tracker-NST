@@ -20,6 +20,7 @@ const LINKS = [
 
 interface Session {
   authenticated: boolean;
+  isAdmin?: boolean;
   user?: {
     username: string;
     name: string;
@@ -40,6 +41,11 @@ export function Nav() {
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  // Pure UI preference for admins — real access control is always the
+  // server-side isAdmin check, this just decides what the nav shows.
+  // Defaults to 'user' so an admin sees the site like everyone else unless
+  // they deliberately switch, or are already somewhere under /admin.
+  const [adminMode, setAdminMode] = useState(false);
 
   // Load session info on mount and when path changes
   useEffect(() => {
@@ -56,6 +62,26 @@ export function Nav() {
     }
     checkSession();
   }, [path]);
+
+  // Initialize the toggle from localStorage, and force it on while browsing
+  // anything under /admin so it always reflects where you actually are.
+  useEffect(() => {
+    if (path.startsWith('/admin')) {
+      setAdminMode(true);
+      return;
+    }
+    try {
+      setAdminMode(localStorage.getItem('adminViewMode') === 'admin');
+    } catch {
+      setAdminMode(false);
+    }
+  }, [path]);
+
+  function toggleAdminMode() {
+    const next = !adminMode;
+    setAdminMode(next);
+    try { localStorage.setItem('adminViewMode', next ? 'admin' : 'user'); } catch {}
+  }
 
   // Close menus on route change
   useEffect(() => {
@@ -115,6 +141,35 @@ export function Nav() {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            {/* Admin/User toggle — visible only to admins. Pure UI switch;
+                real access control is always the server-side isAdmin check. */}
+            {session?.isAdmin && (
+              <div className="hidden sm:flex items-center gap-2">
+                {adminMode && (
+                  <Link
+                    href="/admin/dashboard"
+                    className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/25 text-purple-300 hover:bg-purple-500/20 transition-all font-medium whitespace-nowrap"
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleAdminMode}
+                  aria-label="Toggle admin mode"
+                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${adminMode ? 'bg-purple-500/60' : 'bg-white/[0.1]'}`}
+                  title={adminMode ? 'Admin mode — click for User mode' : 'User mode — click for Admin mode'}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${adminMode ? 'translate-x-5' : ''}`}
+                  />
+                </button>
+                <span className="text-[10px] text-white/35 font-medium uppercase tracking-wide">
+                  {adminMode ? 'Admin' : 'User'}
+                </span>
+              </div>
+            )}
+
             {/* GitHub Session Info / Sign In */}
             {session && (
               session.authenticated && session.user ? (
@@ -223,6 +278,28 @@ export function Nav() {
                   </Link>
                 );
               })}
+
+              {/* Mobile admin/user toggle */}
+              {session?.isAdmin && (
+                <div className="flex items-center justify-between gap-3 mt-2 mx-2 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={toggleAdminMode}
+                      aria-label="Toggle admin mode"
+                      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${adminMode ? 'bg-purple-500/60' : 'bg-white/[0.1]'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${adminMode ? 'translate-x-5' : ''}`} />
+                    </button>
+                    <span className="text-xs text-white/50 font-medium">{adminMode ? 'Admin Mode' : 'User Mode'}</span>
+                  </div>
+                  {adminMode && (
+                    <Link href="/admin/dashboard" className="text-xs text-purple-400 font-medium">
+                      Dashboard →
+                    </Link>
+                  )}
+                </div>
+              )}
 
               {/* Mobile GitHub Auth Link */}
               {session && (
