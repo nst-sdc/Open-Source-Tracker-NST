@@ -1,79 +1,137 @@
 [
   {
-    "name": "Abhijeet Dey",
-    "github": "CWAbhi",
-    "headline": "LFX Mentorship 2025 contributor",
+    "github": "unverified--mehak-jain",
+    "name": "Mehak Jain",
     "programs": [
       {
-        "name": "LFX",
-        "year": 2025,
-        "org": "CNCF / Kubernetes",
-        "url": ""
+        "name": "GSoC",
+        "year": 2024,
+        "org": "NumFOCUS",
+        "project": "Jupyter Lab UI improvements",
+        "description": "Building a consistent, easy-to-maintain user interface for Jupyter Lab.",
+        "url": "https://summerofcode.withgoogle.com/archive/2024/projects/dT0khoRP"
       }
     ]
   },
   {
-    "name": "Kartikey Gupta",
-    "github": "kartikeyg0104",
-    "headline": "Google Summer of Code 2025 contributor",
+    "github": "Jitmisra",
+    "name": "Agnik Misra",
+    "headline": "NST-RU",
+    "linkedinUrl": "https://www.linkedin.com/in/agnikmisra/",
     "programs": [
       {
         "name": "GSoC",
         "year": 2025,
-        "org": "SymPy",
-        "url": ""
+        "org": "Apache Software Foundation",
+        "url": "https://summerofcode.withgoogle.com/archive/2025/projects/HH06mbPA"
+      },
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "org": "OSIPI",
+        "project": "Quality Check ToolBox V1.0",
+        "description": "Building an open-source Python quality control library for MRI perfusion data."
       }
     ]
   },
   {
-    "name": "Tarunya Kesharvani",
+    "github": "unverified--krishna-dave",
+    "name": "Krishna Dave",
+    "linkedinUrl": "https://in.linkedin.com/in/krishna-dave-446256312",
+    "programs": [
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "url": "https://summerofcode.withgoogle.com/programs/2026/projects/UAEqFIyg"
+      },
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "url": "https://summerofcode.withgoogle.com/programs/2026/projects/7hkN7P2p"
+      }
+    ]
+  },
+  {
+    "github": "unverified--geetansh-goyal",
+    "name": "Geetansh Goyal",
+    "headline": "NST-SVYASA",
+    "programs": [
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "org": "openSUSE Project",
+        "project": "Uyuni Event-Driven Automation via MQTT and Node-RED",
+        "description": "Making Uyuni more automation-friendly through real-time event-driven workflows."
+      }
+    ]
+  },
+  {
     "github": "TarunyaProgrammer",
-    "headline": "Outreachy 2025 intern",
-    "programs": [
-      {
-        "name": "Outreachy",
-        "year": 2025,
-        "org": "GNOME Foundation",
-        "url": ""
-      }
-    ]
-  },
-  {
-    "name": "Kartik Yadav",
-    "github": "kartik-yadav",
-    "headline": "Google Summer of Code 2025 contributor",
+    "name": "Tarunya K",
+    "headline": "NST-RU",
     "programs": [
       {
         "name": "GSoC",
-        "year": 2025,
-        "org": "Python Software Foundation",
-        "url": ""
+        "year": 2026,
+        "org": "C2SI",
+        "project": "Scalable Event-Driven Architecture for Webiu",
+        "description": "Building a scalable architecture using GitHub webhooks, queue-based processing, persistent storage, and distributed caching."
       }
     ]
   },
   {
+    "github": "unverified--kartik-yadav",
+    "name": "Kartik Yadav",
+    "headline": "NST-RU",
+    "programs": [
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "org": "omegaUp",
+        "project": "Performance Monitoring and Alerting Dashboard",
+        "description": "Building monitoring, alerting, and observability systems across omegaUp's infrastructure."
+      }
+    ]
+  },
+  {
+    "github": "kartikeyg0104",
+    "name": "Kartikey Gupta",
+    "headline": "NST-RU",
+    "programs": [
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "org": "C2SI",
+        "project": "TensorMap",
+        "description": "Working on a neural network design studio with real-time training visualisation and model export capabilities."
+      }
+    ]
+  },
+  {
+    "github": "unverified--manshu-saini",
     "name": "Manshu Saini",
-    "github": "manshu-saini",
-    "headline": "Summer of Bitcoin 2025 contributor",
+    "headline": "NST-RU",
     "programs": [
       {
-        "name": "Summer of Bitcoin",
-        "year": 2025,
-        "org": "Bitcoin FOSS",
-        "url": ""
+        "name": "GSoC",
+        "year": 2026,
+        "org": "OWASP® Foundation",
+        "project": "OpenCRE Noise & Relevance Filtering Pipeline",
+        "description": "Building an intelligent filtering pipeline for cybersecurity knowledge across OWASP projects."
       }
     ]
   },
   {
-    "name": "Agnik Mishra",
-    "github": "agnik-mishra",
-    "headline": "MLH Fellowship 2025 fellow",
+    "github": "unverified--tushar-verma",
+    "name": "Tushar Verma",
+    "headline": "NST-ADYPU",
     "programs": [
       {
-        "name": "MLH",
-        "year": 2025,
-        "org": "Major League Hacking",
-        "url": ""
+        "name": "GSoC",
+        "year": 2026,
+        "org": "JSON Schema",
+        "project": "Comprehensive Test Suite for Format Validation",
+        "description": "Building RFC-grounded test cases for JSON Schema format validation."
       }
     ]
   }

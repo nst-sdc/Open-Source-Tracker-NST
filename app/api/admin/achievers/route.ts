@@ -13,9 +13,9 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!(await checkAdminAuth())) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await request.json().catch(() => ({}));
-  const { github, name, headline, bookingUrl, programs } = body as {
-    github?: string; name?: string; headline?: string; bookingUrl?: string;
-    programs?: Array<{ name: string; year?: number; org?: string; url?: string }>;
+  const { github, name, headline, bookingUrl, linkedinUrl, programs } = body as {
+    github?: string; name?: string; headline?: string; bookingUrl?: string; linkedinUrl?: string;
+    programs?: Array<{ name: string; year?: number; org?: string; url?: string; project?: string; description?: string }>;
   };
   if (!github?.trim()) return Response.json({ error: 'Missing github username' }, { status: 400 });
   if (!programs?.length) return Response.json({ error: 'At least one program is required' }, { status: 400 });
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     ...(name?.trim() ? { name: name.trim() } : {}),
     ...(headline?.trim() ? { headline: headline.trim() } : {}),
     ...(bookingUrl?.trim() ? { bookingUrl: bookingUrl.trim() } : {}),
+    ...(linkedinUrl?.trim() ? { linkedinUrl: linkedinUrl.trim() } : {}),
     programs,
   });
   if (!result.ok) return Response.json({ error: result.message }, { status: 409 });

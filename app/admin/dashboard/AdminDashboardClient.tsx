@@ -1499,7 +1499,7 @@ function EventsTab() {
 
 // ─── Achievers Tab ────────────────────────────────────────────────────────────
 
-interface AchieverEntry { github: string; name?: string; programs: Array<{ name: string; year?: number; org?: string; url?: string }>; }
+interface AchieverEntry { github: string; name?: string; linkedinUrl?: string; programs: Array<{ name: string; year?: number; org?: string; url?: string; project?: string; description?: string }>; }
 
 const PROGRAM_OPTIONS = ['GSoC', 'LFX', 'Outreachy', 'Summer of Bitcoin', 'ESoC', 'MLH', 'Hacktoberfest'];
 
@@ -1508,7 +1508,7 @@ function AchieversTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [form, setForm] = useState({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+  const [form, setForm] = useState({ github: '', name: '', linkedinUrl: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', project: '', description: '', url: '' });
   const [adding, setAdding] = useState(false);
 
   async function load() {
@@ -1528,15 +1528,18 @@ function AchieversTab() {
       body: JSON.stringify({
         github: form.github.trim(),
         ...(form.name.trim() ? { name: form.name.trim() } : {}),
+        ...(form.linkedinUrl.trim() ? { linkedinUrl: form.linkedinUrl.trim() } : {}),
         programs: [{
           name: form.programName,
           ...(form.year ? { year: parseInt(form.year) } : {}),
           ...(form.org.trim() ? { org: form.org.trim() } : {}),
+          ...(form.project.trim() ? { project: form.project.trim() } : {}),
+          ...(form.description.trim() ? { description: form.description.trim() } : {}),
           ...(form.url.trim() ? { url: form.url.trim() } : {}),
         }],
       }),
     });
-    if (res.ok) { setSuccess(`@${form.github.trim()} added to Hall of Fame!`); setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' }); await load(); }
+    if (res.ok) { setSuccess(`@${form.github.trim()} added to Hall of Fame!`); setForm({ github: '', name: '', linkedinUrl: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', project: '', description: '', url: '' }); await load(); }
     else { const d = await res.json(); setError(d.error ?? 'Failed'); }
     setAdding(false);
   }
@@ -1565,6 +1568,8 @@ function AchieversTab() {
             className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
           <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name (optional)"
             className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          <input value={form.linkedinUrl} onChange={(e) => setForm(f => ({ ...f, linkedinUrl: e.target.value }))} placeholder="LinkedIn URL (optional)" type="url"
+            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
           <select value={form.programName} onChange={(e) => setForm(f => ({ ...f, programName: e.target.value }))}
             className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white/70 text-sm focus:outline-none focus:border-purple-500/40">
             {PROGRAM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1573,8 +1578,12 @@ function AchieversTab() {
             className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
           <input value={form.org} onChange={(e) => setForm(f => ({ ...f, org: e.target.value }))} placeholder="Organization (optional)"
             className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          <input value={form.project} onChange={(e) => setForm(f => ({ ...f, project: e.target.value }))} placeholder="Project title (optional)"
+            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
           <input value={form.url} onChange={(e) => setForm(f => ({ ...f, url: e.target.value }))} placeholder="Project URL (optional)"
             className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          <input value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Project description (optional)"
+            className="sm:col-span-2 bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
         </div>
         <button type="submit" disabled={adding || !form.github.trim()}
           className="bg-gradient-to-r from-yellow-600 to-orange-600 disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-all">
@@ -1592,7 +1601,15 @@ function AchieversTab() {
               <div className="flex items-center gap-3 min-w-0">
                 <img src={`https://avatars.githubusercontent.com/${a.github}?s=32`} alt={a.github} className="w-8 h-8 rounded-full ring-1 ring-yellow-500/30" />
                 <div className="min-w-0">
-                  <p className="text-white/80 text-sm font-medium">{a.name ?? `@${a.github}`}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-white/80 text-sm font-medium">{a.name ?? `@${a.github}`}</p>
+                    {a.github.startsWith('unverified--') && (
+                      <span title="Placeholder — real GitHub username not confirmed yet. Edit via the API or delete and re-add with the correct username."
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 font-bold uppercase tracking-wide">
+                        Needs GitHub
+                      </span>
+                    )}
+                  </div>
                   <p className="text-white/30 text-xs">{a.programs.map(p => `${p.name}${p.year ? ` ${p.year}` : ''}`).join(' · ')}</p>
                 </div>
               </div>

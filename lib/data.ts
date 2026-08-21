@@ -8,6 +8,9 @@ export interface Program {
   year?: number;
   org?: string;
   url?: string;
+  /** Project title, e.g. "TensorMap" — distinct from the org name */
+  project?: string;
+  description?: string;
 }
 
 export interface PersonEntry {
@@ -15,6 +18,7 @@ export interface PersonEntry {
   name?: string;
   headline?: string;
   bookingUrl?: string;
+  linkedinUrl?: string;
   programs: Program[];
 }
 
