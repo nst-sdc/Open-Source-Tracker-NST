@@ -44,6 +44,9 @@ Nothing to do here except push to `main` — `.github/workflows/build-and-push.y
 
 ## 4. Open the Rancher kubectl shell
 
+If Rancher's own login is down or unreachable, everything below still works via direct SSH
+instead — see [CLUSTER-ACCESS.md](./CLUSTER-ACCESS.md), which doesn't depend on Rancher at all.
+
 1. Go to `rancher.nstsdc.org`, find the **"local"** cluster in the cluster list (there may be more than one cluster listed — `local` is the shared one everyone deploys to), and click into it.
 2. In the top-right corner of the cluster view, click the small terminal icon (`>_`). This opens a **Kubectl Shell** panel at the bottom of the page — a real terminal, already authenticated as you, running inside the cluster. No SSH, no downloaded kubeconfig, nothing to install.
 
