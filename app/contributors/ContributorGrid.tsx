@@ -54,9 +54,17 @@ function ContributorCard({
           />
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
-          <h3 className="font-semibold text-white/90 group-hover:text-white truncate transition-colors">
-            {summary.profile.name ?? summary.profile.login}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-white/90 group-hover:text-white truncate transition-colors">
+              {summary.profile.name ?? summary.profile.login}
+            </h3>
+            <span
+              title="Ranking score for this contributor"
+              className="flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 tabular-nums"
+            >
+              {summary.scoreMergedPRs.toFixed(1)}
+            </span>
+          </div>
           <p className="text-white/35 text-xs mt-0.5 truncate">@{summary.profile.login}</p>
           {(summary.year || summary.campus) && (
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">

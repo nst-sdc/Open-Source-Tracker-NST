@@ -114,6 +114,9 @@ export default async function Home() {
                   <div className="text-white/25 text-xs">@{s.profile.login}</div>
                 </div>
                 <div className="flex items-center gap-3 text-xs flex-shrink-0">
+                  <span title="Ranking score" className="text-amber-400 font-semibold tabular-nums px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                    {s.scoreMergedPRs.toFixed(1)}
+                  </span>
                   <span className="text-emerald-400 font-medium tabular-nums">{s.mergedPRs} merged</span>
                   <span className="text-white/15 group-hover:text-purple-400 transition-colors">→</span>
                 </div>
