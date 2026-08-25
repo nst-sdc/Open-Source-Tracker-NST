@@ -27,9 +27,9 @@ interface PRWithMeta extends RawPR {
 }
 
 const REASON_LABELS: Record<FlagReason, { label: string; color: string; bg: string; border: string }> = {
-  fake:        { label: 'Fake PR',     color: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/25' },
-  self_pr:     { label: 'Self PR',     color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/25' },
-  low_quality: { label: 'Low Quality', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/25' },
+  fake:        { label: 'Fake PR',     color: 'text-error-600',    bg: 'bg-error-0',    border: 'border-error-100' },
+  self_pr:     { label: 'Self PR',     color: 'text-warning-600', bg: 'bg-warning-0', border: 'border-warning-200' },
+  low_quality: { label: 'Low Quality', color: 'text-gold-600', bg: 'bg-gold-0', border: 'border-gold-100' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -70,16 +70,16 @@ async function fetchPRsForUser(username: string): Promise<RawPR[]> {
 
 function StatusBadge({ pr }: { pr: PRWithMeta }) {
   if (pr.isMerged)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/25 whitespace-nowrap">Merged</span>;
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-violet-0 text-violet-600 border border-violet-100 whitespace-nowrap">Merged</span>;
   if (pr.state === 'open')
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-400 border border-teal-500/25 whitespace-nowrap">Open</span>;
-  return <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.05] text-white/30 border border-white/10 whitespace-nowrap">Closed</span>;
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-brand-0 text-brand-600 border border-brand-100 whitespace-nowrap">Open</span>;
+  return <span className="text-xs px-2 py-0.5 rounded-full bg-white text-ink-soft border border-line whitespace-nowrap">Closed</span>;
 }
 
 function FlagBadge({ flag }: { flag: FlaggedPR }) {
   const meta = REASON_LABELS[flag.reason];
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium whitespace-nowrap ${meta.bg} ${meta.color} ${meta.border}`}>
+    <span className={`text-xs px-2 py-0.5 rounded-full border font-[500] whitespace-nowrap ${meta.bg} ${meta.color} ${meta.border}`}>
       ⚑ {meta.label}
     </span>
   );
@@ -120,20 +120,20 @@ function FlagModal({ pr, onClose, onFlagged }: FlagModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#0a0f1d] border border-white/[0.1] rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-white font-semibold text-lg mb-1">Flag PR</h3>
-        <p className="text-white/35 text-sm mb-5 leading-relaxed truncate" title={pr.title}>{pr.title}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40" onClick={onClose}>
+      <div className="bg-white border border-line rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-ink font-[550] text-lg mb-1">Flag PR</h3>
+        <p className="text-ink-soft text-sm mb-5 leading-relaxed truncate" title={pr.title}>{pr.title}</p>
 
         <div className="space-y-3 mb-5">
           {(Object.entries(REASON_LABELS) as [FlagReason, typeof REASON_LABELS[FlagReason]][]).map(([key, meta]) => (
             <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-              reason === key ? `${meta.bg} ${meta.border}` : 'bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04]'
+              reason === key ? `${meta.bg} ${meta.border}` : 'bg-white border-line hover:bg-panel'
             }`}>
               <input type="radio" name="flag-reason" value={key} checked={reason === key} onChange={() => setReason(key)} className="accent-purple-500" />
               <div>
-                <div className={`font-medium text-sm ${reason === key ? meta.color : 'text-white/60'}`}>{meta.label}</div>
-                <div className="text-white/25 text-xs">
+                <div className={`font-[500] text-sm ${reason === key ? meta.color : 'text-ink-mid'}`}>{meta.label}</div>
+                <div className="text-ink-soft text-xs">
                   {key === 'fake' && 'PR is completely fake or spam'}
                   {key === 'self_pr' && "Merged to contributor's own repository"}
                   {key === 'low_quality' && 'Trivial change not worthy of contribution credit'}
@@ -144,17 +144,17 @@ function FlagModal({ pr, onClose, onFlagged }: FlagModalProps) {
         </div>
 
         <div className="mb-5">
-          <label className="block text-xs text-white/40 mb-2 uppercase tracking-wider">Note (optional)</label>
+          <label className="block text-xs text-ink-soft mb-2 uppercase tracking-wider">Note (optional)</label>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Admin note…" rows={2}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white/80 placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40 resize-none" />
+            className="w-full bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 resize-none" />
         </div>
 
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white/70 hover:bg-white/[0.06] transition-all text-sm font-medium">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-white border border-line text-ink-soft hover:text-ink-mid hover:bg-panel transition-all text-sm font-[500]">
             Cancel
           </button>
           <button onClick={submit} disabled={loading} id="confirm-flag-btn"
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-600/80 to-orange-600/80 hover:from-red-500/80 hover:to-orange-500/80 text-white font-semibold transition-all text-sm disabled:opacity-50 shadow-lg shadow-red-900/20">
+            className="flex-1 py-2.5 rounded-xl bg-error-500 hover:bg-error-400 text-white font-[550] transition-all text-sm disabled:opacity-50 ">
             {loading ? 'Flagging…' : '⚑ Flag PR'}
           </button>
         </div>
@@ -177,32 +177,32 @@ interface PRRowProps {
 function PRRow({ pr, showAuthor, onApprove, onFlag, onUnflag, onUnapprove }: PRRowProps) {
   return (
     <div className={`group flex items-start gap-3 rounded-xl p-4 border transition-all ${
-      pr.flagged ? 'bg-red-500/[0.04] border-red-500/[0.15]'
-      : pr.approved ? 'bg-emerald-500/[0.03] border-emerald-500/[0.12]'
-      : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
+      pr.flagged ? 'bg-error-500/[0.04] border-error-100'
+      : pr.approved ? 'bg-success-500/[0.03] border-success-100'
+      : 'bg-white border-line hover:bg-panel hover:border-line-heavy'
     }`}>
       <img src={pr.user.avatar_url} alt={pr.user.login} className="w-7 h-7 rounded-full flex-shrink-0 opacity-70 mt-0.5" />
 
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <a href={pr.pull_request?.html_url ?? pr.html_url} target="_blank" rel="noopener noreferrer"
-            className="text-white/80 font-medium hover:text-white transition-colors text-sm leading-snug">
+            className="text-ink font-[500] hover:text-ink transition-colors text-sm leading-snug">
             {pr.title}
           </a>
-          <span className="text-white/20 text-xs tabular-nums">#{pr.number}</span>
+          <span className="text-ink-soft text-xs tabular-nums">#{pr.number}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {showAuthor && <span className="text-purple-400/70 text-xs font-medium">@{pr.user.login}</span>}
-          <span className="text-white/25 text-xs font-mono truncate max-w-[180px]">{pr.repo}</span>
-          <span className="text-white/15 text-xs">·</span>
-          <span className="text-white/25 text-xs">{formatDate(pr.created_at)}</span>
+          {showAuthor && <span className="text-violet-600/70 text-xs font-[500]">@{pr.user.login}</span>}
+          <span className="text-ink-soft text-xs font-mono truncate max-w-[180px]">{pr.repo}</span>
+          <span className="text-ink-faint text-xs">·</span>
+          <span className="text-ink-soft text-xs">{formatDate(pr.created_at)}</span>
           <StatusBadge pr={pr} />
           {pr.flagged && <FlagBadge flag={pr.flagged} />}
           {pr.approved && !pr.flagged && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">✓ Approved</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-success-0 text-success-600 border border-success-100 whitespace-nowrap">✓ Approved</span>
           )}
         </div>
-        {pr.flagged?.note && <p className="text-white/30 text-xs mt-1 italic">Note: {pr.flagged.note}</p>}
+        {pr.flagged?.note && <p className="text-ink-soft text-xs mt-1 italic">Note: {pr.flagged.note}</p>}
       </div>
 
       {/* Actions */}
@@ -210,14 +210,14 @@ function PRRow({ pr, showAuthor, onApprove, onFlag, onUnflag, onUnapprove }: PRR
         {pr.flagged ? (
           onUnflag && (
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUnflag(pr.prKey); }}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-all cursor-pointer">
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid hover:bg-panel transition-all cursor-pointer">
               Unflag
             </button>
           )
         ) : pr.approved ? (
           onUnapprove && (
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUnapprove(pr); }}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
               Undo
             </button>
           )
@@ -226,13 +226,13 @@ function PRRow({ pr, showAuthor, onApprove, onFlag, onUnflag, onUnapprove }: PRR
             {onApprove && (
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onApprove(pr); }}
                 title="Looks good — approve"
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
+                className="text-xs px-2.5 py-1.5 rounded-lg bg-success-0 border border-success-100 text-success-600 hover:bg-success-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
                 ✓ Approve
               </button>
             )}
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFlag(pr); }}
               title="Flag this PR"
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
               ⚑ Flag
             </button>
           </>
@@ -316,8 +316,8 @@ function QueueTab({ students, reviewedIds, flaggedMap, onFlag, onApprove, onUnap
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-white font-semibold">PR Review Queue</h2>
-          <p className="text-white/35 text-sm mt-0.5">
+          <h2 className="text-ink font-[550]">PR Review Queue</h2>
+          <p className="text-ink-soft text-sm mt-0.5">
             All contributor PRs — approve clean ones, flag bad ones.
           </p>
         </div>
@@ -325,7 +325,7 @@ function QueueTab({ students, reviewedIds, flaggedMap, onFlag, onApprove, onUnap
           id="load-queue-btn"
           onClick={loadQueue}
           disabled={loading}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-purple-900/20 flex items-center gap-2 text-sm"
+          className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-[550] px-5 py-2.5 rounded-xl transition-all  flex items-center gap-2 text-sm"
         >
           {loading ? (
             <>
@@ -349,41 +349,41 @@ function QueueTab({ students, reviewedIds, flaggedMap, onFlag, onApprove, onUnap
       {/* Progress bar */}
       {loading && (
         <div className="mb-6">
-          <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-panel rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-300 rounded-full"
+              className="h-full bg-brand-500 transition-all duration-300 rounded-full"
               style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
             />
           </div>
-          <p className="text-white/25 text-xs mt-2">Fetching PRs from GitHub… ({progress.done}/{progress.total} contributors)</p>
+          <p className="text-ink-soft text-xs mt-2">Fetching PRs from GitHub… ({progress.done}/{progress.total} contributors)</p>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/25 rounded-xl p-4 text-red-400 text-sm mb-6">{error}</div>
+        <div className="bg-error-0 border border-error-100 rounded-xl p-4 text-error-600 text-sm mb-6">{error}</div>
       )}
 
       {/* Stats strip */}
       {loaded && !loading && (
         <div className="flex flex-wrap gap-3 mb-5">
           {[
-            { label: 'Pending Review', value: pendingPRs.length, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
-            { label: 'Approved', value: queuePRs.filter(p => p.approved).length, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-            { label: 'Flagged', value: queuePRs.filter(p => p.flagged).length, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
-            { label: 'Total PRs', value: queuePRs.length, color: 'text-white/50', bg: 'bg-white/[0.04]', border: 'border-white/[0.08]' },
+            { label: 'Pending Review', value: pendingPRs.length, color: 'text-gold-600', bg: 'bg-gold-0', border: 'border-gold-100' },
+            { label: 'Approved', value: queuePRs.filter(p => p.approved).length, color: 'text-success-600', bg: 'bg-success-0', border: 'border-success-100' },
+            { label: 'Flagged', value: queuePRs.filter(p => p.flagged).length, color: 'text-error-600', bg: 'bg-error-0', border: 'border-error-100' },
+            { label: 'Total PRs', value: queuePRs.length, color: 'text-ink-soft', bg: 'bg-white', border: 'border-line' },
           ].map((s) => (
             <div key={s.label} className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${s.bg} ${s.border}`}>
-              <span className={`text-xl font-bold tabular-nums ${s.color}`}>{s.value}</span>
-              <span className="text-white/35 text-xs">{s.label}</span>
+              <span className={`text-xl font-[650] tabular-nums ${s.color}`}>{s.value}</span>
+              <span className="text-ink-soft text-xs">{s.label}</span>
             </div>
           ))}
 
           {/* Filter toggle */}
-          <div className="flex gap-1 ml-auto bg-white/[0.03] border border-white/[0.07] rounded-xl p-1">
+          <div className="flex gap-1 ml-auto bg-white border border-line rounded-xl p-1">
             {(['pending', 'all'] as const).map((f) => (
               <button key={f} onClick={() => setQueueFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${
-                  queueFilter === f ? 'bg-white/[0.08] text-white' : 'text-white/35 hover:text-white/55'
+                className={`px-3 py-1.5 rounded-lg text-xs font-[500] transition-all capitalize ${
+                  queueFilter === f ? 'bg-panel text-ink' : 'text-ink-soft hover:text-ink-mid'
                 }`}>
                 {f === 'pending' ? `⏳ Pending (${pendingPRs.length})` : `All (${queuePRs.length})`}
               </button>
@@ -394,17 +394,17 @@ function QueueTab({ students, reviewedIds, flaggedMap, onFlag, onApprove, onUnap
 
       {/* Empty state */}
       {!loaded && !loading && (
-        <div className="text-center py-24 text-white/20">
+        <div className="text-center py-24 text-ink-soft">
           <div className="text-5xl mb-4">📥</div>
-          <p className="text-base font-medium text-white/30 mb-1">Queue not loaded yet</p>
+          <p className="text-base font-[500] text-ink-soft mb-1">Queue not loaded yet</p>
           <p className="text-sm">Click &quot;Load Queue&quot; to fetch all contributor PRs from server cache</p>
         </div>
       )}
 
       {loaded && !loading && displayPRs.length === 0 && (
-        <div className="text-center py-24 text-white/20">
+        <div className="text-center py-24 text-ink-soft">
           <div className="text-5xl mb-4">🎉</div>
-          <p className="text-base font-medium text-white/35 mb-1">All caught up!</p>
+          <p className="text-base font-[500] text-ink-soft mb-1">All caught up!</p>
           <p className="text-sm">No pending PRs to review</p>
         </div>
       )}
@@ -571,29 +571,29 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
   });
 
   return (
-    <main className="min-h-screen bg-[#030712]">
+    <main className="min-h-screen bg-panel">
       {/* Glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-600/6 blur-[120px] rounded-full" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-brand-100/30 blur-[120px] rounded-full" />
       </div>
 
       {/* Header */}
-      <header className="relative border-b border-white/[0.07] bg-[#030712]/80 backdrop-blur-sm sticky top-0 z-30">
+      <header className="relative border-b border-line bg-panel/80 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/30 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
-              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 rounded-lg bg-brand-0 flex items-center justify-center">
+              <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
             </div>
-            <span className="text-white font-semibold text-sm">Admin Dashboard</span>
+            <span className="text-ink font-[550] text-sm">Admin Dashboard</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-white/25 text-xs hidden sm:inline">{allFlagged.length} flagged</span>
+            <span className="text-ink-soft text-xs hidden sm:inline">{allFlagged.length} flagged</span>
             <button onClick={handleLogout} disabled={logoutLoading} id="admin-logout-btn"
-              className="text-white/40 hover:text-white/70 text-sm px-3 py-1.5 rounded-lg hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition-all flex items-center gap-1.5">
+              className="text-ink-soft hover:text-ink-mid text-sm px-3 py-1.5 rounded-lg hover:bg-panel border border-transparent hover:border-line transition-all flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
@@ -605,7 +605,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
       <div className="relative max-w-6xl mx-auto px-4 py-8">
         {/* Tabs */}
-        <div className="flex flex-wrap gap-1 mb-8 bg-white/[0.03] border border-white/[0.07] rounded-xl p-1 w-fit">
+        <div className="flex flex-wrap gap-1 mb-8 bg-white border border-line rounded-xl p-1 w-fit">
           {([
             { id: 'queue',    label: '📥 Queue',    badge: pendingCount > 0 ? pendingCount : null },
             { id: 'requests', label: '📨 Requests', badge: pendingReqCount && pendingReqCount > 0 ? pendingReqCount : null },
@@ -617,13 +617,13 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             { id: 'ownRepos', label: '🌱 Own-Repo PRs', badge: null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
-              className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                tab === id ? 'bg-white/[0.08] text-white border border-white/[0.12]' : 'text-white/40 hover:text-white/60'
+              className={`relative px-4 py-2 rounded-lg text-sm font-[500] transition-all ${
+                tab === id ? 'bg-panel text-ink border border-line-strong' : 'text-ink-soft hover:text-ink-mid'
               }`}>
               {label}
               {badge !== null && (
-                <span className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                  id === 'queue' ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'
+                <span className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-[650] flex items-center justify-center ${
+                  id === 'queue' ? 'bg-gold-400 text-ink' : 'bg-error-500 text-white'
                 }`}>
                   {badge}
                 </span>
@@ -652,7 +652,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
           <div>
             <div className="flex flex-wrap gap-3 mb-6">
               <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs text-white/35 mb-1.5 uppercase tracking-wider">Select contributor</label>
+                <label className="block text-xs text-ink-soft mb-1.5 uppercase tracking-wider">Select contributor</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -670,7 +670,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                       }
                     }}
                     onFocus={() => setIsDropdownOpen(true)}
-                    className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl pl-4 pr-14 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/40 cursor-text"
+                    className="w-full bg-white border border-line rounded-xl pl-4 pr-14 py-2.5 text-ink text-sm focus:outline-none focus:border-violet-100 cursor-text"
                   />
                   {searchQuery && (
                     <button
@@ -679,7 +679,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                         setSelectedUser('');
                         setBrowsePRs([]);
                       }}
-                      className="absolute right-9 top-3.5 text-white/20 hover:text-white/50 transition-colors cursor-pointer"
+                      className="absolute right-9 top-3.5 text-ink-soft hover:text-ink-soft transition-colors cursor-pointer"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -688,7 +688,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                   )}
                   <div
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="absolute right-3 top-3 text-white/30 hover:text-white/60 cursor-pointer"
+                    className="absolute right-3 top-3 text-ink-soft hover:text-ink-mid cursor-pointer"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -698,7 +698,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                   {isDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-                      <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-[#0a0f1d] border border-white/[0.15] rounded-xl shadow-2xl z-20 scrollbar-thin">
+                      <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-white border border-line-strong rounded-xl shadow-2xl z-20 scrollbar-thin">
                         {students.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
                           students
                             .filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -710,22 +710,22 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                                   setSearchQuery(s);
                                   setIsDropdownOpen(false);
                                 }}
-                                className={`px-4 py-2.5 text-sm text-white/80 cursor-pointer hover:bg-white/[0.06] hover:text-white transition-all ${
-                                  selectedUser === s ? 'bg-purple-500/20 text-purple-300 font-medium' : ''
+                                className={`px-4 py-2.5 text-sm text-ink cursor-pointer hover:bg-panel hover:text-ink transition-all ${
+                                  selectedUser === s ? 'bg-violet-0 text-violet-600 font-[500]' : ''
                                 }`}
                               >
                                 {s}
                               </div>
                             ))
                         ) : (
-                          <div className="px-4 py-3 text-xs text-white/25 text-center">
+                          <div className="px-4 py-3 text-xs text-ink-soft text-center">
                             No contributors match search.
                             <button
                               onClick={() => {
                                 setTab('students');
                                 setIsDropdownOpen(false);
                               }}
-                              className="block mx-auto mt-1.5 text-purple-400 hover:text-purple-300 underline font-medium cursor-pointer"
+                              className="block mx-auto mt-1.5 text-violet-600 hover:text-violet-500 underline font-[500] cursor-pointer"
                             >
                               Add student to track list
                             </button>
@@ -738,7 +738,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
               </div>
               <div className="flex items-end">
                 <button id="load-prs-btn" onClick={() => fetchBrowsePRs(selectedUser)} disabled={browseLoading || !selectedUser}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-purple-900/20 flex items-center gap-2 text-sm cursor-pointer">
+                  className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-[550] px-6 py-2.5 rounded-xl transition-all  flex items-center gap-2 text-sm cursor-pointer">
                   {browseLoading ? (
                     <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Loading…</>
                   ) : (
@@ -750,8 +750,8 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                 <div className="flex items-end gap-1">
                   {(['all', 'clean', 'flagged'] as const).map((f) => (
                     <button key={f} onClick={() => setBrowseFilter(f)}
-                      className={`px-3 py-2.5 rounded-xl text-xs font-medium border transition-all capitalize ${
-                        browseFilter === f ? 'bg-white/[0.08] text-white border-white/[0.15]' : 'bg-white/[0.02] text-white/35 border-white/[0.07] hover:text-white/55'
+                      className={`px-3 py-2.5 rounded-xl text-xs font-[500] border transition-all capitalize ${
+                        browseFilter === f ? 'bg-panel text-ink border-line-strong' : 'bg-white text-ink-soft border-line hover:text-ink-mid'
                       }`}>
                       {f === 'all' ? `All (${browsePRs.length})` : f === 'flagged' ? `Flagged (${browsePRs.filter(p => p.flagged).length})` : `Clean (${browsePRs.filter(p => !p.flagged).length})`}
                     </button>
@@ -760,21 +760,21 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
               )}
             </div>
 
-            {browseError && <div className="bg-red-500/10 border border-red-500/25 rounded-xl p-4 text-red-400 text-sm mb-6">{browseError}</div>}
+            {browseError && <div className="bg-error-0 border border-error-100 rounded-xl p-4 text-error-600 text-sm mb-6">{browseError}</div>}
 
             {!browseLoading && browsePRs.length === 0 && !browseError && (
-              <div className="text-center py-20 text-white/20 animate-in fade-in duration-300">
+              <div className="text-center py-20 text-ink-soft animate-in fade-in duration-300">
                 <svg className="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 {!selectedUser ? (
                   <>
-                    <p className="text-base font-medium text-white/35 mb-1">No contributor selected</p>
+                    <p className="text-base font-[500] text-ink-soft mb-1">No contributor selected</p>
                     <p className="text-sm">Search and select a tracked contributor from the dropdown above, or add a new student under the <strong>Students</strong> tab.</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-base font-medium text-white/35 mb-1">Contributor selected: @{selectedUser}</p>
+                    <p className="text-base font-[500] text-ink-soft mb-1">Contributor selected: @{selectedUser}</p>
                     <p className="text-sm">Click "Load PRs" to fetch their pull requests from GitHub.</p>
                   </>
                 )}
@@ -782,7 +782,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             )}
 
             {browseLoading && (
-              <div className="text-center py-20 text-white/25 flex flex-col items-center gap-3">
+              <div className="text-center py-20 text-ink-soft flex flex-col items-center gap-3">
                 <svg className="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -807,10 +807,10 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
         {/* ── Flagged Tab ── */}
         {tab === 'flagged' && (
           <div>
-            <p className="text-white/35 text-sm mb-6">These PRs are excluded from contribution counts across all views.</p>
+            <p className="text-ink-soft text-sm mb-6">These PRs are excluded from contribution counts across all views.</p>
 
             {allFlagged.length === 0 ? (
-              <div className="text-center py-20 text-white/20">
+              <div className="text-center py-20 text-ink-soft">
                 <div className="text-5xl mb-3">🏳️</div>
                 <p>No flagged PRs yet</p>
               </div>
@@ -819,24 +819,24 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                 {allFlagged.map((flag) => {
                   const meta = REASON_LABELS[flag.reason];
                   return (
-                    <div key={flag.id} className="flex items-start gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:bg-white/[0.035] transition-all">
-                      <span className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border font-medium ${meta.bg} ${meta.color} ${meta.border}`}>
+                    <div key={flag.id} className="flex items-start gap-4 bg-white border border-line rounded-xl p-4 hover:bg-white transition-all">
+                      <span className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border font-[500] ${meta.bg} ${meta.color} ${meta.border}`}>
                         {meta.label}
                       </span>
                       <div className="flex-1 min-w-0">
                         <a href={flag.url} target="_blank" rel="noopener noreferrer"
-                          className="text-white/75 text-sm font-medium hover:text-white transition-colors block">{flag.title}</a>
+                          className="text-ink-mid text-sm font-[500] hover:text-ink transition-colors block">{flag.title}</a>
                         <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <span className="text-white/25 text-xs">@{flag.author}</span>
-                          <span className="text-white/15 text-xs">·</span>
-                          <span className="text-white/20 text-xs font-mono">{flag.id}</span>
-                          <span className="text-white/15 text-xs">·</span>
-                          <span className="text-white/20 text-xs">{formatDate(flag.flaggedAt)}</span>
+                          <span className="text-ink-soft text-xs">@{flag.author}</span>
+                          <span className="text-ink-faint text-xs">·</span>
+                          <span className="text-ink-soft text-xs font-mono">{flag.id}</span>
+                          <span className="text-ink-faint text-xs">·</span>
+                          <span className="text-ink-soft text-xs">{formatDate(flag.flaggedAt)}</span>
                         </div>
-                        {flag.note && <p className="text-white/30 text-xs mt-1 italic">"{flag.note}"</p>}
+                        {flag.note && <p className="text-ink-soft text-xs mt-1 italic">"{flag.note}"</p>}
                       </div>
                       <button onClick={() => handleUnflag(flag.id)}
-                        className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/35 hover:text-white/65 hover:bg-white/[0.07] transition-all">
+                        className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid hover:bg-panel transition-all">
                         Unflag
                       </button>
                     </div>
@@ -986,17 +986,17 @@ function StudentsTab() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-white font-semibold">Tracked Students</h2>
-        <p className="text-white/35 text-sm mt-0.5">Add or remove GitHub usernames and assign year/campus labels.</p>
+        <h2 className="text-ink font-[550]">Tracked Students</h2>
+        <p className="text-ink-soft text-sm mt-0.5">Add or remove GitHub usernames and assign year/campus labels.</p>
       </div>
 
       <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-3 mb-6">
         <input type="text" value={newGithub} onChange={(e) => setNewGithub(e.target.value)}
           placeholder="GitHub username" id="new-student-input"
-          className="flex-1 bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          className="flex-1 bg-white border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         
         <select value={newYear} onChange={(e) => setNewYear(e.target.value as any)}
-          className="bg-[#0f172a] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/40 cursor-pointer">
+          className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink text-sm focus:outline-none focus:border-violet-100 cursor-pointer">
           <option value="">Select Year</option>
           <option value="1st year">1st Year</option>
           <option value="2nd year">2nd Year</option>
@@ -1005,7 +1005,7 @@ function StudentsTab() {
         </select>
 
         <select value={newCampus} onChange={(e) => setNewCampus(e.target.value as any)}
-          className="bg-[#0f172a] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/40 cursor-pointer">
+          className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink text-sm focus:outline-none focus:border-violet-100 cursor-pointer">
           <option value="">Select Campus</option>
           <option value="Rishihood">Rishihood</option>
           <option value="ADYPU">ADYPU</option>
@@ -1013,13 +1013,13 @@ function StudentsTab() {
         </select>
 
         <button type="submit" disabled={adding || !newGithub.trim()} id="add-student-btn"
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer">
+          className="bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white font-[550] px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer">
           {adding ? 'Adding…' : '+ Add'}
         </button>
       </form>
 
       {/* ── Search & Filter Bar ── */}
-      <div className="flex flex-col md:flex-row gap-3 mb-4 bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 animate-in fade-in slide-in-from-top-1 duration-200">
+      <div className="flex flex-col md:flex-row gap-3 mb-4 bg-white border border-line rounded-xl p-4 animate-in fade-in slide-in-from-top-1 duration-200">
         <div className="flex-1 relative">
           <input
             type="text"
@@ -1029,9 +1029,9 @@ function StudentsTab() {
               setVisibleCount(50);
             }}
             placeholder="Search student by GitHub username..."
-            className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl pl-9 pr-4 py-2 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40"
+            className="w-full bg-white border border-line rounded-xl pl-9 pr-4 py-2 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100"
           />
-          <span className="absolute left-3 top-2.5 text-white/30 text-sm">🔎</span>
+          <span className="absolute left-3 top-2.5 text-ink-soft text-sm">🔎</span>
         </div>
 
         <select
@@ -1040,7 +1040,7 @@ function StudentsTab() {
             setFilterYear(e.target.value);
             setVisibleCount(50);
           }}
-          className="bg-[#0f172a] border border-white/[0.1] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/40 cursor-pointer"
+          className="bg-white border border-line rounded-xl px-3 py-2 text-ink text-sm focus:outline-none focus:border-violet-100 cursor-pointer"
         >
           <option value="">All Years</option>
           <option value="1st year">1st Year</option>
@@ -1055,7 +1055,7 @@ function StudentsTab() {
             setFilterCampus(e.target.value);
             setVisibleCount(50);
           }}
-          className="bg-[#0f172a] border border-white/[0.1] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/40 cursor-pointer"
+          className="bg-white border border-line rounded-xl px-3 py-2 text-ink text-sm focus:outline-none focus:border-violet-100 cursor-pointer"
         >
           <option value="">All Campuses</option>
           <option value="Rishihood">Rishihood</option>
@@ -1072,69 +1072,69 @@ function StudentsTab() {
               setFilterCampus('');
               setVisibleCount(50);
             }}
-            className="text-xs px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white transition-all cursor-pointer"
+            className="text-xs px-4 py-2 rounded-xl bg-panel border border-line text-ink-mid hover:text-ink transition-all cursor-pointer"
           >
             Clear Filters
           </button>
         )}
       </div>
 
-      <div className="flex justify-between items-center mb-4 text-xs text-white/40 px-1">
+      <div className="flex justify-between items-center mb-4 text-xs text-ink-soft px-1">
         <p>Showing {Math.min(filteredStudents.length, visibleCount)} of {filteredStudents.length} students {filteredStudents.length !== students.length && `(filtered from ${students.length})`}</p>
       </div>
 
-      {error && <p className="text-red-400 text-sm mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
-      {success && <p className="text-emerald-400 text-sm mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</p>}
+      {error && <p className="text-error-600 text-sm mb-4 bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</p>}
+      {success && <p className="text-success-600 text-sm mb-4 bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</p>}
 
       {loading ? (
-        <div className="text-center py-12 text-white/25">Loading…</div>
+        <div className="text-center py-12 text-ink-soft">Loading…</div>
       ) : (
         <div className="space-y-2">
           {filteredStudents.slice(0, visibleCount).map((s) => {
             const isConfirming = confirmRemove === s.github;
             const isEditing = editingGithub === s.github;
             return (
-              <div key={s.github} className="group flex flex-col gap-3 bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 hover:bg-white/[0.04] transition-all">
+              <div key={s.github} className="group flex flex-col gap-3 bg-white border border-line rounded-xl px-4 py-3 hover:bg-panel transition-all">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <img src={`https://avatars.githubusercontent.com/${s.github}?s=32`} alt={s.github} className="w-8 h-8 rounded-full ring-1 ring-white/10" />
+                    <img src={`https://avatars.githubusercontent.com/${s.github}?s=32`} alt={s.github} className="w-8 h-8 rounded-full ring-1 ring-line" />
                     <div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-white/80 text-sm font-medium">@{s.github}</p>
+                        <p className="text-ink text-sm font-[500]">@{s.github}</p>
                         {s.year && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/25 font-semibold">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-0 text-violet-600 border border-violet-100 font-[550]">
                             {s.year}
                           </span>
                         )}
                         {s.campus && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 font-semibold">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-0 text-brand-600 border border-brand-100 font-[550]">
                             {s.campus}
                           </span>
                         )}
                       </div>
-                      <a href={`https://github.com/${s.github}`} target="_blank" rel="noopener noreferrer" className="text-white/25 text-xs hover:text-purple-400 transition-colors">github.com/{s.github}</a>
+                      <a href={`https://github.com/${s.github}`} target="_blank" rel="noopener noreferrer" className="text-ink-soft text-xs hover:text-violet-600 transition-colors">github.com/{s.github}</a>
                     </div>
                   </div>
                   {isConfirming ? (
                     <div className="flex items-center gap-1.5 flex-shrink-0 animate-in fade-in zoom-in-95 duration-150">
-                      <span className="text-xs text-white/40 mr-1 hidden xs:inline">Are you sure?</span>
+                      <span className="text-xs text-ink-soft mr-1 hidden xs:inline">Are you sure?</span>
                       <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); executeRemove(s.github); }}
-                        className="text-xs px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold transition-all cursor-pointer shadow-lg shadow-red-900/15">
+                        className="text-xs px-2.5 py-1.5 rounded-lg bg-error-500 hover:bg-error-500 text-white font-[550] transition-all cursor-pointer ">
                         Delete
                       </button>
                       <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmRemove(null); }}
-                        className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-all cursor-pointer">
+                        className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid transition-all cursor-pointer">
                         Cancel
                       </button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button type="button" onClick={() => startEdit(s)}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
+                        className="text-xs px-3 py-1.5 rounded-lg bg-panel border border-line text-ink-mid hover:text-ink hover:bg-panel transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
                         Edit
                       </button>
                       <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmRemove(s.github); }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
+                        className="text-xs px-3 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
                         Remove
                       </button>
                     </div>
@@ -1142,11 +1142,11 @@ function StudentsTab() {
                 </div>
 
                 {isEditing && (
-                  <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-white/[0.05] animate-in slide-in-from-top-2 duration-150">
+                  <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-line animate-in slide-in-from-top-2 duration-150">
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-semibold text-white/35 uppercase tracking-wider">Year</span>
+                      <span className="text-[10px] font-[550] text-ink-soft uppercase tracking-wider">Year</span>
                       <select value={editYear} onChange={(e) => setEditYear(e.target.value as any)}
-                        className="bg-[#0f172a] border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500/40 cursor-pointer">
+                        className="bg-white border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs focus:outline-none focus:border-violet-100 cursor-pointer">
                         <option value="">None</option>
                         <option value="1st year">1st Year</option>
                         <option value="2nd year">2nd Year</option>
@@ -1155,9 +1155,9 @@ function StudentsTab() {
                       </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-semibold text-white/35 uppercase tracking-wider">Campus</span>
+                      <span className="text-[10px] font-[550] text-ink-soft uppercase tracking-wider">Campus</span>
                       <select value={editCampus} onChange={(e) => setEditCampus(e.target.value as any)}
-                        className="bg-[#0f172a] border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500/40 cursor-pointer">
+                        className="bg-white border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs focus:outline-none focus:border-violet-100 cursor-pointer">
                         <option value="">None</option>
                         <option value="Rishihood">Rishihood</option>
                         <option value="ADYPU">ADYPU</option>
@@ -1166,11 +1166,11 @@ function StudentsTab() {
                     </div>
                     <div className="flex items-end gap-1.5 h-full pt-5">
                       <button type="button" onClick={() => executeUpdate(s.github)} disabled={saving}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-all cursor-pointer">
+                        className="text-xs px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-[550] transition-all cursor-pointer">
                         {saving ? 'Saving…' : 'Save'}
                       </button>
                       <button type="button" onClick={() => setEditingGithub(null)}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-all cursor-pointer">
+                        className="text-xs px-3 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid transition-all cursor-pointer">
                         Cancel
                       </button>
                     </div>
@@ -1179,13 +1179,13 @@ function StudentsTab() {
               </div>
             );
           })}
-          {filteredStudents.length === 0 && <div className="text-center py-12 text-white/25">No matching students found.</div>}
+          {filteredStudents.length === 0 && <div className="text-center py-12 text-ink-soft">No matching students found.</div>}
           {filteredStudents.length > visibleCount && (
             <div className="flex justify-center pt-4">
               <button
                 type="button"
                 onClick={() => setVisibleCount((prev) => prev + 100)}
-                className="bg-white/5 border border-white/10 hover:bg-white/10 text-white/80 hover:text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+                className="bg-panel border border-line hover:bg-panel text-ink hover:text-ink px-6 py-2.5 rounded-xl text-sm font-[550] transition-all cursor-pointer"
               >
                 Load More (+100)
               </button>
@@ -1264,8 +1264,8 @@ function OwnReposTab() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-white font-semibold">Own-Repo PR Exceptions</h2>
-        <p className="text-white/35 text-sm mt-0.5">
+        <h2 className="text-ink font-[550]">Own-Repo PR Exceptions</h2>
+        <p className="text-ink-soft text-sm mt-0.5">
           By default, a student&apos;s own-repo PRs never count toward their score. Add a specific repo here — after actually
           reviewing the project — to let that one student&apos;s self-authored merged PRs into that one repo count.
         </p>
@@ -1274,29 +1274,29 @@ function OwnReposTab() {
       <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-3 mb-6">
         <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)}
           placeholder="GitHub username" id="new-own-repo-username"
-          className="flex-1 bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          className="flex-1 bg-white border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
 
         <input type="text" value={newRepo} onChange={(e) => setNewRepo(e.target.value)}
           placeholder="owner/repo (e.g. octocat/hello-world)" id="new-own-repo-name"
-          className="flex-1 bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          className="flex-1 bg-white border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
 
         <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)}
           placeholder="Note (optional)" id="new-own-repo-note"
-          className="flex-1 bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          className="flex-1 bg-white border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
 
         <button type="submit" disabled={adding || !newUsername.trim() || !newRepo.trim()} id="add-own-repo-btn"
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer whitespace-nowrap">
+          className="bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white font-[550] px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer whitespace-nowrap">
           {adding ? 'Adding…' : '+ Approve'}
         </button>
       </form>
 
-      {error && <div className="mb-4 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</div>}
-      {success && <div className="mb-4 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</div>}
+      {error && <div className="mb-4 text-error-600 text-sm bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</div>}
+      {success && <div className="mb-4 text-success-600 text-sm bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</div>}
 
       {loading ? (
-        <div className="text-white/30 text-sm py-8 text-center">Loading…</div>
+        <div className="text-ink-soft text-sm py-8 text-center">Loading…</div>
       ) : exceptions.length === 0 ? (
-        <div className="text-white/25 text-sm py-12 text-center border border-white/[0.06] rounded-2xl bg-white/[0.015]">
+        <div className="text-ink-soft text-sm py-12 text-center border border-line rounded-2xl bg-white">
           No exceptions yet — nothing counts from a student&apos;s own repos until you add one here.
         </div>
       ) : (
@@ -1304,30 +1304,30 @@ function OwnReposTab() {
           {exceptions.map((e) => {
             const key = `${e.username}::${e.repo}`;
             return (
-              <div key={key} className="flex items-center justify-between gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3">
+              <div key={key} className="flex items-center justify-between gap-4 bg-white border border-line rounded-xl px-4 py-3">
                 <div className="min-w-0">
-                  <div className="text-sm text-white/85">
-                    <span className="font-semibold">@{e.username}</span>
-                    <span className="text-white/30 mx-1.5">→</span>
-                    <span className="text-purple-400/90 font-mono text-xs">{e.repo}</span>
+                  <div className="text-sm text-ink">
+                    <span className="font-[550]">@{e.username}</span>
+                    <span className="text-ink-soft mx-1.5">→</span>
+                    <span className="text-violet-600/90 font-mono text-xs">{e.repo}</span>
                   </div>
-                  {e.note && <div className="text-white/35 text-xs mt-1">{e.note}</div>}
-                  <div className="text-white/20 text-[10px] mt-1">Added {new Date(e.addedAt).toLocaleDateString()}</div>
+                  {e.note && <div className="text-ink-soft text-xs mt-1">{e.note}</div>}
+                  <div className="text-ink-soft text-[10px] mt-1">Added {new Date(e.addedAt).toLocaleDateString()}</div>
                 </div>
                 {confirmRemove === key ? (
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => executeRemove(e.username, e.repo)}
-                      className="text-red-400 hover:text-red-300 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-all cursor-pointer">
+                      className="text-error-600 hover:text-error-600 text-xs font-[550] px-3 py-1.5 rounded-lg bg-error-0 hover:bg-error-500/20 transition-all cursor-pointer">
                       Confirm revoke
                     </button>
                     <button onClick={() => setConfirmRemove(null)}
-                      className="text-white/40 hover:text-white/70 text-xs px-3 py-1.5 rounded-lg hover:bg-white/[0.06] transition-all cursor-pointer">
+                      className="text-ink-soft hover:text-ink-mid text-xs px-3 py-1.5 rounded-lg hover:bg-panel transition-all cursor-pointer">
                       Cancel
                     </button>
                   </div>
                 ) : (
                   <button onClick={() => setConfirmRemove(key)}
-                    className="text-white/30 hover:text-red-400 text-xs px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-all cursor-pointer shrink-0">
+                    className="text-ink-soft hover:text-error-600 text-xs px-3 py-1.5 rounded-lg hover:bg-error-0 transition-all cursor-pointer shrink-0">
                     Revoke
                   </button>
                 )}
@@ -1396,82 +1396,82 @@ function EventsTab() {
 
   const EVENT_TYPES = ['session', 'deadline', 'announcement'];
   const TYPE_COLORS: Record<string, string> = {
-    session: 'text-blue-400 bg-blue-500/10 border-blue-500/25',
-    deadline: 'text-red-400 bg-red-500/10 border-red-500/25',
-    announcement: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/25',
+    session: 'text-brand-600 bg-brand-0 border-brand-100',
+    deadline: 'text-error-600 bg-error-0 border-error-100',
+    announcement: 'text-gold-600 bg-gold-0 border-gold-100',
   };
 
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-white font-semibold">Upcoming Events</h2>
-        <p className="text-white/35 text-sm mt-0.5">Manage sessions, deadlines, and announcements shown on the home page.</p>
+        <h2 className="text-ink font-[550]">Upcoming Events</h2>
+        <p className="text-ink-soft text-sm mt-0.5">Manage sessions, deadlines, and announcements shown on the home page.</p>
       </div>
 
       {/* Add form */}
-      <form onSubmit={handleAdd} className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-5 mb-6 space-y-3">
-        <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">New Event</p>
+      <form onSubmit={handleAdd} className="bg-white border border-line rounded-2xl p-5 mb-6 space-y-3">
+        <p className="text-ink-soft text-xs font-[550] uppercase tracking-wider">New Event</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Title *" required
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
           <input type="date" value={form.date} onChange={(e) => setForm(f => ({ ...f, date: e.target.value }))} required
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white/70 text-sm focus:outline-none focus:border-purple-500/40 [color-scheme:dark]" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink-mid text-sm focus:outline-none focus:border-violet-100 " />
           <select value={form.type} onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white/70 text-sm focus:outline-none focus:border-purple-500/40">
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink-mid text-sm focus:outline-none focus:border-violet-100">
             {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
           <input value={form.link} onChange={(e) => setForm(f => ({ ...f, link: e.target.value }))} placeholder="Link (optional)"
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         </div>
         <input value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description"
-          className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+          className="w-full bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         <button type="submit" disabled={adding || !form.title.trim() || !form.date}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-all">
+          className="bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white font-[550] px-5 py-2 rounded-xl text-sm transition-all">
           {adding ? 'Adding…' : '+ Add Event'}
         </button>
       </form>
 
-      {error && <p className="text-red-400 text-sm mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
-      {success && <p className="text-emerald-400 text-sm mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</p>}
+      {error && <p className="text-error-600 text-sm mb-4 bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</p>}
+      {success && <p className="text-success-600 text-sm mb-4 bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</p>}
 
-      {loading ? <div className="text-center py-12 text-white/25">Loading…</div> : (
+      {loading ? <div className="text-center py-12 text-ink-soft">Loading…</div> : (
         <div className="space-y-2">
           {events.map((ev) => editId === ev.id ? (
-            <div key={ev.id} className="bg-white/[0.04] border border-purple-500/25 rounded-xl p-4 space-y-3">
+            <div key={ev.id} className="bg-white border border-violet-100 rounded-xl p-4 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input value={editForm.title ?? ev.title} onChange={(e) => setEditForm(f => ({ ...f, title: e.target.value }))}
-                  className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/40" />
+                  className="bg-white border border-line rounded-xl px-3 py-2 text-ink text-sm focus:outline-none focus:border-violet-100" />
                 <input type="date" value={editForm.date ?? ev.date} onChange={(e) => setEditForm(f => ({ ...f, date: e.target.value }))}
-                  className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2 text-white/70 text-sm focus:outline-none [color-scheme:dark]" />
+                  className="bg-white border border-line rounded-xl px-3 py-2 text-ink-mid text-sm focus:outline-none " />
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveEdit(ev.id); }} className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg transition-all cursor-pointer">Save</button>
-                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditId(null); }} className="px-4 py-1.5 bg-white/[0.04] text-white/40 hover:text-white/70 text-xs rounded-lg border border-white/[0.08] transition-all cursor-pointer">Cancel</button>
+                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveEdit(ev.id); }} className="px-4 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-[550] rounded-lg transition-all cursor-pointer">Save</button>
+                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditId(null); }} className="px-4 py-1.5 bg-white text-ink-soft hover:text-ink-mid text-xs rounded-lg border border-line transition-all cursor-pointer">Cancel</button>
               </div>
             </div>
           ) : (
-            <div key={ev.id} className="group flex items-start justify-between gap-4 bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 hover:bg-white/[0.04] transition-all">
+            <div key={ev.id} className="group flex items-start justify-between gap-4 bg-white border border-line rounded-xl px-4 py-3 hover:bg-panel transition-all">
               <div className="flex items-start gap-3 min-w-0">
-                <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full border whitespace-nowrap mt-0.5 ${TYPE_COLORS[ev.type] ?? 'text-white/50 bg-white/5 border-white/10'}`}>{ev.type}</span>
+                <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full border whitespace-nowrap mt-0.5 ${TYPE_COLORS[ev.type] ?? 'text-ink-soft bg-panel border-line'}`}>{ev.type}</span>
                 <div className="min-w-0">
-                  <p className="text-white/80 text-sm font-medium">{ev.title}</p>
-                  <p className="text-white/30 text-xs">{ev.date}{ev.description ? ` · ${ev.description}` : ''}</p>
+                  <p className="text-ink text-sm font-[500]">{ev.title}</p>
+                  <p className="text-ink-soft text-xs">{ev.date}{ev.description ? ` · ${ev.description}` : ''}</p>
                 </div>
               </div>
               {confirmDeleteId === ev.id ? (
                 <div className="flex items-center gap-1.5 flex-shrink-0 animate-in fade-in zoom-in-95 duration-150">
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); executeDeleteEvent(ev.id); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold transition-all cursor-pointer shadow-lg shadow-red-900/15">Delete</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteId(null); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-all cursor-pointer">Cancel</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); executeDeleteEvent(ev.id); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-error-500 hover:bg-error-500 text-white font-[550] transition-all cursor-pointer ">Delete</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteId(null); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid transition-all cursor-pointer">Cancel</button>
                 </div>
               ) : (
                 <div className="flex gap-1.5 flex-shrink-0 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all">
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditId(ev.id); setEditForm({}); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-all cursor-pointer">Edit</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteId(ev.id); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all cursor-pointer">Delete</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditId(ev.id); setEditForm({}); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid transition-all cursor-pointer">Edit</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteId(ev.id); }} className="text-xs px-2.5 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all cursor-pointer">Delete</button>
                 </div>
               )}
             </div>
           ))}
-          {events.length === 0 && <div className="text-center py-12 text-white/25">No events yet.</div>}
+          {events.length === 0 && <div className="text-center py-12 text-ink-soft">No events yet.</div>}
         </div>
       )}
     </div>
@@ -1535,68 +1535,68 @@ function AchieversTab() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-white font-semibold">Hall of Fame</h2>
-        <p className="text-white/35 text-sm mt-0.5">Add or remove students from the achievers list. Each student can have multiple programs — add them one at a time.</p>
+        <h2 className="text-ink font-[550]">Hall of Fame</h2>
+        <p className="text-ink-soft text-sm mt-0.5">Add or remove students from the achievers list. Each student can have multiple programs — add them one at a time.</p>
       </div>
 
-      <form onSubmit={handleAdd} className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-5 mb-6 space-y-3">
-        <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">Add Achiever</p>
+      <form onSubmit={handleAdd} className="bg-white border border-line rounded-2xl p-5 mb-6 space-y-3">
+        <p className="text-ink-soft text-xs font-[550] uppercase tracking-wider">Add Achiever</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input value={form.github} onChange={(e) => setForm(f => ({ ...f, github: e.target.value }))} placeholder="GitHub username *" required
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
           <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name (optional)"
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
           <select value={form.programName} onChange={(e) => setForm(f => ({ ...f, programName: e.target.value }))}
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white/70 text-sm focus:outline-none focus:border-purple-500/40">
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink-mid text-sm focus:outline-none focus:border-violet-100">
             {PROGRAM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
           <input value={form.year} onChange={(e) => setForm(f => ({ ...f, year: e.target.value }))} placeholder="Year" type="number" min="2010" max="2035"
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
           <input value={form.org} onChange={(e) => setForm(f => ({ ...f, org: e.target.value }))} placeholder="Organization (optional)"
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
           <input value={form.url} onChange={(e) => setForm(f => ({ ...f, url: e.target.value }))} placeholder="Project URL (optional)"
-            className="bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40" />
+            className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         </div>
         <button type="submit" disabled={adding || !form.github.trim()}
-          className="bg-gradient-to-r from-yellow-600 to-orange-600 disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-all">
+          className="bg-gold-400 disabled:opacity-40 text-ink font-[550] px-5 py-2 rounded-xl text-sm transition-all">
           {adding ? 'Adding…' : '+ Add to Hall of Fame'}
         </button>
       </form>
 
-      {error && <p className="text-red-400 text-sm mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
-      {success && <p className="text-emerald-400 text-sm mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</p>}
+      {error && <p className="text-error-600 text-sm mb-4 bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</p>}
+      {success && <p className="text-success-600 text-sm mb-4 bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</p>}
 
-      {loading ? <div className="text-center py-12 text-white/25">Loading…</div> : (
+      {loading ? <div className="text-center py-12 text-ink-soft">Loading…</div> : (
         <div className="space-y-2">
           {achievers.map((a) => (
-            <div key={a.github} className="group flex items-center justify-between gap-4 bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 hover:bg-white/[0.04] transition-all">
+            <div key={a.github} className="group flex items-center justify-between gap-4 bg-white border border-line rounded-xl px-4 py-3 hover:bg-panel transition-all">
               <div className="flex items-center gap-3 min-w-0">
-                <img src={`https://avatars.githubusercontent.com/${a.github}?s=32`} alt={a.github} className="w-8 h-8 rounded-full ring-1 ring-yellow-500/30" />
+                <img src={`https://avatars.githubusercontent.com/${a.github}?s=32`} alt={a.github} className="w-8 h-8 rounded-full ring-1 ring-gold-100" />
                 <div className="min-w-0">
-                  <p className="text-white/80 text-sm font-medium">{a.name ?? `@${a.github}`}</p>
-                  <p className="text-white/30 text-xs">{a.programs.map(p => `${p.name}${p.year ? ` ${p.year}` : ''}`).join(' · ')}</p>
+                  <p className="text-ink text-sm font-[500]">{a.name ?? `@${a.github}`}</p>
+                  <p className="text-ink-soft text-xs">{a.programs.map(p => `${p.name}${p.year ? ` ${p.year}` : ''}`).join(' · ')}</p>
                 </div>
               </div>
               {confirmDeleteGithub === a.github ? (
                 <div className="flex items-center gap-1.5 flex-shrink-0 animate-in fade-in zoom-in-95 duration-150">
                   <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); executeDeleteAchiever(a.github); }}
-                    className="text-xs px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold transition-all cursor-pointer shadow-lg shadow-red-900/15">
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-error-500 hover:bg-error-500 text-white font-[550] transition-all cursor-pointer ">
                     Remove
                   </button>
                   <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteGithub(null); }}
-                    className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-all cursor-pointer">
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid transition-all cursor-pointer">
                     Cancel
                   </button>
                 </div>
               ) : (
                 <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteGithub(a.github); }}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
+                  className="text-xs px-3 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
                   Remove
                 </button>
               )}
             </div>
           ))}
-          {achievers.length === 0 && <div className="text-center py-12 text-white/25">No achievers yet.</div>}
+          {achievers.length === 0 && <div className="text-center py-12 text-ink-soft">No achievers yet.</div>}
         </div>
       )}
     </div>
@@ -1672,39 +1672,39 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-white font-semibold">Join Leaderboard Requests</h2>
-        <p className="text-white/35 text-sm mt-0.5">Approve or reject requests from students to be tracked on the leaderboard.</p>
+        <h2 className="text-ink font-[550]">Join Leaderboard Requests</h2>
+        <p className="text-ink-soft text-sm mt-0.5">Approve or reject requests from students to be tracked on the leaderboard.</p>
       </div>
 
-      {error && <p className="text-red-400 text-sm mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
-      {success && <p className="text-emerald-400 text-sm mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">{success}</p>}
+      {error && <p className="text-error-600 text-sm mb-4 bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</p>}
+      {success && <p className="text-success-600 text-sm mb-4 bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</p>}
 
       {loading ? (
-        <div className="text-center py-12 text-white/25">Loading…</div>
+        <div className="text-center py-12 text-ink-soft">Loading…</div>
       ) : (
         <div className="space-y-6">
           {/* Pending Queue */}
           <div className="space-y-3">
-            <h3 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Pending Queue ({pendingRequests.length})</h3>
+            <h3 className="text-ink-mid text-xs font-[550] uppercase tracking-wider">Pending Queue ({pendingRequests.length})</h3>
             <div className="space-y-2">
               {pendingRequests.map((r) => (
-                <div key={r.github} className="flex items-center justify-between gap-4 bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 hover:bg-white/[0.04] transition-all">
+                <div key={r.github} className="flex items-center justify-between gap-4 bg-white border border-line rounded-xl px-4 py-3 hover:bg-panel transition-all">
                   <div className="flex items-center gap-3">
-                    <img src={r.avatarUrl || `https://avatars.githubusercontent.com/${r.github}?s=32`} alt={r.github} className="w-8 h-8 rounded-full ring-1 ring-white/10" />
+                    <img src={r.avatarUrl || `https://avatars.githubusercontent.com/${r.github}?s=32`} alt={r.github} className="w-8 h-8 rounded-full ring-1 ring-line" />
                     <div>
-                      <p className="text-white/80 text-sm font-medium">
+                      <p className="text-ink text-sm font-[500]">
                         {r.name && r.name !== r.github ? `${r.name} (@${r.github})` : `@${r.github}`}
                       </p>
-                      <p className="text-white/25 text-xs">Requested on {new Date(r.createdAt).toLocaleDateString()}</p>
+                      <p className="text-ink-soft text-xs">Requested on {new Date(r.createdAt).toLocaleDateString()}</p>
                       {(r.year || r.campus) && (
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {r.year && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/25 font-semibold">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-0 text-violet-600 border border-violet-100 font-[550]">
                               {r.year}
                             </span>
                           )}
                           {r.campus && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 font-semibold">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-0 text-brand-600 border border-brand-100 font-[550]">
                               {r.campus}
                             </span>
                           )}
@@ -1717,7 +1717,7 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
                       type="button"
                       disabled={processing !== null}
                       onClick={() => handleAction(r.github, 'approve')}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all font-semibold disabled:opacity-50 cursor-pointer"
+                      className="text-xs px-3 py-1.5 rounded-lg bg-success-0 border border-success-100 text-success-600 hover:bg-success-500/20 transition-all font-[550] disabled:opacity-50 cursor-pointer"
                     >
                       {processing === r.github ? '...' : 'Approve'}
                     </button>
@@ -1725,7 +1725,7 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
                       type="button"
                       disabled={processing !== null}
                       onClick={() => handleAction(r.github, 'reject')}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all font-semibold disabled:opacity-50 cursor-pointer"
+                      className="text-xs px-3 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all font-[550] disabled:opacity-50 cursor-pointer"
                     >
                       Reject
                     </button>
@@ -1733,7 +1733,7 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
                 </div>
               ))}
               {pendingRequests.length === 0 && (
-                <div className="text-center py-8 bg-white/[0.01] border border-white/[0.04] rounded-xl text-white/25 text-sm">
+                <div className="text-center py-8 bg-white border border-line rounded-xl text-ink-soft text-sm">
                   No pending join requests.
                 </div>
               )}
@@ -1742,33 +1742,33 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
 
           {/* History */}
           {historyRequests.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-white/[0.05]">
-              <h3 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Processed History</h3>
+            <div className="space-y-3 pt-4 border-t border-line">
+              <h3 className="text-ink-mid text-xs font-[550] uppercase tracking-wider">Processed History</h3>
               <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
                 {historyRequests.map((r) => (
-                  <div key={r.github} className="flex items-center justify-between gap-4 bg-white/[0.015] border border-white/[0.05] rounded-xl px-4 py-2 text-white/50">
+                  <div key={r.github} className="flex items-center justify-between gap-4 bg-white border border-line rounded-xl px-4 py-2 text-ink-soft">
                     <div className="flex items-center gap-3">
                       <img src={r.avatarUrl || `https://avatars.githubusercontent.com/${r.github}?s=32`} alt={r.github} className="w-6 h-6 rounded-full opacity-60" />
                       <div>
                         <div className="text-xs">
-                          <span className="font-medium text-white/70">@{r.github}</span>
-                          {r.name && r.name !== r.github && <span className="text-white/40 ml-1">({r.name})</span>}
+                          <span className="font-[500] text-ink-mid">@{r.github}</span>
+                          {r.name && r.name !== r.github && <span className="text-ink-soft ml-1">({r.name})</span>}
                         </div>
                         {(r.year || r.campus) && (
                           <div className="flex flex-wrap gap-1 mt-0.5">
-                            {r.year && <span className="text-[8px] px-1 py-0.2 rounded bg-purple-500/10 text-purple-400 font-medium">{r.year}</span>}
-                            {r.campus && <span className="text-[8px] px-1 py-0.2 rounded bg-blue-500/10 text-blue-400 font-medium">{r.campus}</span>}
+                            {r.year && <span className="text-[8px] px-1 py-0.2 rounded bg-violet-0 text-violet-600 font-[500]">{r.year}</span>}
+                            {r.campus && <span className="text-[8px] px-1 py-0.2 rounded bg-brand-0 text-brand-600 font-[500]">{r.campus}</span>}
                           </div>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-xs">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        r.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-[650] uppercase ${
+                        r.status === 'approved' ? 'bg-success-0 text-success-600' : 'bg-error-0 text-error-600'
                       }`}>
                         {r.status}
                       </span>
-                      <span className="text-white/20">{new Date(r.createdAt).toLocaleDateString()}</span>
+                      <span className="text-ink-soft">{new Date(r.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 ))}

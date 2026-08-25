@@ -33,31 +33,31 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#030712] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-panel flex items-center justify-center px-4">
       {/* Background glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-purple-600/10 blur-[120px] rounded-full" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-brand-100/40 blur-[120px] rounded-full" />
       </div>
 
       <div className="relative w-full max-w-md">
         {/* Card */}
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 backdrop-blur-sm shadow-2xl shadow-black/40">
+        <div className="bg-white border border-line rounded-2xl p-8 shadow-card">
           {/* Icon */}
           <div className="flex items-center justify-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/30 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
-              <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-14 h-14 rounded-2xl bg-brand-0 flex items-center justify-center">
+              <svg className="w-7 h-7 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-white text-center mb-1">Admin Access</h1>
-          <p className="text-white/35 text-sm text-center mb-8">Enter the admin password to continue</p>
+          <h1 className="text-2xl font-[650] text-ink text-center mb-1">Admin Access</h1>
+          <p className="text-ink-soft text-sm text-center mb-8">Enter the admin password to continue</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="admin-password" className="block text-xs text-white/40 mb-2 font-medium uppercase tracking-wider">
+              <label htmlFor="admin-password" className="block text-xs text-ink-soft mb-2 font-[500] uppercase tracking-wider">
                 Password
               </label>
               <input
@@ -68,16 +68,16 @@ export default function AdminLoginPage() {
                 placeholder="Enter admin password"
                 required
                 autoFocus
-                className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.06] transition-all text-sm"
+                className="w-full bg-white border border-line rounded-xl px-4 py-3 text-ink placeholder:text-ink-soft focus:outline-none focus:border-violet-200 focus:bg-panel transition-all text-sm"
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
-                <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-center gap-2.5 bg-error-0 border border-error-100 rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 text-error-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
                 </svg>
-                <p className="text-red-400 text-sm">{error}</p>
+                <p className="text-error-600 text-sm">{error}</p>
               </div>
             )}
 
@@ -85,7 +85,7 @@ export default function AdminLoginPage() {
               type="submit"
               disabled={loading || !password}
               id="admin-login-btn"
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-900/30 hover:shadow-purple-900/50 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] py-3 rounded-xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -102,7 +102,7 @@ export default function AdminLoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-white/20 text-xs mt-6">
+        <p className="text-center text-ink-soft text-xs mt-6">
           Restricted access — authorized personnel only
         </p>
       </div>

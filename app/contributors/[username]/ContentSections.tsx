@@ -14,18 +14,18 @@ function repoFromUrl(url: string): string {
 function PRBadge({ pr }: { pr: StudentPR }) {
   if (pr.pull_request?.merged_at)
     return (
-      <span className="inline-flex items-center gap-1.5 bg-purple-500/15 text-purple-400 border border-purple-500/25 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+      <span className="inline-flex items-center gap-1.5 bg-success-0 text-success-600 px-2.5 py-1 rounded-full text-xs font-[600] whitespace-nowrap">
         <MergedIcon /> Merged
       </span>
     );
   if (pr.state === 'open')
     return (
-      <span className="inline-flex items-center gap-1.5 bg-teal-500/15 text-teal-400 border border-teal-500/25 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+      <span className="inline-flex items-center gap-1.5 bg-brand-0 text-brand-600 px-2.5 py-1 rounded-full text-xs font-[600] whitespace-nowrap">
         <OpenIcon /> Open
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1.5 bg-red-500/15 text-red-400 border border-red-500/25 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+    <span className="inline-flex items-center gap-1.5 bg-error-0 text-error-600 px-2.5 py-1 rounded-full text-xs font-[600] whitespace-nowrap">
       <ClosedIcon /> Closed
     </span>
   );
@@ -34,12 +34,12 @@ function PRBadge({ pr }: { pr: StudentPR }) {
 function IssueBadge({ issue }: { issue: StudentIssue }) {
   if (issue.state === 'open')
     return (
-      <span className="inline-flex items-center gap-1.5 bg-teal-500/15 text-teal-400 border border-teal-500/25 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+      <span className="inline-flex items-center gap-1.5 bg-brand-0 text-brand-600 px-2.5 py-1 rounded-full text-xs font-[600] whitespace-nowrap">
         <IssueOpenIcon /> Open
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1.5 bg-purple-500/15 text-purple-400 border border-purple-500/25 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+    <span className="inline-flex items-center gap-1.5 bg-success-0 text-success-600 px-2.5 py-1 rounded-full text-xs font-[600] whitespace-nowrap">
       <IssueClosedIcon /> Closed
     </span>
   );
@@ -93,11 +93,10 @@ function Labels({ labels }: { labels: Array<{ id: number; name: string; color: s
       {labels.slice(0, 4).map((label) => (
         <span
           key={label.id}
-          className="text-xs px-1.5 py-0.5 rounded-full"
+          className="text-xs font-[500] px-2 py-0.5 rounded-full text-ink-mid"
           style={{
-            backgroundColor: `#${label.color}22`,
-            color: `#${label.color}`,
-            border: `1px solid #${label.color}44`,
+            backgroundColor: `#${label.color}1f`,
+            border: `1px solid #${label.color}55`,
           }}
         >
           {label.name}
@@ -113,7 +112,7 @@ function formatDate(d: string) {
 
 function ExternalIcon() {
   return (
-    <svg className="w-4 h-4 flex-shrink-0 text-white/15 group-hover:text-white/40 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 flex-shrink-0 text-ink-faint group-hover:text-brand-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
     </svg>
   );
@@ -121,15 +120,15 @@ function ExternalIcon() {
 
 function RepoHeader({ repo, count }: { repo: string; count: number }) {
   return (
-    <div className="flex items-center gap-3 mb-3">
+    <div className="flex items-center gap-2.5 mb-3">
       <a href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer"
-        className="text-white/50 text-sm font-mono hover:text-purple-300 transition-colors flex items-center gap-1.5">
-        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16">
+        className="text-ink-mid text-[13.5px] font-[600] hover:text-brand-600 transition-colors flex items-center gap-1.5">
+        <svg className="w-3.5 h-3.5 flex-shrink-0 text-ink-faint" fill="currentColor" viewBox="0 0 16 16">
           <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8Z" />
         </svg>
         {repo}
       </a>
-      <span className="bg-white/[0.06] text-white/30 text-xs px-2 py-0.5 rounded-full">
+      <span className="bg-panel-2 text-ink-mid text-[11.5px] font-[600] px-2 py-0.5 rounded-full tabular-nums">
         {count}
       </span>
     </div>
@@ -137,7 +136,11 @@ function RepoHeader({ repo, count }: { repo: string; count: number }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="text-center py-16 text-white/25">{text}</div>;
+  return (
+    <div className="text-center py-14 bg-white border border-line rounded-2xl shadow-card">
+      <p className="text-ink-soft text-sm">{text}</p>
+    </div>
+  );
 }
 
 /** Groups items by repo, preserving first-seen repo order. */
@@ -164,23 +167,23 @@ export function PRsSection({ prs }: { prs: StudentPR[] }) {
   const hasMore = visibleCount < prs.length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {Array.from(visibleByRepo.entries()).map(([repo, repoPRs]) => (
         <div key={repo}>
           <RepoHeader repo={repo} count={fullCounts.get(repo)!.length} />
           <div className="space-y-2">
             {repoPRs.map((pr) => (
               <a key={pr.id} href={pr.pull_request?.html_url ?? pr.html_url} target="_blank" rel="noopener noreferrer"
-                className="group flex items-start gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:bg-white/[0.045] hover:border-white/[0.1] transition-all">
+                className="group flex items-start gap-4 bg-white border border-line rounded-xl shadow-card p-4 card-hover">
                 <div className="flex-shrink-0 mt-0.5"><PRBadge pr={pr} /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-white/85 font-medium group-hover:text-white transition-colors leading-snug">{pr.title}</h3>
-                    <span className="text-white/20 text-xs flex-shrink-0 tabular-nums mt-0.5">#{pr.number}</span>
+                    <h3 className="text-ink font-[550] text-[14.5px] group-hover:text-brand-600 transition-colors leading-snug">{pr.title}</h3>
+                    <span className="text-ink-faint text-xs flex-shrink-0 tabular-nums mt-0.5">#{pr.number}</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-2">
-                    <span className="text-white/25 text-xs">{formatDate(pr.created_at)}</span>
-                    {pr.draft && <span className="text-xs text-white/30 border border-white/10 px-1.5 py-0.5 rounded">Draft</span>}
+                  <div className="flex flex-wrap items-center gap-2.5 mt-2">
+                    <span className="text-ink-soft text-xs">{formatDate(pr.created_at)}</span>
+                    {pr.draft && <span className="text-xs font-[500] text-ink-soft bg-panel px-1.5 py-0.5 rounded-md">Draft</span>}
                     <Labels labels={pr.labels} />
                   </div>
                 </div>
@@ -194,9 +197,9 @@ export function PRsSection({ prs }: { prs: StudentPR[] }) {
         <div className="flex justify-center pt-2">
           <button
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="px-6 py-2.5 rounded-xl text-sm font-medium border border-white/[0.08] bg-white/[0.02] text-white/60 hover:text-white hover:bg-white/[0.05] hover:border-white/[0.12] transition-all"
+            className="h-10 px-5 rounded-[11px] text-[13.5px] font-[550] border border-line-strong bg-white text-ink hover:bg-panel transition-colors"
           >
-            Load More ({prs.length - visibleCount} remaining)
+            Load more ({prs.length - visibleCount} remaining)
           </button>
         </div>
       )}
@@ -215,24 +218,24 @@ export function IssuesSection({ issues }: { issues: StudentIssue[] }) {
   const hasMore = visibleCount < issues.length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {Array.from(visibleByRepo.entries()).map(([repo, repoIssues]) => (
         <div key={repo}>
           <RepoHeader repo={repo} count={fullCounts.get(repo)!.length} />
           <div className="space-y-2">
             {repoIssues.map((issue) => (
               <a key={issue.id} href={issue.html_url} target="_blank" rel="noopener noreferrer"
-                className="group flex items-start gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:bg-white/[0.045] hover:border-white/[0.1] transition-all">
+                className="group flex items-start gap-4 bg-white border border-line rounded-xl shadow-card p-4 card-hover">
                 <div className="flex-shrink-0 mt-0.5"><IssueBadge issue={issue} /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-white/85 font-medium group-hover:text-white transition-colors leading-snug">{issue.title}</h3>
-                    <span className="text-white/20 text-xs flex-shrink-0 tabular-nums mt-0.5">#{issue.number}</span>
+                    <h3 className="text-ink font-[550] text-[14.5px] group-hover:text-brand-600 transition-colors leading-snug">{issue.title}</h3>
+                    <span className="text-ink-faint text-xs flex-shrink-0 tabular-nums mt-0.5">#{issue.number}</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-2">
-                    <span className="text-white/25 text-xs">{formatDate(issue.created_at)}</span>
+                  <div className="flex flex-wrap items-center gap-2.5 mt-2">
+                    <span className="text-ink-soft text-xs">{formatDate(issue.created_at)}</span>
                     {issue.comments > 0 && (
-                      <span className="text-white/25 text-xs flex items-center gap-1">
+                      <span className="text-ink-soft text-xs flex items-center gap-1">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
                           <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Z" />
                         </svg>
@@ -252,9 +255,9 @@ export function IssuesSection({ issues }: { issues: StudentIssue[] }) {
         <div className="flex justify-center pt-2">
           <button
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="px-6 py-2.5 rounded-xl text-sm font-medium border border-white/[0.08] bg-white/[0.02] text-white/60 hover:text-white hover:bg-white/[0.05] hover:border-white/[0.12] transition-all"
+            className="h-10 px-5 rounded-[11px] text-[13.5px] font-[550] border border-line-strong bg-white text-ink hover:bg-panel transition-colors"
           >
-            Load More ({issues.length - visibleCount} remaining)
+            Load more ({issues.length - visibleCount} remaining)
           </button>
         </div>
       )}

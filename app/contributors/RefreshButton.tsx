@@ -128,13 +128,13 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
     <div className="flex items-center gap-3">
       {/* Last updated label */}
       {cachedAt && (
-        <span className="text-white/25 text-xs flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-white/20 inline-block" />
+        <span className="text-ink-soft text-xs flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-line-heavy inline-block" />
           Updated {label}
         </span>
       )}
       {!cachedAt && (
-        <span className="text-white/20 text-xs">No cache yet</span>
+        <span className="text-ink-soft text-xs">No cache yet</span>
       )}
 
       {/* Refresh button — always enabled for logged-in users */}
@@ -143,14 +143,14 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
         disabled={isDisabled}
         id="public-refresh-btn"
         title={isLoggedIn ? 'Refresh anytime — you are logged in' : 'Fetch latest data from GitHub'}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+        className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[10px] text-xs font-[550] border transition-colors ${
           isLoading
-            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 cursor-wait'
+            ? 'bg-brand-0 border-brand-100 text-brand-600 cursor-wait'
             : (cooldown && !isLoggedIn)
-              ? 'bg-white/[0.02] border-white/[0.06] text-white/20 cursor-not-allowed'
+              ? 'bg-panel border-line text-ink-faint cursor-not-allowed'
               : isLoggedIn
-                ? 'bg-purple-500/10 border-purple-500/25 text-purple-400 hover:bg-purple-500/20 hover:border-purple-500/40'
-                : 'bg-white/[0.03] border-white/[0.08] text-white/40 hover:text-white/70 hover:bg-white/[0.06] hover:border-white/[0.12]'
+                ? 'bg-brand-0 border-brand-100 text-brand-600 hover:bg-brand-100'
+                : 'bg-white border-line-strong text-ink-mid hover:text-ink hover:bg-panel hover:border-line-heavy'
         }`}
       >
         <svg
@@ -171,14 +171,14 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
 
       {/* Logged-in unlock indicator */}
       {isLoggedIn && (
-        <span className="text-purple-400/50 text-[10px] font-mono">∞ free</span>
+        <span className="text-brand-600 text-[10.5px] font-[600]">∞ unlimited</span>
       )}
 
       {/* Anon login nudge — always visible once session is confirmed not-logged-in */}
       {sessionChecked && !isLoggedIn && (
         <a
           href="/login"
-          className="inline-flex items-center gap-1 text-[10px] text-white/25 hover:text-purple-400/70 transition-colors"
+          className="inline-flex items-center gap-1 text-[11px] font-[500] text-ink-soft hover:text-brand-600 transition-colors"
           title="Log in with GitHub for unlimited refreshes"
         >
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,39 +190,39 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
 
       {/* Cooldown error (only shows for anonymous users) */}
       {error && !isLoggedIn && (
-        <span className="text-yellow-500/60 text-xs">{error}</span>
+        <span className="text-warning-600 text-xs font-[500]">{error}</span>
       )}
 
       {/* Custom Premium Toast Alert */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/10 bg-[#030712]/90 backdrop-blur-md shadow-2xl text-xs max-w-xs transition-all duration-300">
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3.5 rounded-xl border border-line bg-white shadow-pop text-xs max-w-xs transition-all duration-300">
           {toast.type === 'success' && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-success-500"></span>
             </span>
           )}
           {toast.type === 'info' && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-300 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
             </span>
           )}
           {toast.type === 'error' && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-error-500"></span>
             </span>
           )}
           {toast.type === 'warning' && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
             </span>
           )}
-          <span className="text-white/80 font-medium">{toast.message}</span>
+          <span className="text-ink font-[550]">{toast.message}</span>
           {toast.loginNudge && (
-            <a href="/login" className="ml-1 text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors whitespace-nowrap">
+            <a href="/login" className="ml-1 text-brand-600 hover:text-brand-500 underline underline-offset-2 transition-colors whitespace-nowrap">
               Log in →
             </a>
           )}

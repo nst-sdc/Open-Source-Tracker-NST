@@ -29,44 +29,46 @@ function CountdownDisplay({ target, urgent }: { target: string; urgent?: boolean
   const r = useCountdown(target);
 
   if (!r) return (
-    <span className="text-white/25 text-xs font-mono">Ended</span>
+    <span className="text-ink-soft text-xs">Ended</span>
   );
 
   const pad = (n: number) => String(n).padStart(2, '0');
+  const strong = urgent ? 'text-error-500' : 'text-ink';
+  const soft = urgent ? 'text-error-500' : 'text-ink-mid';
 
   if (r.d > 0) {
     return (
-      <div className="flex items-baseline gap-1 font-mono">
-        <span className={`text-2xl font-bold tabular-nums ${urgent ? 'text-red-400' : 'text-white/80'}`}>{r.d}</span>
-        <span className="text-white/30 text-xs">d</span>
-        <span className={`text-2xl font-bold tabular-nums ${urgent ? 'text-red-400' : 'text-white/80'}`}>{pad(r.h)}</span>
-        <span className="text-white/30 text-xs">h</span>
-        <span className={`text-xl font-bold tabular-nums ${urgent ? 'text-red-400' : 'text-white/60'}`}>{pad(r.m)}</span>
-        <span className="text-white/30 text-xs">m</span>
+      <div className="flex items-baseline gap-1">
+        <span className={`text-2xl font-[650] tabular-nums ${strong}`}>{r.d}</span>
+        <span className="text-ink-soft text-xs">d</span>
+        <span className={`text-2xl font-[650] tabular-nums ${strong}`}>{pad(r.h)}</span>
+        <span className="text-ink-soft text-xs">h</span>
+        <span className={`text-xl font-[650] tabular-nums ${soft}`}>{pad(r.m)}</span>
+        <span className="text-ink-soft text-xs">m</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-baseline gap-1 font-mono">
+    <div className="flex items-baseline gap-1">
       {r.h > 0 && (
         <>
-          <span className={`text-2xl font-bold tabular-nums ${urgent ? 'text-red-400' : 'text-white/80'}`}>{r.h}</span>
-          <span className="text-white/30 text-xs">h</span>
+          <span className={`text-2xl font-[650] tabular-nums ${strong}`}>{r.h}</span>
+          <span className="text-ink-soft text-xs">h</span>
         </>
       )}
-      <span className={`text-2xl font-bold tabular-nums ${urgent ? 'text-orange-400' : 'text-white/80'}`}>{pad(r.m)}</span>
-      <span className="text-white/30 text-xs">m</span>
-      <span className={`text-xl font-bold tabular-nums ${urgent ? 'text-orange-400' : 'text-white/50'}`}>{pad(r.s)}</span>
-      <span className="text-white/30 text-xs">s</span>
+      <span className={`text-2xl font-[650] tabular-nums ${urgent ? 'text-warning-600' : strong}`}>{pad(r.m)}</span>
+      <span className="text-ink-soft text-xs">m</span>
+      <span className={`text-xl font-[650] tabular-nums ${urgent ? 'text-warning-600' : soft}`}>{pad(r.s)}</span>
+      <span className="text-ink-soft text-xs">s</span>
     </div>
   );
 }
 
-const TYPE_COLORS: Record<string, { text: string; bg: string; border: string; dot: string }> = {
-  session:      { text: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   dot: 'bg-blue-400'   },
-  deadline:     { text: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/30',    dot: 'bg-red-400'    },
-  announcement: { text: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', dot: 'bg-yellow-400' },
+const TYPE_COLORS: Record<string, { text: string; chipBg: string; dot: string }> = {
+  session:      { text: 'text-brand-600',   chipBg: 'bg-brand-0',   dot: 'bg-brand-500'   },
+  deadline:     { text: 'text-error-600',   chipBg: 'bg-error-0',   dot: 'bg-error-500'   },
+  announcement: { text: 'text-gold-600',    chipBg: 'bg-gold-0',    dot: 'bg-gold-500'    },
 };
 
 function DeadlineCard({ event }: { event: EventItem }) {
@@ -76,25 +78,25 @@ function DeadlineCard({ event }: { event: EventItem }) {
   const urgent = r !== null && r.diff < 24 * 3_600_000;
 
   const inner = (
-    <div className={`relative rounded-2xl border p-5 flex flex-col gap-4 transition-all ${
-      event.link ? 'cursor-pointer hover:border-white/20' : ''
-    } ${c.border} ${c.bg}`}>
+    <div className={`relative h-full rounded-2xl bg-white border border-line shadow-card p-5 flex flex-col gap-4 ${
+      event.link ? 'cursor-pointer card-hover' : ''
+    }`}>
       {/* Top row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${c.bg} ${c.border} ${c.text} capitalize`}>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 text-xs font-[600] px-2.5 py-1 rounded-full capitalize ${c.chipBg} ${c.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
               {event.type}
             </span>
             {urgent && event.type === 'deadline' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/25 text-red-400 animate-pulse">
+              <span className="text-xs font-[600] px-2.5 py-1 rounded-full bg-error-0 text-error-600 animate-pulse">
                 Closing soon
               </span>
             )}
           </div>
-          <h3 className="font-semibold text-white/90 text-sm leading-snug">{event.title}</h3>
-          <p className="text-white/35 text-xs mt-0.5">
+          <h3 className="font-[650] text-ink text-sm leading-snug">{event.title}</h3>
+          <p className="text-ink-soft text-xs mt-1">
             {date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
@@ -104,15 +106,15 @@ function DeadlineCard({ event }: { event: EventItem }) {
           {r ? (
             <CountdownDisplay target={event.date} urgent={urgent && event.type === 'deadline'} />
           ) : (
-            <span className="text-white/25 text-xs">Passed</span>
+            <span className="text-ink-soft text-xs">Passed</span>
           )}
         </div>
       </div>
 
-      <p className="text-white/40 text-xs leading-relaxed">{event.description}</p>
+      <p className="text-ink-soft text-[12.5px] leading-relaxed">{event.description}</p>
 
       {event.link && (
-        <div className={`inline-flex items-center gap-1.5 text-xs ${c.text} self-start font-medium`}>
+        <div className={`inline-flex items-center gap-1.5 text-xs font-[600] ${c.text} self-start mt-auto`}>
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
@@ -123,8 +125,8 @@ function DeadlineCard({ event }: { event: EventItem }) {
   );
 
   return event.link ? (
-    <a href={event.link} target="_blank" rel="noopener noreferrer">{inner}</a>
-  ) : <div>{inner}</div>;
+    <a href={event.link} target="_blank" rel="noopener noreferrer" className="h-full">{inner}</a>
+  ) : <div className="h-full">{inner}</div>;
 }
 
 export function UpcomingEvents({ events }: { events: EventItem[] }) {
@@ -137,16 +139,20 @@ export function UpcomingEvents({ events }: { events: EventItem[] }) {
   if (upcoming.length === 0) return null;
 
   return (
-    <section className="w-full max-w-2xl mx-auto px-4 pb-24">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-        <h2 className="text-white/70 text-sm font-semibold uppercase tracking-widest">
-          Upcoming Events &amp; Deadlines
-        </h2>
-        <div className="flex-1 h-px bg-white/[0.06]" />
+    <section className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-16">
+      <div className="flex items-center gap-3.5 mb-5">
+        <span className="w-11 h-11 rounded-xl bg-error-0 text-error-600 flex items-center justify-center">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" />
+          </svg>
+        </span>
+        <div>
+          <h2 className="text-[17px] font-[650] text-ink">Upcoming events &amp; deadlines</h2>
+          <p className="text-[13px] text-ink-soft mt-0.5">Sessions, program deadlines, and announcements.</p>
+        </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {upcoming.map((e) => <DeadlineCard key={e.id} event={e} />)}
       </div>
     </section>

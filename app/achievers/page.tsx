@@ -16,20 +16,20 @@ function InitialsAvatar({ name, size = 56 }: { name: string; size?: number }) {
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('');
   const colors = [
-    'from-purple-500 to-blue-500',
-    'from-blue-500 to-cyan-500',
-    'from-emerald-500 to-teal-500',
-    'from-orange-500 to-amber-500',
-    'from-pink-500 to-rose-500',
-    'from-violet-500 to-purple-500',
+    'bg-violet-500',
+    'bg-brand-500',
+    'bg-success-500',
+    'bg-warning-400',
+    'bg-error-400',
+    'bg-violet-500',
   ];
   const color = colors[name.charCodeAt(0) % colors.length];
   return (
     <div
       style={{ width: size, height: size }}
-      className={`rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 ring-2 ring-white/10`}
+      className={`rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 ring-2 ring-line`}
     >
-      <span className="text-white font-bold" style={{ fontSize: size * 0.35 }}>
+      <span className="text-ink font-[650]" style={{ fontSize: size * 0.35 }}>
         {initials}
       </span>
     </div>
@@ -52,7 +52,7 @@ function AchieverCard({
   const bio = entry.headline ?? profile?.bio;
 
   const inner = (
-    <div className="group relative bg-white/[0.025] border border-white/[0.07] rounded-2xl p-6 hover:bg-white/[0.055] hover:border-yellow-500/35 transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/10 hover:-translate-y-1 h-full">
+    <div className="group relative bg-white border border-line rounded-2xl p-6 hover:bg-panel hover:border-gold-100 transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/10 hover:-translate-y-1 h-full">
       {index < 3 && (
         <div className="absolute top-4 right-4 text-lg">
           {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
@@ -67,7 +67,7 @@ function AchieverCard({
             width={56}
             height={56}
             unoptimized
-            className="w-14 h-14 rounded-full ring-2 ring-white/10 group-hover:ring-yellow-500/30 transition-all object-cover flex-shrink-0"
+            className="w-14 h-14 rounded-full ring-2 ring-line group-hover:ring-gold-100 transition-all object-cover flex-shrink-0"
           />
         ) : (
           <div className="group-hover:[--ring-color:rgba(234,179,8,0.3)] transition-all">
@@ -76,26 +76,26 @@ function AchieverCard({
         )}
 
         <div className="flex-1 min-w-0 pt-0.5">
-          <h3 className="font-semibold text-white/90 group-hover:text-white truncate transition-colors">
+          <h3 className="font-[550] text-ink group-hover:text-ink truncate transition-colors">
             {displayName}
           </h3>
-          <p className="text-white/35 text-xs mt-0.5">@{handle}</p>
+          <p className="text-ink-soft text-xs mt-0.5">@{handle}</p>
           {(student?.year || student?.campus) && (
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
               {student.year && (
-                <span className="text-[9px] px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">
+                <span className="text-[9px] px-2 py-0.5 rounded-md bg-violet-0 text-violet-600 border border-violet-100 font-[500]">
                   {student.year}
                 </span>
               )}
               {student.campus && (
-                <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                <span className="text-[9px] px-2 py-0.5 rounded-md bg-brand-0 text-brand-600 border border-brand-100 font-[500]">
                   {student.campus}
                 </span>
               )}
             </div>
           )}
           {bio && (
-            <p className="text-white/40 text-xs mt-1.5 line-clamp-2 leading-relaxed">{bio}</p>
+            <p className="text-ink-soft text-xs mt-1.5 line-clamp-2 leading-relaxed">{bio}</p>
           )}
         </div>
       </div>
@@ -120,11 +120,11 @@ function AchieverCard({
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <span className="text-white/20 text-xs group-hover:text-white/40 transition-colors">
+        <span className="text-ink-soft text-xs group-hover:text-ink-soft transition-colors">
           View achievements
         </span>
         <svg
-          className="w-4 h-4 text-white/15 group-hover:text-yellow-400 group-hover:translate-x-0.5 transition-all"
+          className="w-4 h-4 text-ink-faint group-hover:text-gold-600 group-hover:translate-x-0.5 transition-all"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -173,18 +173,18 @@ export default async function AchieversPage() {
   const programSet = new Set(achievers.flatMap((a) => a.entry.programs.map((p) => p.name)));
 
   return (
-    <main className="min-h-screen bg-[#030712]">
+    <main className="min-h-screen bg-panel">
       <div className="relative overflow-hidden pt-14 pb-10 px-4">
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute top-0 left-1/3 w-[500px] h-[350px] rounded-full bg-yellow-600/6 blur-[100px]" />
-          <div className="absolute top-0 right-1/3 w-[400px] h-[300px] rounded-full bg-amber-600/6 blur-[100px]" />
+          <div className="absolute top-0 left-1/3 w-[500px] h-[350px] rounded-full bg-gold-100/40 blur-[100px]" />
+          <div className="absolute top-0 right-1/3 w-[400px] h-[300px] rounded-full bg-gold-100/40 blur-[100px]" />
         </div>
 
         <div className="relative max-w-6xl mx-auto text-center">
           <div className="flex justify-start mb-6">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors text-sm"
+              className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
@@ -193,16 +193,16 @@ export default async function AchieversPage() {
             </Link>
           </div>
 
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs text-yellow-300/70 mb-6">
+          <div className="inline-flex items-center gap-2 bg-panel border border-line rounded-full px-4 py-1.5 text-xs text-gold-600/70 mb-6">
             Students who cracked top open source programs
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
+          <h1 className="text-5xl md:text-6xl font-[650] text-ink mb-4 tracking-tight">
             Hall of{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400">
+            <span className="text-gold-600">
               Fame
             </span>
           </h1>
-          <p className="text-white/40 text-lg max-w-lg mx-auto mb-10">
+          <p className="text-ink-soft text-lg max-w-lg mx-auto mb-10">
             Our students who got selected into prestigious open source programs.
           </p>
 
@@ -215,10 +215,10 @@ export default async function AchieversPage() {
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-2xl px-8 py-4"
+                  className="bg-white border border-line rounded-2xl px-8 py-4"
                 >
-                  <div className="text-3xl font-bold text-white tabular-nums">{stat.value}</div>
-                  <div className="text-white/35 text-sm mt-0.5">{stat.label}</div>
+                  <div className="text-3xl font-[650] text-ink tabular-nums">{stat.value}</div>
+                  <div className="text-ink-soft text-sm mt-0.5">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -230,12 +230,12 @@ export default async function AchieversPage() {
         {achievers.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Coming Soon</h2>
-            <p className="text-white/35 text-sm max-w-xs mx-auto">
+            <h2 className="text-2xl font-[650] text-ink mb-2">Coming Soon</h2>
+            <p className="text-ink-soft text-sm max-w-xs mx-auto">
               Our Hall of Fame is being built. NST students who crack GSoC, LFX, Outreachy and more will be celebrated here.
             </p>
             <div className="mt-6 flex justify-center gap-3">
-              <Link href="/programs" className="text-xs px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400/70 hover:text-yellow-400 transition-all">
+              <Link href="/programs" className="text-xs px-4 py-2 rounded-xl bg-gold-0 border border-gold-100 text-gold-600/70 hover:text-gold-600 transition-all">
                 Learn about programs →
               </Link>
             </div>
@@ -250,13 +250,13 @@ export default async function AchieversPage() {
       </div>
 
       {/* Featured Student Maintainers */}
-      <div className="max-w-6xl mx-auto px-4 pb-24 border-t border-white/[0.06] pt-16">
+      <div className="max-w-6xl mx-auto px-4 pb-24 border-t border-line pt-16">
         <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
-          <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-purple-400 border border-purple-500/20 bg-purple-500/5 px-2.5 py-1 rounded">
+          <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-violet-600 border border-violet-100 bg-violet-0 px-2.5 py-1 rounded">
             Student-Led Open Source Projects
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Featured Student Maintainers</h2>
-          <p className="text-white/40 text-sm">Celebrating students who build and maintain their own original open source codebases.</p>
+          <h2 className="text-3xl md:text-4xl font-[650] text-ink tracking-tight">Featured Student Maintainers</h2>
+          <p className="text-ink-soft text-sm">Celebrating students who build and maintain their own original open source codebases.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -265,37 +265,37 @@ export default async function AchieversPage() {
             href="https://github.com/bitflicker64/Termstory"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/[0.07] hover:bg-white/[0.04] hover:border-purple-500/30 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+            className="group flex flex-col justify-between p-6 rounded-2xl bg-white border border-line hover:bg-panel hover:border-violet-100 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
           >
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.25)]">🐧</span>
                 <div>
-                  <h3 className="font-bold text-white text-base group-hover:text-white transition-colors">Termstory</h3>
-                  <span className="text-[10px] text-white/30 font-mono uppercase tracking-wider">Memory Engine</span>
+                  <h3 className="font-[650] text-ink text-base group-hover:text-ink transition-colors">Termstory</h3>
+                  <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">Memory Engine</span>
                 </div>
               </div>
-              <p className="text-white/60 text-xs leading-relaxed mb-4">
+              <p className="text-ink-mid text-xs leading-relaxed mb-4">
                 Turns your terminal history into a searchable, AI-narrated timeline of your development life. Recover commands, correlate Git commits, and visualize your terminal work.
               </p>
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {['Python', 'TUI', 'Shell-History', 'CLI'].map((t) => (
-                  <span key={t} className="text-[10px] px-2.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/40 font-mono">
+                  <span key={t} className="text-[10px] px-2.5 py-0.5 rounded bg-panel border border-line text-ink-soft font-mono">
                     {t}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between text-xs text-white/40">
+            <div className="pt-4 border-t border-line flex items-center justify-between text-xs text-ink-soft">
               <span className="flex items-center gap-2">
                 <img
                   src="https://avatars.githubusercontent.com/u/211528427?v=4"
                   alt="bitflicker64"
-                  className="w-5 h-5 rounded-full border border-white/10"
+                  className="w-5 h-5 rounded-full border border-line"
                 />
-                Built by <strong className="text-white/60">KAI (@bitflicker64)</strong>
+                Built by <strong className="text-ink-mid">KAI (@bitflicker64)</strong>
               </span>
-              <span className="text-purple-400 group-hover:translate-x-0.5 transition-transform">→</span>
+              <span className="text-violet-600 group-hover:translate-x-0.5 transition-transform">→</span>
             </div>
           </a>
 
@@ -304,37 +304,37 @@ export default async function AchieversPage() {
             href="https://github.com/Dreamstick9/filedrop"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/[0.07] hover:bg-white/[0.04] hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+            className="group flex flex-col justify-between p-6 rounded-2xl bg-white border border-line hover:bg-panel hover:border-brand-100 hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
           >
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.25)]">📦</span>
                 <div>
-                  <h3 className="font-bold text-white text-base group-hover:text-white transition-colors">filedrop</h3>
-                  <span className="text-[10px] text-white/30 font-mono uppercase tracking-wider">File Sharing</span>
+                  <h3 className="font-[650] text-ink text-base group-hover:text-ink transition-colors">filedrop</h3>
+                  <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">File Sharing</span>
                 </div>
               </div>
-              <p className="text-white/60 text-xs leading-relaxed mb-4">
+              <p className="text-ink-mid text-xs leading-relaxed mb-4">
                 Instantly host encrypted files locally with QR codes for mobile transfer. Features AES-256-GCM browser encryption, ephemeral URLs, and DDoS protection.
               </p>
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {['JavaScript', 'Node.js', 'AES-256', 'Crypto'].map((t) => (
-                  <span key={t} className="text-[10px] px-2.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/40 font-mono">
+                  <span key={t} className="text-[10px] px-2.5 py-0.5 rounded bg-panel border border-line text-ink-soft font-mono">
                     {t}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between text-xs text-white/40">
+            <div className="pt-4 border-t border-line flex items-center justify-between text-xs text-ink-soft">
               <span className="flex items-center gap-2">
                 <img
                   src="https://avatars.githubusercontent.com/u/222502230?v=4"
                   alt="Dreamstick9"
-                  className="w-5 h-5 rounded-full border border-white/10"
+                  className="w-5 h-5 rounded-full border border-line"
                 />
-                Built by <strong className="text-white/60">Dreamstick (@Dreamstick9)</strong>
+                Built by <strong className="text-ink-mid">Dreamstick (@Dreamstick9)</strong>
               </span>
-              <span className="text-blue-400 group-hover:translate-x-0.5 transition-transform">→</span>
+              <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform">→</span>
             </div>
           </a>
         </div>
