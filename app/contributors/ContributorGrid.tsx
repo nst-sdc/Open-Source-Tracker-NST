@@ -95,8 +95,18 @@ function ContributorRow({
           </span>
           <span className="block text-[12px] text-ink-soft truncate">@{summary.profile.login}</span>
         </span>
-        <span title="Ranking score for this contributor" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums shrink-0">
-          {summary.scoreMergedPRs.toFixed(1)}
+        <span className="flex flex-col items-end gap-0.5 shrink-0">
+          <span title="Ranking score for this contributor" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums">
+            {summary.scoreMergedPRs.toFixed(1)}
+          </span>
+          {summary.avgScore !== undefined && (
+            <span
+              title="Average score per merged PR — a secondary signal for how consistently impactful the projects they contribute to are, not how many PRs they've done"
+              className="text-[9.5px] text-ink-soft tabular-nums"
+            >
+              avg {summary.avgScore.toFixed(1)}
+            </span>
+          )}
         </span>
       </span>
 
