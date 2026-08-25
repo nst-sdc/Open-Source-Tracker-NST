@@ -158,6 +158,9 @@ export default async function Home() {
                   </div>
                   <div className="text-[11.5px] text-ink-soft truncate">@{s.profile.login}</div>
                 </div>
+                <span title="Ranking score" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums shrink-0">
+                  {s.scoreMergedPRs.toFixed(1)}
+                </span>
                 <span className="flex items-center gap-1.5 shrink-0">
                   <MergeIcon className="w-3.5 h-3.5 text-success-600" />
                   <span className="text-[14px] font-[650] text-success-600 tabular-nums">{s.mergedPRs}</span>

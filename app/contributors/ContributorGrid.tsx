@@ -89,11 +89,14 @@ function ContributorRow({
           unoptimized
           className="w-[38px] h-[38px] rounded-full border border-line object-cover shrink-0"
         />
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-[550] text-ink truncate group-hover:text-brand-600 transition-colors">
             {summary.profile.name ?? summary.profile.login}
           </span>
           <span className="block text-[12px] text-ink-soft truncate">@{summary.profile.login}</span>
+        </span>
+        <span title="Ranking score for this contributor" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums shrink-0">
+          {summary.scoreMergedPRs.toFixed(1)}
         </span>
       </span>
 

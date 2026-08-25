@@ -31,13 +31,13 @@ A comprehensive technical reference for current and future contributors. Covers 
 
 ## 1. Project Overview
 
-**Opensource Tracker NST** is a leaderboard and visibility platform for tracking open source contributions made by students of NST across three campuses (Rishihood, ADYPU, SVYASA). It fetches pull requests and issues from the GitHub Search API, ranks students by the number of clean merged PRs, and surfaces this data in a public dashboard.
+**Opensource Tracker NST** is a leaderboard and visibility platform for tracking open source contributions made by students of NST across three campuses (Rishihood, ADYPU, SVYASA). It fetches pull requests and issues from the GitHub Search API, ranks students by a repo-quality-weighted score over their clean merged PRs (see 6.4), and surfaces this data in a public dashboard.
 
 ### Goals
 
 - **Transparency** — every student's contributions are visible and linkable.
 - **Motivation** — real-time rankings and achievement badges encourage consistent contributions.
-- **Integrity** — an admin system flags fake/low-quality PRs, and an automatic repo-validation layer penalizes PRs merged into 0-star/spam repositories, so both are excluded from rankings.
+- **Integrity** — an admin system flags fake/low-quality PRs, and an automatic repo-validation layer excludes PRs merged into 0-star/spam repositories entirely; among what remains, ranking weight scales with the target repo's stars/forks rather than treating every merged PR as equally valuable.
 - **Education** — a "Common Issues" page teaches open source Git workflows to beginners.
 - **Growth** — a public join-request flow lets students self-register; admins approve from a queue.
 
@@ -393,9 +393,23 @@ See Section 11 for the full picture — in short: a logged-in visitor's own OAut
 
 Every leaderboard number shown is now an **exact** count from full pagination — there is no scaled-estimate path anymore (see 5.4, Generation 1).
 
-### 6.4 Repo Validation / Spam Filtering (`lib/repo-cache.ts`)
+### 6.4 Repo Validation, Spam Filtering & Ranking Weight (`lib/repo-cache.ts`)
 
-Any repository a merged PR points to gets checked once for star count (`GET /repos/:owner/:repo`) and cached permanently in `repo_cache_map`. A repo with **fewer than 5 stars is marked invalid**, and merged PRs into it are penalized in `scoreMergedPRs` — this is the automatic half of the integrity system, catching the common "spam PR into a throwaway repo" gaming pattern without needing an admin to manually flag every instance. It runs alongside, not instead of, manual flagging (`lib/flagged.ts`) — an admin can still override either way via `manualOverride`.
+Any repository a merged PR points to gets checked once for stars/forks (`GET /repos/:owner/:repo`) and cached permanently in `repo_cache_map` — `{ stars, forks, valid, manualOverride? }`. A repo with **fewer than 5 stars is marked invalid**, and merged PRs into it are excluded entirely from `scoreMergedPRs` — this is the automatic half of the integrity system, catching the common "spam PR into a throwaway repo" gaming pattern without needing an admin to manually flag every instance. It runs alongside, not instead of, manual flagging (`lib/flagged.ts`) — an admin can still override either way via `manualOverride`.
+
+Among PRs that survive that filter, `scoreMergedPRs` is not a plain count — each merged PR is weighted by `computeRepoWeight(stars, forks)`:
+
+```
+weight = 1 + log10(stars + 3×forks + 1)
+```
+
+A PR into an unknown/tiny repo scores ~1 (identical to a plain count). A PR into a very large, well-known project scores up to ~6. The log scale is deliberate: a linear weight would let one PR into a massive project outrank dozens of honest contributions elsewhere, which makes ranking worse, not better — this keeps quantity meaningful while still rewarding landing a PR somewhere genuinely significant. Forks count for 3× a star each (a fork means someone actually reused the code, a stronger signal than a star click).
+
+This costs **zero additional GitHub API calls** — stars/forks are already fetched once per repo (ever) for the validity check above; the weighting just makes use of data that was previously sitting unused in the cache.
+
+**Staleness caveat, by design (see `saveRepoCache`'s "store permanently"):** a repo's stars/forks are captured the first time any student's PR references it, and never re-checked. Within one repo this is fair (every student who's ever PR'd there shares the same frozen number), but across repos it means a repo that grew significantly after being cached will score lower than an equally-popular repo that happened to be cached more recently. Accepted as a reasonable tradeoff for now given the log scale bounds the impact — revisit with a periodic re-validation pass (reusing the incremental refresh's rate-limit-aware pacing) if it turns out to matter in practice.
+
+The actual score is intentionally shown to students (see 7.2) — visible enough to explain "why is my rank different from my raw PR count," without the UI explaining the underlying formula itself.
 
 ### 6.5 `repoFromUrl(url)` Utility
 
@@ -419,7 +433,7 @@ Reads only from KV (events, achievers, summary cache) — no GitHub API calls, s
 
 Reads the matching `summary_cache:<period>` entry directly — it does **not** trigger a live GitHub fetch on page load. If a student has no `profile_cache` entry yet, they render as a zero-stat placeholder (see Section 15 — this is indistinguishable from a genuine zero until they're refreshed, manually or by the incremental cron).
 
-**Ranking metric:** `scoreMergedPRs = mergedPRs - flaggedMergedPRs - invalidRepoMergedPRs`.
+**Ranking metric:** `scoreMergedPRs`, a repo-quality-weighted sum over valid merged PRs — see 6.4 for the exact formula. The card UI shows this score alongside the raw PR count so a ranking that doesn't match raw PR count is legible, without exposing the formula itself in the UI.
 
 ### 7.3 Contributor Profile (`/contributors/[username]`)
 
