@@ -58,12 +58,22 @@ function ContributorCard({
             <h3 className="font-semibold text-white/90 group-hover:text-white truncate transition-colors">
               {summary.profile.name ?? summary.profile.login}
             </h3>
-            <span
-              title="Ranking score for this contributor"
-              className="flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 tabular-nums"
-            >
-              {summary.scoreMergedPRs.toFixed(1)}
-            </span>
+            <div className="flex-shrink-0 flex flex-col items-end gap-0.5">
+              <span
+                title="Ranking score for this contributor"
+                className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 tabular-nums"
+              >
+                {summary.scoreMergedPRs.toFixed(1)}
+              </span>
+              {summary.avgScore !== undefined && (
+                <span
+                  title="Average score per merged PR — a secondary signal for how consistently impactful the projects they contribute to are, not how many PRs they've done"
+                  className="text-[10px] text-white/30 tabular-nums"
+                >
+                  avg {summary.avgScore.toFixed(1)}
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-white/35 text-xs mt-0.5 truncate">@{summary.profile.login}</p>
           {(summary.year || summary.campus) && (

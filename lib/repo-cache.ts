@@ -43,3 +43,9 @@ export function computeRepoWeight(stars: number, forks: number): number {
   const signal = Math.max(0, stars) + 3 * Math.max(0, forks);
   return 1 + Math.log10(signal + 1);
 }
+
+/** Minimum valid merged PRs before a student's average project-impact score
+ * (StudentSummary.avgScore) is shown at all. Below this, one merge into a
+ * huge repo would read as a perfect average — noise, not a signal of
+ * consistently choosing impactful projects. */
+export const MIN_PRS_FOR_AVG_SCORE = 5;

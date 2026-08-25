@@ -411,6 +411,8 @@ This costs **zero additional GitHub API calls** — stars/forks are already fetc
 
 The actual score is intentionally shown to students (see 7.2) — visible enough to explain "why is my rank different from my raw PR count," without the UI explaining the underlying formula itself.
 
+**Ranking uses the total, not the average, deliberately.** `StudentSummary.avgScore` (`scoreMergedPRs / mergedPRs`) exists as a secondary, non-ranking stat — a "how impactful are the projects this person contributes to" signal, distinct from "how much have they contributed." Total is what drives rank because average actively punishes continuing to contribute: taking on a new, less-flashy repo drags a good average down, which is the opposite of what a platform meant to encourage ongoing participation should reward. Gated to students with `MIN_PRS_FOR_AVG_SCORE` (5) or more merged PRs — below that, one lucky PR into a huge repo would show a perfect average, which is noise, not a real signal, so it's simply not shown rather than shown misleadingly.
+
 ### 6.5 `repoFromUrl(url)` Utility
 
 Converts `https://api.github.com/repos/org/repo` → `org/repo`. Used for grouping PRs by repository and building the `owner/repo#number` keys used throughout the flagging/validation system.

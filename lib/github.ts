@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getStudentsKV, removeStudent } from './kv-students';
 import { getExceptionRepoSetForUser, getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from './kv-own-repo-exceptions';
-import { getRepoCache, saveRepoCache, computeRepoWeight } from './repo-cache';
+import { getRepoCache, saveRepoCache, computeRepoWeight, MIN_PRS_FOR_AVG_SCORE } from './repo-cache';
 import { readProfileCache, writeProfileCache, type ProfileCacheEntry } from './profile-cache';
 import { execSync } from 'child_process';
 import { cookies } from 'next/headers';
@@ -268,6 +268,14 @@ export interface StudentSummary {
    * is computed, same as mergedPRs. Fractional — display mergedPRs for the
    * actual PR count. */
   scoreMergedPRs: number;
+  /** scoreMergedPRs / mergedPRs — a secondary "project impact" signal, not
+   * used for ranking. Answers a different question than the total score:
+   * not "how much have they done" but "when they do contribute, how
+   * significant are the projects they land in." Undefined below
+   * MIN_PRS_FOR_AVG_SCORE (see lib/repo-cache.ts) — a 1-PR average is noise,
+   * not a signal, and would otherwise let one lucky mega-repo PR read as a
+   * perfect score. */
+  avgScore?: number;
   issuesCount: number;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
   campus?: 'Rishihood' | 'ADYPU' | 'SVYASA';
@@ -566,24 +574,28 @@ export function getSummaryFromCache(
   const openPRs = prs.filter((pr) => pr.state === 'open').length;
   const closedPRs = prs.filter((pr) => pr.state === 'closed' && !pr.pull_request?.merged_at).length;
 
+  // Weighted by the target repo's stars/forks (computeRepoWeight), not a
+  // plain count — a PR into an established, widely-used project counts for
+  // more than one into an unknown repo. Junk is already stripped out of
+  // `prs` above. Repos with no cache entry (shouldn't normally happen, since
+  // every PR's repo gets validated on refresh) fall back to weight 1, same
+  // as today's plain count.
+  const totalWeightedScore = mergedPRList.reduce((sum, pr) => {
+    if (!pr.repository_url) return sum + 1;
+    const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
+    const repoEntry = repoCacheMap[repo];
+    return sum + (repoEntry ? computeRepoWeight(repoEntry.stars, repoEntry.forks) : 1);
+  }, 0);
+
   return {
     profile: cached.profile,
     totalPRs,
     mergedPRs,
     openPRs,
     closedPRs,
-    // Weighted by the target repo's stars/forks (computeRepoWeight), not a
-    // plain count — a PR into an established, widely-used project counts for
-    // more than one into an unknown repo. Junk is already stripped out of
-    // `prs` above. Repos with no cache entry (shouldn't normally happen,
-    // since every PR's repo gets validated on refresh) fall back to weight 1,
-    // same as today's plain count.
-    scoreMergedPRs: mergedPRList.reduce((sum, pr) => {
-      if (!pr.repository_url) return sum + 1;
-      const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
-      const repoEntry = repoCacheMap[repo];
-      return sum + (repoEntry ? computeRepoWeight(repoEntry.stars, repoEntry.forks) : 1);
-    }, 0),
+    scoreMergedPRs: totalWeightedScore,
+    // Secondary "project impact" signal — see StudentSummary.avgScore doc.
+    avgScore: mergedPRs >= MIN_PRS_FOR_AVG_SCORE ? totalWeightedScore / mergedPRs : undefined,
     issuesCount: issues.length,
     cachedAt: cached.cachedAt,
   };
@@ -805,20 +817,23 @@ export async function getAllStudentSummaries(
     const openPRs = validPRs.filter((pr) => pr.state === 'open').length;
     const closedPRs = validPRs.filter((pr) => pr.state === 'closed' && !pr.pull_request?.merged_at).length;
 
+    // See getSummaryFromCache's comment — same repo-quality weighting, kept
+    // in sync between both code paths.
+    const liveWeightedScore = mergedPRList.reduce((sum, pr) => {
+      if (!pr.repository_url) return sum + 1;
+      const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
+      const repoEntry = repoCache[repo];
+      return sum + (repoEntry ? computeRepoWeight(repoEntry.stars, repoEntry.forks) : 1);
+    }, 0);
+
     summaries.push({
       profile,
       totalPRs,
       mergedPRs,
       openPRs,
       closedPRs,
-      // See getSummaryFromCache's comment — same repo-quality weighting, kept
-      // in sync between both code paths.
-      scoreMergedPRs: mergedPRList.reduce((sum, pr) => {
-        if (!pr.repository_url) return sum + 1;
-        const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
-        const repoEntry = repoCache[repo];
-        return sum + (repoEntry ? computeRepoWeight(repoEntry.stars, repoEntry.forks) : 1);
-      }, 0),
+      scoreMergedPRs: liveWeightedScore,
+      avgScore: mergedPRs >= MIN_PRS_FOR_AVG_SCORE ? liveWeightedScore / mergedPRs : undefined,
       issuesCount: issues.length,
       year: student.year,
       campus: student.campus,
