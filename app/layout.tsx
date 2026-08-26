@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Mona_Sans } from "next/font/google";
 import { Nav } from "./components/Nav";
 import SmoothScroll from "./components/SmoothScroll";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// grauity's own face (see Newton-School/grauity constantGlobalStyle.ts).
+// Variable weight + width axis, self-hosted by next/font — no layout shift.
+const monaSans = Mona_Sans({
+  variable: "--font-mona-sans",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "variable",
+  axes: ["wdth"],
 });
 
 export const metadata: Metadata = {
@@ -25,11 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className={`${monaSans.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col bg-ground text-ink">
         <Nav />
         <SmoothScroll>
           {children}
@@ -38,4 +34,3 @@ export default function RootLayout({
     </html>
   );
 }
-

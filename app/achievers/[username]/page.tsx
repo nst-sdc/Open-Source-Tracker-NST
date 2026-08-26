@@ -60,9 +60,9 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
   const repoCount   = new Set(prs.map(pr => repoFromUrl(pr.repository_url))).size;
 
   return (
-    <main className="min-h-screen bg-[#030712]">
+    <main className="min-h-screen bg-panel">
       <div className="max-w-4xl mx-auto px-4 pt-6">
-        <Link href="/achievers" className="inline-flex items-center gap-2 text-white/30 hover:text-white/70 transition-colors text-sm">
+        <Link href="/achievers" className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
           </svg>
@@ -73,7 +73,7 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
       {/* Hero */}
       <div className="relative overflow-hidden pt-8 pb-8 px-4">
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-yellow-600/6 blur-[80px] rounded-full" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-gold-100/40 blur-[80px] rounded-full" />
         </div>
 
         <div className="relative max-w-4xl mx-auto">
@@ -84,29 +84,29 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
               width={112}
               height={112}
               unoptimized
-              className="w-28 h-28 rounded-full ring-4 ring-yellow-500/20 shadow-2xl object-cover flex-shrink-0"
+              className="w-28 h-28 rounded-full ring-4 ring-gold-100 shadow-2xl object-cover flex-shrink-0"
             />
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-3xl font-bold text-white">{profile.name ?? profile.login}</h1>
-              <p className="text-white/40 text-sm mt-0.5">@{profile.login}</p>
+              <h1 className="text-3xl font-[650] text-ink">{profile.name ?? profile.login}</h1>
+              <p className="text-ink-soft text-sm mt-0.5">@{profile.login}</p>
               {(student?.year || student?.campus) && (
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-1.5">
                   {student.year && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-400 font-medium">
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-violet-0 border border-violet-100 text-violet-600 font-[500]">
                       🎓 {student.year}
                     </span>
                   )}
                   {student.campus && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 font-medium">
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-brand-0 border border-brand-100 text-brand-600 font-[500]">
                       📍 {student.campus}
                     </span>
                   )}
                 </div>
               )}
-              <p className="text-white/55 mt-3 max-w-lg leading-relaxed">
+              <p className="text-ink-mid mt-3 max-w-lg leading-relaxed">
                 {entry.headline ?? profile.bio}
               </p>
-              <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start text-sm text-white/35">
+              <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start text-sm text-ink-soft">
                 {profile.location && (
                   <span className="flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
@@ -116,7 +116,7 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
                   </span>
                 )}
                 <a href={profile.html_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 hover:text-white/70 transition-colors">
+                  className="flex items-center gap-1.5 hover:text-ink-mid transition-colors">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
                   </svg>
@@ -129,13 +129,13 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
           {/* Quick stats */}
           <div className="grid grid-cols-3 gap-3 mt-8">
             {[
-              { label: 'Contributions', value: prs.length,    color: 'text-yellow-400'  },
-              { label: 'Merged PRs',    value: mergedCount,   color: 'text-emerald-400' },
-              { label: 'Repos',         value: repoCount,     color: 'text-white'       },
+              { label: 'Contributions', value: prs.length,    color: 'text-gold-600'  },
+              { label: 'Merged PRs',    value: mergedCount,   color: 'text-success-600' },
+              { label: 'Repos',         value: repoCount,     color: 'text-ink'       },
             ].map(stat => (
-              <div key={stat.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 text-center">
-                <div className={`text-2xl font-bold tabular-nums ${stat.color}`}>{stat.value}</div>
-                <div className="text-white/35 text-xs mt-0.5">{stat.label}</div>
+              <div key={stat.label} className="bg-white border border-line rounded-xl p-4 text-center">
+                <div className={`text-2xl font-[650] tabular-nums ${stat.color}`}>{stat.value}</div>
+                <div className="text-ink-soft text-xs mt-0.5">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -147,7 +147,7 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
         {/* Program achievements */}
         {entry.programs.length > 0 && (
           <section>
-            <h2 className="text-white/50 text-xs font-medium uppercase tracking-widest mb-4">
+            <h2 className="text-ink-soft text-xs font-[500] uppercase tracking-widest mb-4">
               Program Achievements
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -157,12 +157,12 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
                   <div className={`rounded-2xl border p-5 ${meta.bg} ${meta.border} ${prog.url ? 'hover:opacity-90 transition-opacity cursor-pointer' : ''}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className={`text-base font-semibold ${meta.color}`}>{prog.name}</div>
-                        <div className="text-white/50 text-sm mt-0.5">{meta.label}</div>
-                        {prog.org && <div className="text-white/35 text-xs mt-1">{prog.org}</div>}
+                        <div className={`text-base font-[550] ${meta.color}`}>{prog.name}</div>
+                        <div className="text-ink-soft text-sm mt-0.5">{meta.label}</div>
+                        {prog.org && <div className="text-ink-soft text-xs mt-1">{prog.org}</div>}
                       </div>
                       {prog.year && (
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${meta.bg} ${meta.color} border ${meta.border}`}>
+                        <span className={`text-xs font-[650] px-2.5 py-1 rounded-full ${meta.bg} ${meta.color} border ${meta.border}`}>
                           {prog.year}
                         </span>
                       )}
@@ -190,30 +190,30 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
         {/* Recent contributions */}
         {prs.length > 0 && (
           <section>
-            <h2 className="text-white/50 text-xs font-medium uppercase tracking-widest mb-4">
+            <h2 className="text-ink-soft text-xs font-[500] uppercase tracking-widest mb-4">
               Open Source Contributions
             </h2>
             <div className="space-y-2">
               {prs.slice(0, 10).map(pr => (
                 <a key={pr.id} href={pr.pull_request?.html_url ?? pr.html_url} target="_blank" rel="noopener noreferrer"
-                  className="group flex items-start gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:bg-white/[0.045] hover:border-white/[0.1] transition-all">
+                  className="group flex items-start gap-4 bg-white border border-line rounded-xl p-4 hover:bg-panel hover:border-line-heavy transition-all">
                   <div className="flex-shrink-0 mt-0.5">
                     {pr.pull_request?.merged_at ? (
-                      <span className="inline-flex items-center bg-purple-500/15 text-purple-400 border border-purple-500/25 px-2.5 py-1 rounded-full text-xs font-medium">Merged</span>
+                      <span className="inline-flex items-center bg-violet-0 text-violet-600 border border-violet-100 px-2.5 py-1 rounded-full text-xs font-[500]">Merged</span>
                     ) : pr.state === 'open' ? (
-                      <span className="inline-flex items-center bg-teal-500/15 text-teal-400 border border-teal-500/25 px-2.5 py-1 rounded-full text-xs font-medium">Open</span>
+                      <span className="inline-flex items-center bg-brand-0 text-brand-600 border border-brand-100 px-2.5 py-1 rounded-full text-xs font-[500]">Open</span>
                     ) : (
-                      <span className="inline-flex items-center bg-red-500/15 text-red-400 border border-red-500/25 px-2.5 py-1 rounded-full text-xs font-medium">Closed</span>
+                      <span className="inline-flex items-center bg-error-0 text-error-600 border border-error-100 px-2.5 py-1 rounded-full text-xs font-[500]">Closed</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-white/85 font-medium group-hover:text-white transition-colors leading-snug">{pr.title}</h3>
+                    <h3 className="text-ink font-[500] group-hover:text-ink transition-colors leading-snug">{pr.title}</h3>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-white/30 text-xs font-mono">{repoFromUrl(pr.repository_url)}</span>
-                      <span className="text-white/20 text-xs">{formatDate(pr.created_at)}</span>
+                      <span className="text-ink-soft text-xs font-mono">{repoFromUrl(pr.repository_url)}</span>
+                      <span className="text-ink-soft text-xs">{formatDate(pr.created_at)}</span>
                     </div>
                   </div>
-                  <svg className="w-4 h-4 text-white/15 group-hover:text-white/40 flex-shrink-0 mt-0.5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-ink-faint group-hover:text-ink-soft flex-shrink-0 mt-0.5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>

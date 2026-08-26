@@ -7,11 +7,11 @@ const PROGRAMS = [
     id: 'gsoc',
     name: 'Google Summer of Code',
     short: 'GSoC',
-    color: 'text-blue-400',
-    accent: 'border-blue-500/30',
-    bg: 'bg-blue-500/5',
-    dot: 'bg-blue-400',
-    dotBorder: 'border-blue-500/40',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-500/5',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-100',
     stipend: '$3,000 – $6,600+',
     duration: '12 weeks (June – August)',
     eligibility: 'Students 18+ worldwide. No degree required.',
@@ -35,7 +35,7 @@ const PROGRAMS = [
     color: 'text-violet-400',
     accent: 'border-violet-500/30',
     bg: 'bg-violet-500/5',
-    dot: 'bg-violet-400',
+    dot: 'bg-violet-500',
     dotBorder: 'border-violet-500/40',
     stipend: '$3,000 – $6,600',
     duration: '12 weeks, runs 3 terms per year',
@@ -82,11 +82,11 @@ const PROGRAMS = [
     id: 'summer-of-bitcoin',
     name: 'Summer of Bitcoin',
     short: 'SoB',
-    color: 'text-orange-400',
-    accent: 'border-orange-500/30',
-    bg: 'bg-orange-500/5',
-    dot: 'bg-orange-400',
-    dotBorder: 'border-orange-500/40',
+    color: 'text-warning-600',
+    accent: 'border-warning-200',
+    bg: 'bg-warning-0',
+    dot: 'bg-warning-400',
+    dotBorder: 'border-warning-200',
     stipend: '$3,000 + 0.1 BTC',
     duration: '12 weeks (June – August)',
     eligibility: 'University students globally with interest in Bitcoin',
@@ -107,11 +107,11 @@ const PROGRAMS = [
     id: 'mlh',
     name: 'MLH Fellowship',
     short: 'MLH',
-    color: 'text-rose-400',
-    accent: 'border-rose-500/30',
-    bg: 'bg-rose-500/5',
-    dot: 'bg-rose-400',
-    dotBorder: 'border-rose-500/40',
+    color: 'text-error-600',
+    accent: 'border-error-100',
+    bg: 'bg-error-0',
+    dot: 'bg-error-400',
+    dotBorder: 'border-error-100',
     stipend: '$5,000 (stipend varies by track)',
     duration: '12 weeks',
     eligibility: 'Students and recent graduates globally',
@@ -132,11 +132,11 @@ const PROGRAMS = [
     id: 'hacktoberfest',
     name: 'Hacktoberfest',
     short: 'Hacktoberfest',
-    color: 'text-pink-400',
-    accent: 'border-pink-500/30',
-    bg: 'bg-pink-500/5',
-    dot: 'bg-pink-400',
-    dotBorder: 'border-pink-500/40',
+    color: 'text-violet-600',
+    accent: 'border-violet-100',
+    bg: 'bg-violet-0',
+    dot: 'bg-violet-500',
+    dotBorder: 'border-violet-200',
     stipend: 'Digital rewards (no cash stipend)',
     duration: 'October (1 month)',
     eligibility: 'Anyone globally',
@@ -157,11 +157,11 @@ const PROGRAMS = [
     id: 'gsod',
     name: 'Google Season of Docs',
     short: 'GSoD',
-    color: 'text-emerald-400',
-    accent: 'border-emerald-500/30',
-    bg: 'bg-emerald-500/5',
-    dot: 'bg-emerald-400',
-    dotBorder: 'border-emerald-500/40',
+    color: 'text-success-600',
+    accent: 'border-success-200',
+    bg: 'bg-success-500/5',
+    dot: 'bg-success-400',
+    dotBorder: 'border-success-200',
     stipend: '$3,000 – $6,600+',
     duration: '6 months (May – November)',
     eligibility: 'Technical writers and developers globally, 18+',
@@ -182,11 +182,11 @@ const PROGRAMS = [
     id: 'sok',
     name: 'Season of KDE',
     short: 'SoK',
-    color: 'text-cyan-400',
-    accent: 'border-cyan-500/30',
-    bg: 'bg-cyan-500/5',
-    dot: 'bg-cyan-400',
-    dotBorder: 'border-cyan-500/40',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-0',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-200',
     stipend: 'Merchandise & Travel Support (No cash stipend)',
     duration: '10 weeks (December – February)',
     eligibility: 'Open to anyone globally, great for beginners',
@@ -207,11 +207,11 @@ const PROGRAMS = [
     id: 'asoc',
     name: 'Alibaba Summer of Code',
     short: 'ASoC',
-    color: 'text-amber-400',
-    accent: 'border-amber-500/30',
-    bg: 'bg-amber-500/5',
-    dot: 'bg-amber-400',
-    dotBorder: 'border-amber-500/40',
+    color: 'text-gold-600',
+    accent: 'border-gold-100',
+    bg: 'bg-gold-500/5',
+    dot: 'bg-gold-400',
+    dotBorder: 'border-gold-100',
     stipend: '$1,000 – $3,000+',
     duration: '12 weeks (July – September)',
     eligibility: 'Students 18+ worldwide',
@@ -232,11 +232,11 @@ const PROGRAMS = [
     id: 'hyperledger',
     name: 'Hyperledger Mentorship Program',
     short: 'Hyperledger',
-    color: 'text-teal-400',
-    accent: 'border-teal-500/30',
-    bg: 'bg-teal-500/5',
-    dot: 'bg-teal-400',
-    dotBorder: 'border-teal-500/40',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-0',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-200',
     stipend: '$3,000 – $6,600',
     duration: '12 or 24 weeks (Summer/Year-round)',
     eligibility: 'Open to university students and developers worldwide',
@@ -257,11 +257,11 @@ const PROGRAMS = [
     id: 'gssoc',
     name: 'GirlScript Summer of Code',
     short: 'GSSoC',
-    color: 'text-red-400',
-    accent: 'border-red-500/30',
-    bg: 'bg-red-500/5',
-    dot: 'bg-red-400',
-    dotBorder: 'border-red-500/40',
+    color: 'text-error-600',
+    accent: 'border-error-100',
+    bg: 'bg-error-500/5',
+    dot: 'bg-error-400',
+    dotBorder: 'border-error-100',
     stipend: 'Prizes & Goodies (no cash stipend)',
     duration: '12 weeks (May – July)',
     eligibility: 'Open to everyone worldwide, very beginner-friendly',
@@ -307,11 +307,11 @@ const PROGRAMS = [
     id: 'ospp',
     name: 'Open Source Promotion Plan',
     short: 'OSPP',
-    color: 'text-purple-400',
-    accent: 'border-purple-500/30',
-    bg: 'bg-purple-500/5',
-    dot: 'bg-purple-400',
-    dotBorder: 'border-purple-500/40',
+    color: 'text-violet-600',
+    accent: 'border-violet-100',
+    bg: 'bg-violet-0',
+    dot: 'bg-violet-500',
+    dotBorder: 'border-violet-100',
     stipend: '$1,500 – $3,000+',
     duration: '3 months (July – September)',
     eligibility: 'Students globally, 18+',
@@ -332,11 +332,11 @@ const PROGRAMS = [
     id: 'codeheat',
     name: 'FOSSASIA Codeheat',
     short: 'Codeheat',
-    color: 'text-rose-400',
-    accent: 'border-rose-500/30',
-    bg: 'bg-rose-500/5',
-    dot: 'bg-rose-400',
-    dotBorder: 'border-rose-500/40',
+    color: 'text-error-600',
+    accent: 'border-error-100',
+    bg: 'bg-error-0',
+    dot: 'bg-error-400',
+    dotBorder: 'border-error-100',
     stipend: 'Summit Travel Funding & Goodies',
     duration: '2 months per term (runs autumn/winter)',
     eligibility: 'Open to anyone worldwide',
@@ -357,11 +357,11 @@ const PROGRAMS = [
     id: 'lkmp',
     name: 'Linux Kernel Mentorship Program',
     short: 'LKMP',
-    color: 'text-yellow-400',
-    accent: 'border-yellow-500/30',
-    bg: 'bg-yellow-500/5',
-    dot: 'bg-yellow-400',
-    dotBorder: 'border-yellow-500/40',
+    color: 'text-gold-600',
+    accent: 'border-gold-100',
+    bg: 'bg-gold-0',
+    dot: 'bg-gold-400',
+    dotBorder: 'border-gold-100',
     stipend: '$3,000 – $6,600',
     duration: '12 to 24 weeks',
     eligibility: 'Aspiring Linux kernel developers globally',
@@ -382,11 +382,11 @@ const PROGRAMS = [
     id: 'dssg',
     name: 'Data Science for Social Good Fellowship',
     short: 'DSSG',
-    color: 'text-indigo-400',
-    accent: 'border-indigo-500/30',
-    bg: 'bg-indigo-500/5',
-    dot: 'bg-indigo-400',
-    dotBorder: 'border-indigo-500/40',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-0',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-200',
     stipend: 'Varies (Paid summer fellowship)',
     duration: '12 weeks (Summer)',
     eligibility: 'Undergraduate & graduate students in computational/quantitative fields or social sciences',
@@ -407,11 +407,11 @@ const PROGRAMS = [
 
 export default function ProgramsPage() {
   return (
-    <main className="min-h-screen bg-[#030712]">
+    <main className="min-h-screen bg-panel">
       {/* Hero */}
       <div className="relative overflow-hidden pt-14 pb-10 px-4">
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[350px] rounded-full bg-blue-600/7 blur-[100px]" />
+          <div className="absolute top-0 left-1/4 w-[500px] h-[350px] rounded-full bg-brand-100/40 blur-[100px]" />
           <div className="absolute top-0 right-1/4 w-[400px] h-[300px] rounded-full bg-violet-600/7 blur-[100px]" />
         </div>
 
@@ -419,7 +419,7 @@ export default function ProgramsPage() {
           <div className="flex justify-start mb-6">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors text-sm"
+              className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
@@ -428,16 +428,16 @@ export default function ProgramsPage() {
             </Link>
           </div>
 
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs text-blue-300/70 mb-6">
+          <div className="inline-flex items-center gap-2 bg-panel border border-line rounded-full px-4 py-1.5 text-xs text-brand-600/70 mb-6">
             Paid internships · Global programs · Real-world impact
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
+          <h1 className="text-5xl md:text-6xl font-[650] text-ink mb-4 tracking-tight">
             Open Source{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400">
+            <span className="text-violet-600">
               Programs
             </span>
           </h1>
-          <p className="text-white/40 text-lg max-w-2xl mx-auto leading-relaxed mb-8">
+          <p className="text-ink-soft text-lg max-w-2xl mx-auto leading-relaxed mb-8">
             A guide to the world&apos;s best paid open source programs — stipends, timelines,
             eligibility, and how NST students have fared.
           </p>
@@ -462,17 +462,17 @@ export default function ProgramsPage() {
 
         {/* Quick comparison cards */}
         <section>
-          <h2 className="text-white/50 text-xs font-medium uppercase tracking-widest mb-4">
+          <h2 className="text-ink-soft text-xs font-[500] uppercase tracking-widest mb-4">
             Quick Comparison
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {PROGRAMS.map((p) => (
               <div key={p.id} className={`rounded-xl border ${p.accent} ${p.bg} p-4`}>
-                <div className={`font-bold text-sm mb-2 ${p.color}`}>{p.short}</div>
-                <div className="space-y-1 text-xs text-white/50">
-                  <div className="flex justify-between"><span className="text-white/30">Stipend</span><span>{p.stipend}</span></div>
-                  <div className="flex justify-between"><span className="text-white/30">Duration</span><span>{p.duration.split('(')[0].trim()}</span></div>
-                  <div className="flex justify-between"><span className="text-white/30">Deadline</span><span>{p.deadline.split('—')[0].trim()}</span></div>
+                <div className={`font-[650] text-sm mb-2 ${p.color}`}>{p.short}</div>
+                <div className="space-y-1 text-xs text-ink-soft">
+                  <div className="flex justify-between"><span className="text-ink-soft">Stipend</span><span>{p.stipend}</span></div>
+                  <div className="flex justify-between"><span className="text-ink-soft">Duration</span><span>{p.duration.split('(')[0].trim()}</span></div>
+                  <div className="flex justify-between"><span className="text-ink-soft">Deadline</span><span>{p.deadline.split('—')[0].trim()}</span></div>
                 </div>
               </div>
             ))}
@@ -484,14 +484,14 @@ export default function ProgramsPage() {
           <section key={p.id} id={p.id}>
             <div className={`rounded-2xl border ${p.accent} ${p.bg} overflow-hidden`}>
               {/* Header */}
-              <div className="p-6 border-b border-white/[0.05]">
+              <div className="p-6 border-b border-line">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`w-2 h-2 rounded-full ${p.dot}`} />
-                      <span className={`text-xs font-medium ${p.color} opacity-70`}>{p.org}</span>
+                      <span className={`text-xs font-[500] ${p.color} opacity-70`}>{p.org}</span>
                     </div>
-                    <h2 className={`text-2xl font-bold ${p.color}`}>{p.name}</h2>
+                    <h2 className={`text-2xl font-[650] ${p.color}`}>{p.name}</h2>
                   </div>
                   <a
                     href={p.link}
@@ -506,11 +506,11 @@ export default function ProgramsPage() {
                   </a>
                 </div>
 
-                <p className="text-white/55 text-sm mt-4 leading-relaxed">{p.desc}</p>
+                <p className="text-ink-mid text-sm mt-4 leading-relaxed">{p.desc}</p>
               </div>
 
               {/* Details */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-white/[0.04]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-white">
                 {[
                   { label: 'Stipend', value: p.stipend },
                   { label: 'Duration', value: p.duration },
@@ -518,20 +518,20 @@ export default function ProgramsPage() {
                   { label: 'Apply By', value: p.deadline },
                 ].map((item) => (
                   <div key={item.label} className={`${p.bg} px-4 py-3`}>
-                    <div className="text-white/30 text-xs mb-1">{item.label}</div>
-                    <div className="text-white/70 text-xs font-medium leading-snug">{item.value}</div>
+                    <div className="text-ink-soft text-xs mb-1">{item.label}</div>
+                    <div className="text-ink-mid text-xs font-[500] leading-snug">{item.value}</div>
                   </div>
                 ))}
               </div>
 
               {/* Tips */}
-              <div className="p-6 border-t border-white/[0.05]">
-                <div className={`text-xs font-semibold ${p.color} uppercase tracking-wide mb-3`}>
+              <div className="p-6 border-t border-line">
+                <div className={`text-xs font-[550] ${p.color} uppercase tracking-wide mb-3`}>
                   Tips to get selected
                 </div>
                 <ul className="space-y-2">
                   {p.tips.map((tip, i) => (
-                    <li key={i} className="flex items-start gap-2 text-white/50 text-sm">
+                    <li key={i} className="flex items-start gap-2 text-ink-soft text-sm">
                       <span className={`${p.color} opacity-50 flex-shrink-0 mt-0.5`}>✓</span>
                       {tip}
                     </li>
@@ -540,41 +540,41 @@ export default function ProgramsPage() {
               </div>
 
               {/* NST track record */}
-              <div className={`px-6 py-4 border-t border-white/[0.05] bg-white/[0.02]`}>
-                <span className={`text-xs font-semibold ${p.color}`}>NST track record — </span>
-                <span className="text-white/40 text-xs">{p.nst}</span>
+              <div className={`px-6 py-4 border-t border-line bg-white`}>
+                <span className={`text-xs font-[550] ${p.color}`}>NST track record — </span>
+                <span className="text-ink-soft text-xs">{p.nst}</span>
               </div>
             </div>
           </section>
         ))}
 
         {/* CTA */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-8 text-center">
-          <h2 className="text-xl font-bold text-white mb-2">Ready to start your journey?</h2>
-          <p className="text-white/40 text-sm mb-6">
+        <section className="rounded-2xl border border-line bg-white p-8 text-center">
+          <h2 className="text-xl font-[650] text-ink mb-2">Ready to start your journey?</h2>
+          <p className="text-ink-soft text-sm mb-6">
             See who is contributing and learn how to get started.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
               href="/contributors"
-              className="px-5 py-2.5 rounded-xl bg-white/[0.07] border border-white/10 text-white/80 text-sm font-medium hover:bg-white/[0.1] transition-all"
+              className="px-5 py-2.5 rounded-xl bg-panel border border-line text-ink text-sm font-[500] hover:bg-panel-2 transition-all"
             >
               View Contributors
             </Link>
             <Link
               href="/achievers"
-              className="px-5 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/25 text-yellow-300 text-sm font-medium hover:bg-yellow-500/15 transition-all"
+              className="px-5 py-2.5 rounded-xl bg-gold-0 border border-gold-100 text-gold-600 text-sm font-[500] hover:bg-gold-0 transition-all"
             >
               Hall of Fame
             </Link>
             <Link
               href="/get-started"
-              className="px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm font-medium hover:bg-emerald-500/15 transition-all"
+              className="px-5 py-2.5 rounded-xl bg-success-0 border border-success-100 text-success-600 text-sm font-[500] hover:bg-success-100 transition-all"
             >
               Get Started Guide
             </Link>
           </div>
-          <p className="text-white/20 text-xs mt-6">
+          <p className="text-ink-soft text-xs mt-6">
             ⚠️ Stipends and deadlines shown are approximate — always verify on the official program site before applying.
           </p>
         </section>

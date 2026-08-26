@@ -1,42 +1,59 @@
 export default function ContributorsLoading() {
   return (
-    <main className="min-h-screen bg-[#030712]">
-      <div className="relative overflow-hidden pt-16 pb-12 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="h-5 w-32 bg-white/5 rounded-full mx-auto mb-8 animate-pulse" />
-          <div className="h-14 w-80 bg-white/5 rounded-2xl mx-auto mb-4 animate-pulse" />
-          <div className="h-5 w-64 bg-white/5 rounded-full mx-auto mb-12 animate-pulse" />
-          <div className="flex justify-center gap-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl px-8 py-4 w-36 animate-pulse">
-                <div className="h-8 w-12 bg-white/10 rounded mx-auto mb-2" />
-                <div className="h-3 w-16 bg-white/5 rounded mx-auto" />
+    <main className="min-h-screen bg-panel">
+      {/* Contest hero skeleton */}
+      <div className="bg-gradient-to-br from-violet-700 via-violet-800 to-violet-900 contest-grid">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-8 pb-24">
+          <div className="flex items-center justify-between">
+            <div className="h-9 w-36 bg-white/10 rounded-full animate-pulse" />
+            <div className="h-10 w-32 bg-white/20 rounded-[10px] animate-pulse" />
+          </div>
+          <div className="flex flex-col items-center mt-6 gap-3">
+            <div className="h-4 w-48 bg-white/15 rounded-full animate-pulse" />
+            <div className="h-11 w-72 bg-white/20 rounded-xl animate-pulse" />
+          </div>
+          <div className="flex items-start justify-center gap-12 md:gap-16 mt-8">
+            {[72, 96, 72].map((size, i) => (
+              <div key={i} className={`flex flex-col items-center gap-3 ${size === 72 ? 'pt-7' : ''}`}>
+                <div className="rounded-full bg-white/20 animate-pulse" style={{ width: size, height: size }} />
+                <div className="h-3.5 w-24 bg-white/15 rounded animate-pulse" />
+                <div className="h-6 w-24 bg-white/10 rounded-full animate-pulse" />
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pb-24">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white/[0.025] border border-white/[0.07] rounded-2xl p-6 animate-pulse"
-            >
-              <div className="flex items-start gap-4 mb-5">
-                <div className="w-13 h-13 rounded-full bg-white/10 flex-shrink-0" style={{ width: 52, height: 52 }} />
-                <div className="flex-1 pt-0.5">
-                  <div className="h-4 w-28 bg-white/10 rounded mb-2" />
-                  <div className="h-3 w-20 bg-white/5 rounded" />
-                </div>
+      {/* CTA band skeleton */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 -mt-12">
+        <div className="h-[86px] bg-gradient-to-br from-violet-600 to-violet-700 rounded-2xl shadow-violet-band animate-pulse" />
+      </div>
+
+      {/* Summary strip skeleton */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
+        <div className="bg-white border border-line rounded-2xl shadow-card grid grid-cols-2 md:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className={`px-5 py-4 ${i > 0 ? 'md:border-l md:border-line' : ''}`}>
+              <div className="h-6 w-14 bg-panel rounded animate-pulse" />
+              <div className="h-3 w-20 bg-panel rounded animate-pulse mt-2" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Table skeleton */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6 pb-20">
+        <div className="bg-white border border-line rounded-2xl shadow-card overflow-hidden">
+          <div className="h-11 bg-panel" />
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-3 border-t border-panel">
+              <div className="h-7 w-10 bg-panel rounded-full animate-pulse" />
+              <div className="w-[38px] h-[38px] rounded-full bg-panel animate-pulse shrink-0" />
+              <div className="flex-1">
+                <div className="h-3.5 w-36 bg-panel rounded animate-pulse" />
+                <div className="h-3 w-24 bg-panel rounded animate-pulse mt-1.5" />
               </div>
-              <div className="flex gap-4 mb-3">
-                <div className="h-3 w-16 bg-white/5 rounded" />
-                <div className="h-3 w-12 bg-white/5 rounded" />
-              </div>
-              <div className="h-1.5 w-full bg-white/10 rounded-full" />
-              <div className="mt-4 h-3 w-24 bg-white/5 rounded" />
+              <div className="h-4 w-10 bg-panel rounded animate-pulse" />
             </div>
           ))}
         </div>

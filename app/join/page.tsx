@@ -102,11 +102,11 @@ export default function JoinRequestPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#030712] flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
+    <main className="min-h-screen bg-panel flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
       {/* Background glow effects */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-purple-600/10 blur-[130px] rounded-full" />
-        <div className="absolute bottom-1/4 right-1/4 w-[350px] h-[250px] bg-blue-600/5 blur-[100px] rounded-full" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-brand-100/40 blur-[130px] rounded-full" />
+        <div className="absolute bottom-1/4 right-1/4 w-[350px] h-[250px] bg-violet-100/30 blur-[100px] rounded-full" />
       </div>
 
       <div className="relative w-full max-w-lg">
@@ -114,7 +114,7 @@ export default function JoinRequestPage() {
         <div className="flex justify-start mb-6">
           <Link
             href="/contributors"
-            className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm font-[500]"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 19l-7-7 7-7" />
@@ -124,20 +124,20 @@ export default function JoinRequestPage() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8 backdrop-blur-md shadow-2xl shadow-black/50">
+        <div className="bg-white border border-line rounded-2xl p-8 shadow-card">
           <div className="flex items-center gap-3.5 mb-6">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/25 to-blue-500/15 border border-purple-500/20 flex items-center justify-center text-xl">
+            <div className="w-11 h-11 rounded-xl bg-brand-0 border border-violet-100 flex items-center justify-center text-xl">
               📥
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white leading-tight">Join Leaderboard</h1>
-              <p className="text-white/35 text-xs mt-0.5">Check your status or submit a request to join</p>
+              <h1 className="text-xl font-[650] text-ink leading-tight">Join Leaderboard</h1>
+              <p className="text-ink-soft text-xs mt-0.5">Check your status or submit a request to join</p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2.5">
-              <label htmlFor="github-input" className="block text-xs font-semibold text-white/45 uppercase tracking-wider">
+              <label htmlFor="github-input" className="block text-xs font-[550] text-ink-soft uppercase tracking-wider">
                 GitHub Username / Search
               </label>
               <div className="relative">
@@ -157,11 +157,11 @@ export default function JoinRequestPage() {
                     }
                   }}
                   disabled={loading}
-                  className="w-full bg-white/[0.04] border border-white/[0.09] rounded-2xl pl-4 pr-12 py-3.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40 focus:bg-white/[0.06] transition-all"
+                  className="w-full bg-white border border-line rounded-2xl pl-4 pr-12 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-panel transition-all"
                 />
                 {verifying && (
                   <div className="absolute right-4 top-4">
-                    <svg className="w-5 h-5 animate-spin text-purple-400/70" fill="none" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 animate-spin text-violet-600/70" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
@@ -172,19 +172,19 @@ export default function JoinRequestPage() {
 
             {/* Verification Preview */}
             {verifiedProfile && status === 'eligible' && (
-              <div className="flex items-start gap-4 p-4 rounded-2xl bg-purple-500/5 border border-purple-500/15 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-start gap-4 p-4 rounded-2xl bg-violet-0 border border-violet-100 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <img
                   src={verifiedProfile.avatar_url}
                   alt={verifiedProfile.login}
-                  className="w-12 h-12 rounded-full ring-2 ring-purple-500/20 flex-shrink-0 object-cover"
+                  className="w-12 h-12 rounded-full ring-2 ring-violet-100 flex-shrink-0 object-cover"
                 />
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-white truncate">
+                  <h3 className="text-sm font-[550] text-ink truncate">
                     {verifiedProfile.name ?? verifiedProfile.login}
                   </h3>
-                  <p className="text-purple-400 text-xs font-mono">@{verifiedProfile.login}</p>
+                  <p className="text-violet-600 text-xs font-mono">@{verifiedProfile.login}</p>
                   {verifiedProfile.bio && (
-                    <p className="text-white/40 text-xs mt-1 leading-normal line-clamp-2">{verifiedProfile.bio}</p>
+                    <p className="text-ink-soft text-xs mt-1 leading-normal line-clamp-2">{verifiedProfile.bio}</p>
                   )}
                 </div>
               </div>
@@ -194,14 +194,14 @@ export default function JoinRequestPage() {
             {status === 'eligible' && (
               <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="space-y-2">
-                  <label htmlFor="year-select" className="block text-xs font-semibold text-white/45 uppercase tracking-wider">
+                  <label htmlFor="year-select" className="block text-xs font-[550] text-ink-soft uppercase tracking-wider">
                     Year
                   </label>
                   <select
                     id="year-select"
                     value={year}
                     onChange={(e) => setYear(e.target.value as any)}
-                    className="w-full bg-[#0a0e1a]/80 border border-white/[0.09] rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-purple-500/40 transition-all cursor-pointer appearance-none"
+                    className="w-full bg-[#0a0e1a]/80 border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
                     style={{
                       backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
                       backgroundRepeat: 'no-repeat',
@@ -209,22 +209,22 @@ export default function JoinRequestPage() {
                       backgroundSize: '16px',
                     }}
                   >
-                    <option value="" className="bg-[#0f172a] text-white">Select Year</option>
-                    <option value="1st year" className="bg-[#0f172a] text-white">1st Year</option>
-                    <option value="2nd year" className="bg-[#0f172a] text-white">2nd Year</option>
-                    <option value="3rd year" className="bg-[#0f172a] text-white">3rd Year</option>
-                    <option value="4th year" className="bg-[#0f172a] text-white">4th Year</option>
+                    <option value="" className="bg-white text-ink">Select Year</option>
+                    <option value="1st year" className="bg-white text-ink">1st Year</option>
+                    <option value="2nd year" className="bg-white text-ink">2nd Year</option>
+                    <option value="3rd year" className="bg-white text-ink">3rd Year</option>
+                    <option value="4th year" className="bg-white text-ink">4th Year</option>
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="campus-select" className="block text-xs font-semibold text-white/45 uppercase tracking-wider">
+                  <label htmlFor="campus-select" className="block text-xs font-[550] text-ink-soft uppercase tracking-wider">
                     Campus
                   </label>
                   <select
                     id="campus-select"
                     value={campus}
                     onChange={(e) => setCampus(e.target.value as any)}
-                    className="w-full bg-[#0a0e1a]/80 border border-white/[0.09] rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-purple-500/40 transition-all cursor-pointer appearance-none"
+                    className="w-full bg-[#0a0e1a]/80 border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
                     style={{
                       backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
                       backgroundRepeat: 'no-repeat',
@@ -232,10 +232,10 @@ export default function JoinRequestPage() {
                       backgroundSize: '16px',
                     }}
                   >
-                    <option value="" className="bg-[#0f172a] text-white">Select Campus</option>
-                    <option value="Rishihood" className="bg-[#0f172a] text-white">Rishihood</option>
-                    <option value="ADYPU" className="bg-[#0f172a] text-white">ADYPU</option>
-                    <option value="SVYASA" className="bg-[#0f172a] text-white">SVYASA</option>
+                    <option value="" className="bg-white text-ink">Select Campus</option>
+                    <option value="Rishihood" className="bg-white text-ink">Rishihood</option>
+                    <option value="ADYPU" className="bg-white text-ink">ADYPU</option>
+                    <option value="SVYASA" className="bg-white text-ink">SVYASA</option>
                   </select>
                 </div>
               </div>
@@ -243,9 +243,9 @@ export default function JoinRequestPage() {
 
             {/* Tracked Message */}
             {status === 'tracked' && (
-              <div className="flex flex-col gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-4 text-emerald-400 text-sm animate-in fade-in duration-200">
+              <div className="flex flex-col gap-3 bg-success-0 border border-success-100 rounded-2xl p-4 text-success-600 text-sm animate-in fade-in duration-200">
                 <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 flex-shrink-0 text-emerald-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 flex-shrink-0 text-success-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.8-9.8a1 1 0 00-1.6-1.2L9 11.2l-1.2-1.2a1 1 0 00-1.6 1.4l2 2a1 1 0 001.6 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <p className="leading-snug">{statusMessage}</p>
@@ -253,13 +253,13 @@ export default function JoinRequestPage() {
                 <div className="flex gap-2.5 mt-2 justify-end">
                   <Link
                     href={`/contributors/${github.trim()}`}
-                    className="px-3.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold transition-all"
+                    className="px-3.5 py-1.5 rounded-lg bg-success-500/20 hover:bg-success-500/30 text-success-600 text-xs font-[650] transition-all"
                   >
                     View My Profile
                   </Link>
                   <Link
                     href="/contributors"
-                    className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all"
+                    className="px-3.5 py-1.5 rounded-lg bg-panel hover:bg-panel text-ink text-xs font-[650] transition-all"
                   >
                     Leaderboard
                   </Link>
@@ -269,8 +269,8 @@ export default function JoinRequestPage() {
 
             {/* Pending Message */}
             {status === 'pending' && (
-              <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/25 rounded-2xl p-4 text-blue-400 text-sm animate-in fade-in duration-200">
-                <svg className="w-5 h-5 flex-shrink-0 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-start gap-3 bg-brand-0 border border-brand-100 rounded-2xl p-4 text-brand-600 text-sm animate-in fade-in duration-200">
+                <svg className="w-5 h-5 flex-shrink-0 text-brand-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5a.75.75 0 001.5 0v-2.5z" clipRule="evenodd" />
                 </svg>
                 <p className="leading-snug">{statusMessage}</p>
@@ -279,8 +279,8 @@ export default function JoinRequestPage() {
 
             {/* Not Found Message */}
             {status === 'not_found' && (
-              <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/25 rounded-2xl p-4 text-red-400 text-sm animate-in fade-in duration-200">
-                <svg className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-start gap-3 bg-error-0 border border-error-100 rounded-2xl p-4 text-error-600 text-sm animate-in fade-in duration-200">
+                <svg className="w-5 h-5 flex-shrink-0 text-error-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
                 </svg>
                 <p className="leading-snug">{statusMessage}</p>
@@ -289,8 +289,8 @@ export default function JoinRequestPage() {
 
             {/* Error Message */}
             {error && (
-              <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/25 rounded-2xl p-4 text-red-400 text-sm animate-in fade-in duration-200">
-                <svg className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-start gap-3 bg-error-0 border border-error-100 rounded-2xl p-4 text-error-600 text-sm animate-in fade-in duration-200">
+                <svg className="w-5 h-5 flex-shrink-0 text-error-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
                 </svg>
                 <p className="leading-snug">{error}</p>
@@ -299,8 +299,8 @@ export default function JoinRequestPage() {
 
             {/* Success Message */}
             {success && (
-              <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-4 text-emerald-400 text-sm animate-in fade-in duration-200">
-                <svg className="w-5 h-5 flex-shrink-0 text-emerald-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-start gap-3 bg-success-0 border border-success-100 rounded-2xl p-4 text-success-600 text-sm animate-in fade-in duration-200">
+                <svg className="w-5 h-5 flex-shrink-0 text-success-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.8-4.8a1 1 0 011.6 0l2 2a1 1 0 01-1.6 1.4L9 15.4l-1.2-1.2a1 1 0 011.6-1.4l2 2z" />
                 </svg>
                 <p className="leading-snug">{success}</p>
@@ -311,7 +311,7 @@ export default function JoinRequestPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-2xl transition-all shadow-lg shadow-purple-900/30 hover:shadow-purple-900/50 hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] py-3.5 rounded-2xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -330,13 +330,13 @@ export default function JoinRequestPage() {
         </div>
 
         {/* Help box */}
-        <div className="mt-6 text-center text-xs text-white/20">
+        <div className="mt-6 text-center text-xs text-ink-soft">
           Already registered? Check the{' '}
-          <Link href="/contributors" className="text-purple-400 hover:text-purple-300 underline font-medium">
+          <Link href="/contributors" className="text-violet-600 hover:text-violet-500 underline font-[500]">
             Leaderboard
           </Link>{' '}
           or search your ID directly on{' '}
-          <Link href="/check-work" className="text-purple-400 hover:text-purple-300 underline font-medium">
+          <Link href="/check-work" className="text-violet-600 hover:text-violet-500 underline font-[500]">
             Check My Work
           </Link>.
         </div>

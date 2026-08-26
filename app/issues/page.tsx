@@ -345,18 +345,18 @@ Fixes #234`,
 
 export default function IssuesPage() {
   return (
-    <main className="min-h-screen bg-[#030712]">
+    <main className="min-h-screen bg-panel">
       {/* Hero */}
       <div className="relative overflow-hidden pt-14 pb-10 px-4">
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[350px] rounded-full bg-orange-600/6 blur-[100px]" />
-          <div className="absolute top-0 right-1/4 w-[400px] h-[300px] rounded-full bg-red-600/5 blur-[100px]" />
+          <div className="absolute top-0 left-1/4 w-[500px] h-[350px] rounded-full bg-warning-0 blur-[100px]" />
+          <div className="absolute top-0 right-1/4 w-[400px] h-[300px] rounded-full bg-error-0 blur-[100px]" />
         </div>
         <div className="relative max-w-3xl mx-auto text-center">
           <div className="flex justify-start mb-6">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors text-sm"
+              className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
@@ -367,23 +367,23 @@ export default function IssuesPage() {
 
           {/* Cross-link to Get Started */}
           <div className="flex justify-center mb-6">
-            <Link href="/get-started" className="inline-flex items-center gap-2 text-xs px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400/70 hover:text-blue-400 hover:bg-blue-500/15 transition-all">
+            <Link href="/get-started" className="inline-flex items-center gap-2 text-xs px-4 py-1.5 rounded-full bg-brand-0 border border-brand-100 text-brand-600/70 hover:text-brand-600 hover:bg-brand-0 transition-all">
               📖 New to open source? Start here first →
             </Link>
           </div>
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs text-orange-300/70 mb-6">
+          <div className="inline-flex items-center gap-2 bg-panel border border-line rounded-full px-4 py-1.5 text-xs text-warning-600 mb-6">
             Real problems, real solutions
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
+          <h1 className="text-5xl md:text-6xl font-[650] text-ink mb-4 tracking-tight">
             Common{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-red-400 to-pink-400">
+            <span className="text-warning-600">
               Issues
             </span>
           </h1>
-          <p className="text-white/40 text-lg max-w-xl mx-auto leading-relaxed mb-3">
+          <p className="text-ink-soft text-lg max-w-xl mx-auto leading-relaxed mb-3">
             Git and GitHub problems every open source contributor runs into — explained and solved.
           </p>
-          <p className="text-white/25 text-sm mb-8">{ISSUES.length} common issues with step-by-step solutions</p>
+          <p className="text-ink-soft text-sm mb-8">{ISSUES.length} common issues with step-by-step solutions</p>
         </div>
       </div>
 

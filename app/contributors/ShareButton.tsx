@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Badge {
   id: string;
@@ -69,44 +69,33 @@ export function ShareButton({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // 1. Draw Background Gradient
-      const bgGrad = ctx.createRadialGradient(400, 225, 50, 400, 225, 450);
-      bgGrad.addColorStop(0, '#1a1235'); // Deep purple
-      bgGrad.addColorStop(1, '#030712'); // Fixed dark background
+      // 1. Violet contest gradient — the leaderboard hero, as a card
+      const bgGrad = ctx.createLinearGradient(0, 0, 800, 450);
+      bgGrad.addColorStop(0, '#46279b');
+      bgGrad.addColorStop(0.55, '#331d72');
+      bgGrad.addColorStop(1, '#221056');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, 800, 450);
 
-      // 2. Draw Decorative Glow Circles (blur simulation)
-      ctx.fillStyle = 'rgba(168, 85, 247, 0.08)'; // Purple glow
-      ctx.beginPath();
-      ctx.arc(80, 80, 200, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.05)'; // Blue glow
-      ctx.beginPath();
-      ctx.arc(700, 380, 180, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 3. Draw Neon Glowing Card Border
-      ctx.shadowColor = '#a855f7';
-      ctx.shadowBlur = 8;
-      ctx.strokeStyle = 'rgba(168, 85, 247, 0.35)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      if (ctx.roundRect) {
-        ctx.roundRect(20, 20, 760, 410, 16);
-      } else {
-        ctx.rect(20, 20, 760, 410);
+      // 2. Faint engineering grid, like the live hero
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= 800; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 450); ctx.stroke();
       }
-      ctx.stroke();
-      ctx.shadowBlur = 0; // Reset shadow
+      for (let y = 0; y <= 450; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(800, y); ctx.stroke();
+      }
 
-      // 4. Draw Header Branding
-      ctx.fillStyle = '#a855f7';
-      ctx.font = 'bold 13px monospace';
-      ctx.fillText('OPENSOURCE TRACKER NST', 45, 50);
+      // 3. Header branding + crown
+      ctx.fillStyle = '#feb000';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('♛', 45, 55);
+      ctx.fillStyle = '#cebcfe';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('OPENSOURCE TRACKER · NST', 75, 51);
 
-      // 5. Draw Avatar (async load with CORS)
+      // 4. Avatar (async load with CORS)
       let avatarLoaded = false;
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -127,29 +116,29 @@ export function ShareButton({
       ctx.arc(105, 160, 52, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
-      
+
       if (avatarLoaded) {
         try {
           ctx.drawImage(img, 53, 108, 104, 104);
-        } catch (e) {
+        } catch {
           avatarLoaded = false;
         }
       }
-      
+
       if (!avatarLoaded) {
         // Fallback placeholder if image fetch fails due to CORS or network
-        ctx.fillStyle = '#1e1b4b';
+        ctx.fillStyle = '#002452';
         ctx.fillRect(53, 108, 104, 104);
-        ctx.fillStyle = '#818cf8';
+        ctx.fillStyle = '#61a8ff';
         ctx.font = 'bold 40px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(displayName[0]?.toUpperCase() ?? '?', 105, 175);
       }
       ctx.restore();
 
-      // Draw Avatar Border Ring
-      ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
-      ctx.lineWidth = 3.5;
+      // White avatar ring, like the podium
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.arc(105, 160, 52, 0, Math.PI * 2);
       ctx.stroke();
@@ -157,35 +146,33 @@ export function ShareButton({
       // Reset text alignment
       ctx.textAlign = 'left';
 
-      // 6. Draw User Profile details
+      // 5. User profile details
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 26px sans-serif';
       ctx.fillText(displayName, 180, 150);
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.font = '15px monospace';
+      ctx.fillStyle = '#cebcfe';
+      ctx.font = '15px sans-serif';
       ctx.fillText(`@${username}`, 180, 180);
 
-      // 7. Draw Stats Grid
-      // Total PRs
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      // 6. Stats
+      ctx.fillStyle = '#cebcfe';
       ctx.font = 'bold 11px sans-serif';
-      ctx.fillText('TOTAL CONTRIBUTIONS', 45, 290);
+      ctx.fillText('CONTRIBUTIONS', 45, 290);
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 42px sans-serif';
       ctx.fillText(String(totalCount), 45, 340);
 
-      // Merged PRs
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillStyle = '#cebcfe';
       ctx.font = 'bold 11px sans-serif';
       ctx.fillText('MERGED PRs', 245, 290);
-      ctx.fillStyle = '#10b981'; // Emerald 500
+      ctx.fillStyle = '#7ee7b8';
       ctx.font = 'bold 42px sans-serif';
       ctx.fillText(String(mergedCount), 245, 340);
 
-      // 8. Draw Badges Showcase Section
+      // 7. Badges showcase
       if (badges.length > 0) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillStyle = '#cebcfe';
         ctx.font = 'bold 11px sans-serif';
         ctx.fillText('EARNED BADGES', 500, 115);
 
@@ -194,31 +181,28 @@ export function ShareButton({
           const by = 135 + idx * 45;
 
           // Capsule box
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-          ctx.lineWidth = 1;
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
           ctx.beginPath();
           if (ctx.roundRect) {
-            ctx.roundRect(bx, by, 250, 36, 8);
+            ctx.roundRect(bx, by, 250, 36, 18);
           } else {
             ctx.rect(bx, by, 250, 36);
           }
           ctx.fill();
-          ctx.stroke();
 
           // Emoji and Name
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.fillStyle = '#ffffff';
           ctx.font = '13px sans-serif';
           ctx.fillText(`${badge.emoji}  ${badge.name}`, bx + 15, by + 23);
         });
       }
 
-      // 9. Draw Footer watermark
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.font = '11px monospace';
-      ctx.fillText('opensource.nst.edu', 45, 410);
+      // 8. Footer watermark
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('oss-tracker.nstsdc.org', 45, 410);
 
-      // 10. Generate and download image
+      // 9. Generate and download image
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `nst-opensource-card-${username}.png`;
@@ -233,35 +217,31 @@ export function ShareButton({
 
   return (
     <div className="flex items-center">
-      {/* Modal Trigger Button */}
+      {/* Trigger button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/25 text-purple-400 hover:bg-purple-500/20 transition-all font-medium cursor-pointer"
+        className="flex items-center gap-1.5 text-xs font-[550] h-9 px-3.5 rounded-[10px] bg-violet-0 text-violet-600 hover:bg-violet-100 transition-colors cursor-pointer"
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
         </svg>
-        View &amp; Share Card
+        Share card
       </button>
 
-      {/* Modal Backdrop & Body */}
+      {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-[#030712]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-[#0a0f1d] border border-white/[0.08] rounded-2xl p-6 shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+        <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-lg bg-white border border-line rounded-2xl p-6 shadow-pop flex flex-col gap-5">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
-                <h3 className="text-white font-semibold text-base">Your Contributor Card</h3>
-                <p className="text-white/30 text-xs mt-0.5">Download and share your achievements natively.</p>
+                <h3 className="text-ink font-[650] text-base">Your contributor card</h3>
+                <p className="text-ink-soft text-xs mt-0.5">Download it, or share your profile link.</p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-white/30 hover:text-white/60 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                aria-label="Close"
+                className="text-ink-soft hover:text-ink p-1 hover:bg-panel rounded-lg transition-colors cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -269,51 +249,46 @@ export function ShareButton({
               </button>
             </div>
 
-            {/* Interactive Card HTML/CSS Preview */}
-            <div className="w-full aspect-[16/9] rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-900/10 to-blue-900/5 relative overflow-hidden p-6 flex flex-col justify-between shadow-lg">
-              {/* Background glows */}
-              <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/10 blur-2xl rounded-full" />
-              <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/5 blur-2xl rounded-full" />
-
-              {/* Top Row Branding */}
-              <div className="relative flex justify-between items-center text-[10px] font-mono font-bold tracking-wider text-purple-400 uppercase">
-                <span>Opensource Tracker NST</span>
+            {/* Card preview — mirrors the downloaded PNG */}
+            <div className="w-full aspect-[16/9] rounded-xl bg-gradient-to-br from-violet-700 via-violet-800 to-violet-900 contest-grid relative overflow-hidden p-5 flex flex-col justify-between shadow-card">
+              <div className="relative flex items-center gap-2 text-[10px] font-[650] tracking-[0.12em] text-violet-200">
+                <svg className="w-3.5 h-3.5 text-gold-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.5 7.5 6 10.5 12 4l6 6.5 3.5-3v9a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2v-9Z" />
+                </svg>
+                <span>OPENSOURCE TRACKER · NST</span>
               </div>
 
-              {/* Profile Details Row */}
-              <div className="relative flex items-center gap-4 mt-2">
+              <div className="relative flex items-center gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={avatarUrl}
-                  alt={username}
-                  className="w-16 h-16 rounded-full ring-2 ring-purple-500/30 object-cover flex-shrink-0"
+                  alt={displayName}
+                  className="w-16 h-16 rounded-full border-[3px] border-white object-cover flex-shrink-0"
                 />
                 <div className="min-w-0">
-                  <h4 className="font-bold text-white text-lg truncate leading-snug">{displayName}</h4>
-                  <p className="text-white/45 text-xs font-mono truncate">@{username}</p>
+                  <h4 className="font-[650] text-white text-lg truncate leading-snug">{displayName}</h4>
+                  <p className="text-violet-200 text-xs truncate">@{username}</p>
                 </div>
               </div>
 
-              {/* Stats & Badges Grid */}
-              <div className="relative flex justify-between items-end mt-4">
+              <div className="relative flex justify-between items-end">
                 <div className="flex gap-8">
-                  <div>
-                    <span className="block text-[8px] font-bold text-white/30 tracking-wider uppercase">Contributions</span>
-                    <span className="block text-2xl font-bold text-white/90 font-mono mt-0.5">{totalCount}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[8px] font-bold text-white/30 tracking-wider uppercase">Merged PRs</span>
-                    <span className="block text-2xl font-bold text-emerald-400 font-mono mt-0.5">{mergedCount}</span>
-                  </div>
+                  <span>
+                    <span className="block text-[8.5px] font-[650] text-violet-200 tracking-[0.1em]">CONTRIBUTIONS</span>
+                    <span className="block text-2xl font-[650] text-white tabular-nums mt-0.5">{totalCount}</span>
+                  </span>
+                  <span>
+                    <span className="block text-[8.5px] font-[650] text-violet-200 tracking-[0.1em]">MERGED PRS</span>
+                    <span className="block text-2xl font-[650] text-success-200 tabular-nums mt-0.5">{mergedCount}</span>
+                  </span>
                 </div>
-
-                {/* Mini Badges Display */}
                 {badges.length > 0 && (
                   <div className="flex gap-1">
                     {badges.slice(0, 3).map((b) => (
                       <span
                         key={b.id}
                         title={b.name}
-                        className="w-6 h-6 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-xs"
+                        className="w-6 h-6 rounded-full bg-white/12 flex items-center justify-center text-xs"
                       >
                         {b.emoji}
                       </span>
@@ -323,12 +298,12 @@ export function ShareButton({
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-white/[0.06]">
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
               <button
                 onClick={downloadCard}
                 disabled={downloading}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-semibold shadow-lg shadow-purple-900/10 transition-all cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[11px] bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-sm font-[550] shadow-brand-btn transition-colors cursor-pointer"
               >
                 <svg className={`w-4 h-4 ${downloading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {downloading ? (
@@ -337,26 +312,25 @@ export function ShareButton({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   )}
                 </svg>
-                {downloading ? 'Generating PNG...' : 'Download Card'}
+                {downloading ? 'Preparing…' : 'Download PNG'}
               </button>
-
               <button
                 onClick={copyLink}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] text-white/70 text-sm font-medium transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[11px] bg-white border border-line-strong hover:bg-panel text-ink text-sm font-[550] transition-colors cursor-pointer"
               >
                 {copied ? (
                   <>
-                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-emerald-400">Copied!</span>
+                    <span className="text-success-600">Copied!</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Copy Profile Link
+                    Copy profile link
                   </>
                 )}
               </button>
