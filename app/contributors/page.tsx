@@ -46,7 +46,7 @@ function MergeIcon({ className }: { className?: string }) {
   );
 }
 
-function PodiumFigure({
+function PodiumCard({
   summary,
   rank,
   period,
@@ -59,36 +59,97 @@ function PodiumFigure({
   from?: string;
   to?: string;
 }) {
-  const center = rank === 1;
-  const chip =
-    rank === 1 ? 'bg-gold-400 text-ink' :
-    rank === 2 ? 'bg-panel-2 text-ink-mid' :
-    'bg-warning-200 text-warning-800';
+  const isFirst = rank === 1;
+  const isSecond = rank === 2;
+
+  const rankBadge = isFirst ? (
+    <span className="inline-flex items-center gap-1.5 bg-gold-400 text-ink rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
+      <CrownIcon className="w-3.5 h-3.5" /> 1st Place
+    </span>
+  ) : isSecond ? (
+    <span className="inline-flex items-center gap-1.5 bg-slate-200 text-slate-800 border border-slate-300 rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
+      <CrownIcon className="w-3.5 h-3.5 text-slate-500" /> 2nd Place
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1.5 bg-warning-0 text-warning-800 border border-warning-200 rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
+      <CrownIcon className="w-3.5 h-3.5 text-warning-600" /> 3rd Place
+    </span>
+  );
+
+  const cardStyle = isFirst
+    ? 'bg-gradient-to-b from-gold-0/70 via-white to-white border-2 border-gold-400/70 shadow-pop md:-translate-y-2 relative'
+    : isSecond
+    ? 'bg-gradient-to-b from-slate-100/90 via-white to-white border border-slate-300 hover:border-slate-400 shadow-card'
+    : 'bg-gradient-to-b from-warning-0/80 via-white to-white border border-warning-200 hover:border-warning-400 shadow-card';
+
+  const avatarRing = isFirst
+    ? 'ring-4 ring-gold-100 border-2 border-gold-500'
+    : isSecond
+    ? 'ring-4 ring-slate-100 border-2 border-slate-400'
+    : 'ring-4 ring-warning-0 border-2 border-warning-400';
+
+  const avatarSize = isFirst ? 80 : 64;
 
   return (
     <Link
       href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
-      className={`flex flex-col items-center group ${center ? '' : 'pt-7'}`}
+      className={`group flex flex-col items-center text-center rounded-2xl p-5 md:p-6 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 ${cardStyle}`}
     >
-      <Image
-        src={summary.profile.avatar_url}
-        alt={summary.profile.login}
-        width={center ? 96 : 72}
-        height={center ? 96 : 72}
-        unoptimized
-        className={`rounded-full border-[3px] border-white object-cover shadow-pop ${center ? 'w-24 h-24' : 'w-[72px] h-[72px]'}`}
-      />
-      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 -mt-3 text-[12.5px] font-[650] tabular-nums shadow-card ${chip}`}>
-        <CrownIcon className="w-3 h-3" />{rank}
-      </span>
-      <span className={`mt-2.5 font-[650] text-white text-center max-w-[160px] truncate group-hover:underline underline-offset-4 ${center ? 'text-[16.5px]' : 'text-[14.5px]'}`}>
-        {summary.profile.name ?? summary.profile.login}
-      </span>
-      <span className="mt-0.5 text-xs text-violet-200 max-w-[160px] truncate">@{summary.profile.login}</span>
-      <span className="mt-2.5 inline-flex items-center gap-1.5 bg-white/12 rounded-full px-3 py-1">
-        <MergeIcon className="w-3.5 h-3.5 text-success-200" />
-        <span className="text-[13px] font-[650] text-white tabular-nums">{summary.mergedPRs} merged</span>
-      </span>
+      <div className="mb-4">{rankBadge}</div>
+
+      <div className="relative">
+        <Image
+          src={summary.profile.avatar_url}
+          alt={summary.profile.login}
+          width={avatarSize}
+          height={avatarSize}
+          unoptimized
+          className={`rounded-full object-cover ${avatarRing} ${isFirst ? 'w-20 h-20' : 'w-16 h-16'}`}
+        />
+        {isFirst && (
+          <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gold-400 text-ink rounded-full flex items-center justify-center text-xs shadow-sm" aria-hidden="true">
+            👑
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3.5 w-full min-w-0">
+        <h3 className={`font-[650] text-ink truncate group-hover:text-brand-600 transition-colors ${isFirst ? 'text-[16.5px]' : 'text-[15px]'}`}>
+          {summary.profile.name ?? summary.profile.login}
+        </h3>
+        <p className="text-[12.5px] text-ink-soft truncate mt-0.5 font-[450]">@{summary.profile.login}</p>
+      </div>
+
+      {(summary.year || summary.campus) && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2.5">
+          {summary.year && (
+            <span className="text-[11px] font-[550] px-2 py-0.5 rounded-md bg-panel border border-line text-ink-mid">
+              {summary.year}
+            </span>
+          )}
+          {summary.campus && (
+            <span className="text-[11px] font-[550] px-2 py-0.5 rounded-md bg-brand-0 text-brand-600 border border-brand-100">
+              {summary.campus}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 pt-3.5 border-t border-line w-full grid grid-cols-2 gap-2 text-center">
+        <div className="flex flex-col items-center">
+          <span className="text-[11px] font-[550] text-ink-soft uppercase tracking-wider">Merged</span>
+          <span className="inline-flex items-center gap-1 text-[14px] font-[650] text-success-600 tabular-nums mt-0.5">
+            <MergeIcon className="w-3.5 h-3.5" />
+            {summary.mergedPRs}
+          </span>
+        </div>
+        <div className="flex flex-col items-center border-l border-line">
+          <span className="text-[11px] font-[550] text-ink-soft uppercase tracking-wider">Impact</span>
+          <span className="text-[14px] font-[650] text-gold-600 tabular-nums mt-0.5">
+            {summary.scoreMergedPRs.toFixed(1)}
+          </span>
+        </div>
+      </div>
     </Link>
   );
 }
@@ -127,16 +188,7 @@ export default async function ContributorsPage({
   const flaggedPRIds = await getFlaggedPRIdSet();
 
   // ── Cache-first data loading ──────────────────────────────────────────────
-  // Cache predefined period summaries to avoid hitting GitHub API rate limits
   const isPredefinedPeriod = ['all', '1day', 'week', 'month', '2months', '3months', '6months', 'year'].includes(period);
-  // Every period except 'all' has a rolling date boundary (created:>N days ago)
-  // that moves every second regardless of whether any student's data changed.
-  // The incremental cron only patches 'all'/'week'/'month', and even those only
-  // for the 5 students it happens to touch each tick — a PR can sit in a cached
-  // '1day'/'2months'/etc. summary looking "recent" for days after it's actually
-  // aged out, because nothing else ever forces that boundary to be re-evaluated.
-  // Time-boxing the cache age for these periods makes them self-correct instead
-  // of relying on an admin action (flagging a PR) to ever invalidate them.
   const isTimeWindowed = isPredefinedPeriod && period !== 'all';
   const MAX_WINDOW_CACHE_AGE_MS = 60 * 60 * 1000; // 1 hour
   let allSummaries: StudentSummary[] | null = null;
@@ -144,9 +196,6 @@ export default async function ContributorsPage({
 
   if (isPredefinedPeriod) {
     const cache = await readSummaryCache(period);
-    // Only use cache if it exists, hasn't been explicitly invalidated (epoch
-    // timestamp), and — for time-windowed periods — isn't old enough that its
-    // date boundary has drifted out of date.
     if (cache && cache.cachedAt !== '1970-01-01T00:00:00.000Z') {
       const ageMs = Date.now() - new Date(cache.cachedAt).getTime();
       if (!isTimeWindowed || ageMs < MAX_WINDOW_CACHE_AGE_MS) {
@@ -158,7 +207,6 @@ export default async function ContributorsPage({
 
   if (!allSummaries) {
     try {
-      // No cache, stale cache, or custom range — fetch live
       allSummaries = await getAllStudentSummaries(dateQuery, flaggedPRIds);
       if (isPredefinedPeriod) {
         await writeSummaryCache(allSummaries, period);
@@ -179,12 +227,10 @@ export default async function ContributorsPage({
       }
     }
   } else {
-    // Keep scores sorted in descending order
     allSummaries = [...allSummaries].sort((a, b) => b.scoreMergedPRs - a.scoreMergedPRs);
   }
 
   const summaries = allSummaries.filter((s) => {
-    // Text search filter
     if (search) {
       const q = search.toLowerCase();
       const matchesText =
@@ -194,9 +240,7 @@ export default async function ContributorsPage({
         (s.campus ?? '').toLowerCase().includes(q);
       if (!matchesText) return false;
     }
-    // Year filter
     if (year && s.year !== year) return false;
-    // Campus filter
     if (campus && s.campus !== campus) return false;
     return true;
   });
@@ -213,71 +257,97 @@ export default async function ContributorsPage({
     : null;
 
   return (
-    <main className="min-h-screen bg-panel">
+    <main className="min-h-screen bg-panel pb-20">
       {/* Contest hero */}
-      <div className="bg-gradient-to-br from-violet-700 via-violet-800 to-violet-900 contest-grid">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-8 pb-24">
-          <div className="flex items-center justify-between gap-4">
-            <span className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 text-[12.5px] font-[550] text-white">
-              {kicker.charAt(0) + kicker.slice(1).toLowerCase()}
+      <div className="bg-white border-b border-line">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-8 pb-12">
+          {/* Top metadata strip */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-2 bg-panel border border-line rounded-full px-3.5 py-1.5 text-[12.5px] font-[550] text-ink-mid">
+              <span className="live-dot w-[7px] h-[7px] rounded-full bg-success-400" />
+              <span>{kicker.charAt(0) + kicker.slice(1).toLowerCase()}</span>
               {refreshedAgo !== null && (
-                <span className="text-violet-200 hidden sm:inline">· refreshed {refreshedAgo === 0 ? 'just now' : `${refreshedAgo} min ago`}</span>
+                <span className="text-ink-soft hidden sm:inline">· Refreshed {refreshedAgo === 0 ? 'just now' : `${refreshedAgo} min ago`}</span>
               )}
             </span>
             <Link
               href="/get-started"
-              className="flex items-center h-10 px-5 rounded-[10px] bg-white text-ink text-[13.5px] font-[650] hover:bg-brand-0 transition-colors"
+              className="flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] bg-panel border border-line-strong hover:bg-panel-2 text-ink text-[13px] font-[550] transition-colors"
             >
-              How it works
+              <span>How ranking works</span>
+              <span className="text-ink-soft" aria-hidden="true">→</span>
             </Link>
           </div>
 
-          <div className="flex flex-col items-center mt-2">
-            <CrownIcon className="w-[22px] h-[22px] text-gold-400" />
-            <div className="flex items-center gap-4 mt-1.5">
-              <span className="w-12 md:w-14 h-px bg-white/35" />
-              <span className="text-[11.5px] font-[650] text-violet-200 tracking-[0.18em]">OPEN SOURCE · {kicker}</span>
-              <span className="w-12 md:w-14 h-px bg-white/35" />
+          {/* Heading */}
+          <div className="text-center max-w-2xl mx-auto mt-6 mb-10">
+            <div className="inline-flex items-center gap-1.5 text-[11.5px] font-[650] text-brand-600 bg-brand-0 px-3 py-1 rounded-full tracking-[0.06em] uppercase mb-3">
+              <CrownIcon className="w-3.5 h-3.5 text-gold-500" />
+              Open Source Leaderboard
             </div>
-            <h1 className="mt-1.5 text-[38px] md:text-[46px] font-[650] tracking-[-0.01em] text-white [text-shadow:0_2px_12px_rgb(11_12_14_/_0.25)]">
-              Leaderboard
+            <h1 className="text-[34px] md:text-[44px] font-[650] leading-[1.12] tracking-[-0.02em] text-ink">
+              Top Contributors
             </h1>
+            <p className="mt-3 text-[15.5px] leading-relaxed text-ink-soft max-w-lg mx-auto">
+              Real pull requests and issues from NST students — filtered for spam, verified by merge status, and ranked transparently.
+            </p>
           </div>
 
-          {/* Podium */}
+          {/* Podium (Top 3) */}
           {podium.length > 0 ? (
-            <div className="flex items-start justify-center gap-8 md:gap-16 mt-7">
-              {podium.length > 1 && <PodiumFigure summary={podium[1]} rank={2} period={period} from={from} to={to} />}
-              <PodiumFigure summary={podium[0]} rank={1} period={period} from={from} to={to} />
-              {podium.length > 2 && <PodiumFigure summary={podium[2]} rank={3} period={period} from={from} to={to} />}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 max-w-4xl mx-auto items-end pt-2">
+              {/* 2nd Place (Left on desktop) */}
+              {podium.length > 1 ? (
+                <div className="order-2 md:order-1">
+                  <PodiumCard summary={podium[1]} rank={2} period={period} from={from} to={to} />
+                </div>
+              ) : (
+                <div className="order-2 md:order-1 hidden md:block" />
+              )}
+
+              {/* 1st Place (Center) */}
+              <div className="order-1 md:order-2">
+                <PodiumCard summary={podium[0]} rank={1} period={period} from={from} to={to} />
+              </div>
+
+              {/* 3rd Place (Right on desktop) */}
+              {podium.length > 2 ? (
+                <div className="order-3">
+                  <PodiumCard summary={podium[2]} rank={3} period={period} from={from} to={to} />
+                </div>
+              ) : (
+                <div className="order-3 hidden md:block" />
+              )}
             </div>
           ) : (
-            <p className="text-center text-violet-200 text-sm mt-8">
-              No contributions found for this filter yet.
-            </p>
+            <div className="bg-panel border border-line rounded-2xl p-8 text-center max-w-md mx-auto">
+              <p className="text-ink-soft text-sm">
+                No contributions found for this filter yet.
+              </p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* CTA band, overlapping the hero */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 -mt-12">
-        <div className="flex flex-wrap items-center gap-4 bg-gradient-to-br from-violet-600 to-violet-700 rounded-2xl shadow-violet-band px-6 py-5">
-          <div className="flex-1 min-w-[240px]">
-            <h2 className="text-white text-[16.5px] font-[650]">Get PRs merged to climb the leaderboard!</h2>
-            <p className="text-violet-100 text-[13px] mt-0.5">
-              Real contributions only — spam and self-merges are filtered out automatically.
+      {/* CTA Banner */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
+        <div className="bg-gradient-to-r from-brand-0/70 via-white to-violet-0/60 border border-brand-100 rounded-2xl shadow-card p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex-1 min-w-[260px]">
+            <h2 className="text-ink text-[16px] md:text-[17px] font-[650]">Get PRs merged to climb the leaderboard!</h2>
+            <p className="text-ink-soft text-[13px] mt-1">
+              Real contributions only — spam and self-merges are automatically filtered out.
             </p>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <Link
               href="/issues"
-              className="flex items-center h-[42px] px-5 rounded-[10px] bg-white text-violet-700 text-[13.5px] font-[650] hover:bg-violet-0 transition-colors"
+              className="flex items-center h-[38px] px-4 rounded-[9px] bg-brand-500 hover:bg-brand-600 text-white text-[13.5px] font-[550] shadow-brand-btn transition-colors"
             >
               Find an issue
             </Link>
             <Link
               href="/check-work"
-              className="flex items-center h-[42px] px-5 rounded-[10px] border-[1.5px] border-white/50 text-white text-[13.5px] font-[650] hover:bg-white/10 transition-colors"
+              className="flex items-center h-[38px] px-4 rounded-[9px] bg-white border border-line-strong hover:bg-panel text-ink text-[13.5px] font-[550] transition-colors"
             >
               Check my work
             </Link>
@@ -290,7 +360,7 @@ export default async function ContributorsPage({
         <div className="bg-white border border-line rounded-2xl shadow-card grid grid-cols-2 md:grid-cols-4">
           {[
             { label: 'Students', value: summaries.length, num: 'text-ink' },
-            { label: 'Contributors', value: realContributors.length, num: 'text-ink' },
+            { label: 'Contributors', value: realContributors.length, num: 'text-brand-600' },
             { label: 'Pull requests', value: totalPRs, num: 'text-ink' },
             { label: 'Merged PRs', value: totalMerged, num: 'text-success-600' },
           ].map((s, i) => (
