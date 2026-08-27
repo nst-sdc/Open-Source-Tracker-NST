@@ -31,6 +31,17 @@ function PRBadge({ pr }: { pr: StudentPR }) {
   );
 }
 
+function ImpactBadge({ weight }: { weight: number }) {
+  return (
+    <span
+      title="Impact: how significant the project this PR landed in is (based on stars/forks), not a judgment of the PR itself"
+      className="inline-flex items-center gap-1 bg-gold-0 text-gold-600 px-2 py-0.5 rounded-full text-[10.5px] font-[600] whitespace-nowrap"
+    >
+      ⚡ {weight.toFixed(1)}
+    </span>
+  );
+}
+
 function IssueBadge({ issue }: { issue: StudentIssue }) {
   if (issue.state === 'open')
     return (
@@ -156,7 +167,7 @@ function groupByRepo<T extends { repository_url: string }>(items: T[]): Map<stri
 
 // ─── Content sections ─────────────────────────────────────────────────────────
 
-export function PRsSection({ prs }: { prs: StudentPR[] }) {
+export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWeights?: Record<string, number> }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (prs.length === 0)
@@ -175,7 +186,12 @@ export function PRsSection({ prs }: { prs: StudentPR[] }) {
             {repoPRs.map((pr) => (
               <a key={pr.id} href={pr.pull_request?.html_url ?? pr.html_url} target="_blank" rel="noopener noreferrer"
                 className="group flex items-start gap-4 bg-white border border-line rounded-xl shadow-card p-4 card-hover">
-                <div className="flex-shrink-0 mt-0.5"><PRBadge pr={pr} /></div>
+                <div className="flex-shrink-0 mt-0.5 flex flex-col items-center gap-1.5">
+                  <PRBadge pr={pr} />
+                  {pr.pull_request?.merged_at && repoFromUrl(pr.repository_url) in repoWeights && (
+                    <ImpactBadge weight={repoWeights[repoFromUrl(pr.repository_url)]} />
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="text-ink font-[550] text-[14.5px] group-hover:text-brand-600 transition-colors leading-snug">{pr.title}</h3>

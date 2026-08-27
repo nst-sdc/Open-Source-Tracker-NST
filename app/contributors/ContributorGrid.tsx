@@ -101,10 +101,10 @@ function ContributorRow({
           </span>
           {summary.avgScore !== undefined && (
             <span
-              title="Average score per merged PR — a secondary signal for how consistently impactful the projects they contribute to are, not how many PRs they've done"
+              title="Average impact per merged PR — how significant the projects they contribute to tend to be, not how many PRs they've done. See each PR's own Impact score on their profile."
               className="text-[9.5px] text-ink-soft tabular-nums"
             >
-              avg {summary.avgScore.toFixed(1)}
+              impact {summary.avgScore.toFixed(1)}
             </span>
           )}
         </span>

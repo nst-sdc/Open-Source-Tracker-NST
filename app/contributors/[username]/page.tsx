@@ -15,7 +15,7 @@ import { readProfileCache, writeProfileCache } from '@/lib/profile-cache';
 import { getStudentsKV } from '@/lib/kv-students';
 import { kvGet, kvSet } from '@/lib/kv';
 import { cookies } from 'next/headers';
-import { getRepoCache } from '@/lib/repo-cache';
+import { getRepoCache, computeRepoWeight } from '@/lib/repo-cache';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
 
@@ -296,6 +296,18 @@ export default async function ContributorPage({
   const lifetimeMergedCount = validPRs.filter(pr => pr.pull_request?.merged_at).length;
   const badges = getBadges(validPRs, lifetimeMergedCount);
 
+  // Per-PR Impact: same repo-weight math used for the leaderboard score, just
+  // surfaced per PR instead of only as an aggregate — a repo's weight is fixed
+  // regardless of which PR into it, so this is computed once per distinct repo.
+  const repoWeights: Record<string, number> = {};
+  for (const pr of prs) {
+    if (!pr.repository_url) continue;
+    const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
+    if (repo in repoWeights) continue;
+    const entry = repoCache[repo];
+    repoWeights[repo] = computeRepoWeight(entry?.stars ?? 0, entry?.forks ?? 0);
+  }
+
   return (
     <main className="min-h-screen bg-panel">
       {/* Back nav */}
@@ -464,7 +476,7 @@ export default async function ContributorPage({
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 md:px-6 mt-6 pb-20">
-        {tab !== 'issues' && <PRsSection key={tab} prs={prs} />}
+        {tab !== 'issues' && <PRsSection key={tab} prs={prs} repoWeights={repoWeights} />}
         {tab === 'issues' && <IssuesSection key={tab} issues={filteredIssues} />}
       </div>
     </main>
