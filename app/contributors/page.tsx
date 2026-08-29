@@ -144,7 +144,7 @@ function PodiumCard({
           </span>
         </div>
         <div className="flex flex-col items-center border-l border-line">
-          <span className="text-[11px] font-[550] text-ink-soft uppercase tracking-wider">Impact</span>
+          <span className="text-[11px] font-[550] text-ink-soft uppercase tracking-wider">Rating</span>
           <span className="text-[14px] font-[650] text-gold-600 tabular-nums mt-0.5">
             {summary.scoreMergedPRs.toFixed(1)}
           </span>

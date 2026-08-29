@@ -57,7 +57,7 @@ function RankCell({ rank }: { rank: number }) {
 }
 
 const ROW_GRID =
-  'grid grid-cols-[64px_minmax(0,1fr)_72px_44px] md:grid-cols-[76px_minmax(0,1fr)_120px_92px_80px_72px_76px_36px] gap-3 items-center';
+  'grid grid-cols-[64px_minmax(0,1fr)_80px_72px_44px] md:grid-cols-[76px_minmax(0,280px)_1fr_1fr_1fr_1fr_1fr_1fr_36px] gap-3 items-center';
 
 function ContributorRow({
   summary,
@@ -95,19 +95,20 @@ function ContributorRow({
           </span>
           <span className="block text-[12px] text-ink-soft truncate">@{summary.profile.login}</span>
         </span>
-        <span className="flex flex-col items-end gap-0.5 shrink-0">
-          <span title="Ranking score for this contributor" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums">
-            {summary.scoreMergedPRs.toFixed(1)}
-          </span>
-          {summary.avgScore !== undefined && (
-            <span
-              title="Average impact per merged PR — how significant the projects they contribute to tend to be, not how many PRs they've done. See each PR's own Impact score on their profile."
-              className="text-[9.5px] text-ink-soft tabular-nums"
-            >
-              impact {summary.avgScore.toFixed(1)}
-            </span>
-          )}
+      </span>
+
+      <span className="flex flex-col items-end gap-0.5 shrink-0">
+        <span title="Ranking score for this contributor" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums">
+          {summary.scoreMergedPRs.toFixed(1)}
         </span>
+        {summary.avgScore !== undefined && (
+          <span
+            title="Average impact per merged PR — how significant the projects they contribute to tend to be, not how many PRs they've done."
+            className="text-[9.5px] text-ink-soft tabular-nums"
+          >
+            impact {summary.avgScore.toFixed(1)}
+          </span>
+        )}
       </span>
 
       <span className="hidden md:block text-[13px] text-ink-mid truncate">
@@ -153,6 +154,7 @@ export function ContributorGrid({
         <div className={`${ROW_GRID} px-4 md:px-5 py-3.5 bg-panel`}>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">RANK</span>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">NAME</span>
+          <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em] text-right">RATING</span>
           <span className="hidden md:block text-[11px] font-[650] text-ink-soft tracking-[0.08em]">CAMPUS</span>
           <span className="hidden md:block text-[11px] font-[650] text-ink-soft tracking-[0.08em]">YEAR</span>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em] text-right">MERGED</span>
