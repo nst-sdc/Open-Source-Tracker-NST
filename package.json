@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bootstrap-data": "node scripts/bootstrap-local-data.mjs"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

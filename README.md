@@ -55,6 +55,20 @@ Open [http://localhost:3000](http://localhost:3000). See [.env.example](./.env.e
 
 **Note:** `npm run dev` shows recurring `FATAL: An unexpected Turbopack error` messages in the terminal — this is harmless (Server Components importing Node's `fs` module trigger it); pages still serve `200`. `npm run build`/`npm start` are unaffected.
 
+### Seeing real data (the leaderboard starts empty)
+
+A fresh clone's `/contributors` page will load fine but show **nobody as an active contributor** — every tracked student renders as a zero-PR placeholder, because there's no cached GitHub data sitting locally yet, and the page doesn't live-fetch from GitHub on every visit (that would blow through GitHub's rate limits instantly across 1,800+ students). This is expected, not a bug — and it's not about your `GITHUB_TOKEN`'s scopes either; a scopeless token works fine here.
+
+To populate real data, add `CRON_SECRET=` (any string) to `.env.local`, then run:
+
+```bash
+npm run bootstrap-data
+```
+
+This repeatedly calls the same `/api/refresh/incremental` endpoint the production CronJob hits every 15 minutes — just back-to-back instead of on a schedule. Each call takes ~2-3 minutes and populates ~15-20 real students; it defaults to 10 calls and stops early once nothing's left to refresh. Pass a number to control how many calls to make, e.g. `npm run bootstrap-data -- 3` for a quicker, smaller sample.
+
+This writes to your own local disk-fallback storage (or your own Upstash database, if you've set one up) — it never touches production data, and no shared credentials are involved anywhere in this. Each local checkout needs its own run: `.env.local` and the populated data it produces are both gitignored, so switching branches in a fresh clone (e.g. to review someone else's PR) means starting from empty again in that checkout.
+
 ## Environment variables reference
 
 | Variable | Needed locally? | What it's for |
@@ -62,7 +76,7 @@ Open [http://localhost:3000](http://localhost:3000). See [.env.example](./.env.e
 | `GITHUB_TOKEN` | Yes | Raises the GitHub Search/REST API rate limit. Any token works, no scopes required. |
 | `ADMIN_PASSWORD` | Only if testing `/admin` | Gates the admin dashboard. Pick anything for local dev. |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | No (use `ADMIN` shortcut) | Real GitHub OAuth App credentials, for the actual "Sign in with GitHub" flow. |
-| `CRON_SECRET` | No | Shared secret the refresh trigger sends as `x-cron-secret`. Only matters if you're testing `/api/refresh/incremental` yourself. |
+| `CRON_SECRET` | Only for `npm run bootstrap-data` | Shared secret the refresh trigger sends as `x-cron-secret`. Pick any string for local dev — see "Seeing real data" above. |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` / `KV_REST_API_READ_ONLY_TOKEN` | No (disk fallback) | Upstash Redis REST credentials. If you do set these for local testing, use your **own** Upstash database — never point local dev at any shared/production one. |
 
 ## Experimenting and testing changes
