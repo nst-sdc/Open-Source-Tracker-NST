@@ -1532,6 +1532,55 @@ function AchieversTab() {
     else setError('Failed to remove');
   }
 
+  // ── Edit mode: lets an existing achiever have programs added/removed, or
+  // their name fixed — the Add form above can only create a brand-new
+  // person (rejects a duplicate GitHub username), so this is the only way
+  // to give someone a second program (e.g. GSoC one year, LFX another)
+  // without deleting and re-adding them from scratch.
+  const [editingGithub, setEditingGithub] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrograms, setEditPrograms] = useState<AchieverEntry['programs']>([]);
+  const [newProgram, setNewProgram] = useState({ programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+  const [saving, setSaving] = useState(false);
+
+  function startEdit(a: AchieverEntry) {
+    setError(''); setSuccess('');
+    setEditingGithub(a.github);
+    setEditName(a.name ?? '');
+    setEditPrograms([...a.programs]);
+    setNewProgram({ programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+  }
+
+  function cancelEdit() {
+    setEditingGithub(null);
+  }
+
+  function addProgramToEdit() {
+    setEditPrograms(ps => [...ps, {
+      name: newProgram.programName,
+      ...(newProgram.year ? { year: parseInt(newProgram.year) } : {}),
+      ...(newProgram.org.trim() ? { org: newProgram.org.trim() } : {}),
+      ...(newProgram.url.trim() ? { url: newProgram.url.trim() } : {}),
+    }]);
+    setNewProgram({ programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+  }
+
+  function removeProgramFromEdit(idx: number) {
+    setEditPrograms(ps => ps.filter((_, i) => i !== idx));
+  }
+
+  async function saveEdit(github: string) {
+    if (editPrograms.length === 0) { setError('An achiever needs at least one program — remove the person instead if none apply.'); return; }
+    setSaving(true); setError(''); setSuccess('');
+    const res = await fetch('/api/admin/achievers', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ github, name: editName.trim() || undefined, programs: editPrograms }),
+    });
+    if (res.ok) { setSuccess(`@${github} updated.`); setEditingGithub(null); await load(); }
+    else { const d = await res.json().catch(() => ({})); setError(d.error ?? 'Failed to save'); }
+    setSaving(false);
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -1569,6 +1618,54 @@ function AchieversTab() {
       {loading ? <div className="text-center py-12 text-ink-soft">Loading…</div> : (
         <div className="space-y-2">
           {achievers.map((a) => (
+            editingGithub === a.github ? (
+              <div key={a.github} className="bg-white border border-violet-100 rounded-xl px-4 py-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <img src={`https://avatars.githubusercontent.com/${a.github}?s=32`} alt={a.github} className="w-8 h-8 rounded-full ring-1 ring-gold-100 flex-shrink-0" />
+                  <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder={`@${a.github}`}
+                    className="flex-1 bg-white border border-line rounded-xl px-3 py-2 text-ink text-sm focus:outline-none focus:border-violet-100" />
+                </div>
+
+                <div className="space-y-1.5">
+                  {editPrograms.map((p, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 bg-panel rounded-lg px-3 py-1.5">
+                      <span className="text-ink-mid text-xs">{p.name}{p.year ? ` ${p.year}` : ''}{p.org ? ` · ${p.org}` : ''}{p.url ? ` · has URL` : ''}</span>
+                      <button type="button" onClick={() => removeProgramFromEdit(idx)}
+                        className="text-error-600 text-xs hover:text-error-500 cursor-pointer flex-shrink-0">✕</button>
+                    </div>
+                  ))}
+                  {editPrograms.length === 0 && <p className="text-ink-soft text-xs italic px-1">No programs — add at least one below before saving.</p>}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <select value={newProgram.programName} onChange={(e) => setNewProgram(f => ({ ...f, programName: e.target.value }))}
+                    className="bg-white border border-line rounded-lg px-2.5 py-2 text-ink-mid text-xs focus:outline-none focus:border-violet-100">
+                    {PROGRAM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <input value={newProgram.year} onChange={(e) => setNewProgram(f => ({ ...f, year: e.target.value }))} placeholder="Year" type="number" min="2010" max="2035"
+                    className="bg-white border border-line rounded-lg px-2.5 py-2 text-ink text-xs focus:outline-none focus:border-violet-100" />
+                  <input value={newProgram.org} onChange={(e) => setNewProgram(f => ({ ...f, org: e.target.value }))} placeholder="Org"
+                    className="bg-white border border-line rounded-lg px-2.5 py-2 text-ink text-xs focus:outline-none focus:border-violet-100" />
+                  <input value={newProgram.url} onChange={(e) => setNewProgram(f => ({ ...f, url: e.target.value }))} placeholder="Project URL"
+                    className="bg-white border border-line rounded-lg px-2.5 py-2 text-ink text-xs focus:outline-none focus:border-violet-100" />
+                </div>
+                <button type="button" onClick={addProgramToEdit}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-panel border border-line-strong text-ink-mid hover:bg-panel-2 transition-all cursor-pointer">
+                  + Add another program
+                </button>
+
+                <div className="flex items-center gap-2 pt-1 border-t border-panel">
+                  <button type="button" disabled={saving} onClick={() => saveEdit(a.github)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-gold-400 disabled:opacity-40 text-ink font-[550] transition-all cursor-pointer">
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                  <button type="button" onClick={cancelEdit}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-white border border-line text-ink-soft hover:text-ink-mid transition-all cursor-pointer">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div key={a.github} className="group flex items-center justify-between gap-4 bg-white border border-line rounded-xl px-4 py-3 hover:bg-panel transition-all">
               <div className="flex items-center gap-3 min-w-0">
                 <img src={`https://avatars.githubusercontent.com/${a.github}?s=32`} alt={a.github} className="w-8 h-8 rounded-full ring-1 ring-gold-100" />
@@ -1589,12 +1686,19 @@ function AchieversTab() {
                   </button>
                 </div>
               ) : (
-                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteGithub(a.github); }}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
-                  Remove
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all">
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEdit(a); }}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-panel border border-line-strong text-ink-mid hover:bg-panel-2 transition-all cursor-pointer">
+                    Edit
+                  </button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteGithub(a.github); }}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all cursor-pointer">
+                    Remove
+                  </button>
+                </div>
               )}
             </div>
+            )
           ))}
           {achievers.length === 0 && <div className="text-center py-12 text-ink-soft">No achievers yet.</div>}
         </div>
