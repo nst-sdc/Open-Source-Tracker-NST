@@ -95,5 +95,44 @@
         "url": ""
       }
     ]
+  },
+  {
+    "name": "Rishi Raj",
+    "github": "rishiraj38",
+    "headline": "LFX Mentorship 2026 @ Meshery",
+    "programs": [
+      {
+        "name": "LFX",
+        "year": 2026,
+        "org": "Meshery",
+        "url": ""
+      }
+    ]
+  },
+  {
+    "name": "Krishna Gehlot",
+    "github": "NSTKrishna",
+    "headline": "LFX Mentorship 2026 @ Meshery",
+    "programs": [
+      {
+        "name": "LFX",
+        "year": 2026,
+        "org": "Meshery",
+        "url": ""
+      }
+    ]
+  },
+  {
+    "name": "Abhijeet Dey",
+    "github": "CWAbhi",
+    "headline": "LFX Mentorship @ MagmaCore",
+    "programs": [
+      {
+        "name": "LFX",
+        "year": 2025,
+        "org": "MagmaCore",
+        "url": ""
+      }
+    ]
   }
 ]
