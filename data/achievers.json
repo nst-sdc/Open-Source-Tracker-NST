@@ -1,13 +1,58 @@
 [
   {
-    "name": "Abhijeet Dey",
-    "github": "CWAbhi",
-    "headline": "LFX Mentorship 2025 contributor",
+    "name": "Mehak Jain",
+    "github": "Mehak261124",
+    "headline": "GSoC 2024 @ NumFOCUS — Improve User Experience Using Jupyter Toolkit",
     "programs": [
       {
-        "name": "LFX",
+        "name": "GSoC",
+        "year": 2024,
+        "org": "NumFOCUS",
+        "url": ""
+      }
+    ]
+  },
+  {
+    "name": "Agnik Misra",
+    "github": "Jitmisra",
+    "headline": "GSoC 2025 @ Apache Software Foundation (Kvrocks UI/UX overhaul) · GSoC 2026 @ OSIPI",
+    "programs": [
+      {
+        "name": "GSoC",
         "year": 2025,
-        "org": "CNCF / Kubernetes",
+        "org": "Apache Software Foundation",
+        "url": ""
+      },
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "org": "OSIPI",
+        "url": ""
+      }
+    ]
+  },
+  {
+    "name": "Geetansh Goyal",
+    "github": "geetxnshgoyal",
+    "headline": "GSoC 2026 @ openSUSE Project",
+    "programs": [
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "org": "openSUSE Project",
+        "url": ""
+      }
+    ]
+  },
+  {
+    "name": "Tarunya K",
+    "github": "TarunyaProgrammer",
+    "headline": "GSoC 2026 @ C2SI",
+    "programs": [
+      {
+        "name": "GSoC",
+        "year": 2026,
+        "org": "C2SI",
         "url": ""
       }
     ]
@@ -15,64 +60,38 @@
   {
     "name": "Kartikey Gupta",
     "github": "kartikeyg0104",
-    "headline": "Google Summer of Code 2025 contributor",
+    "headline": "GSoC 2026 @ C2SI — TensorMap (visual ML pipeline builder)",
     "programs": [
       {
         "name": "GSoC",
-        "year": 2025,
-        "org": "SymPy",
-        "url": ""
-      }
-    ]
-  },
-  {
-    "name": "Tarunya Kesharvani",
-    "github": "TarunyaProgrammer",
-    "headline": "Outreachy 2025 intern",
-    "programs": [
-      {
-        "name": "Outreachy",
-        "year": 2025,
-        "org": "GNOME Foundation",
-        "url": ""
-      }
-    ]
-  },
-  {
-    "name": "Kartik Yadav",
-    "github": "kartik-yadav",
-    "headline": "Google Summer of Code 2025 contributor",
-    "programs": [
-      {
-        "name": "GSoC",
-        "year": 2025,
-        "org": "Python Software Foundation",
+        "year": 2026,
+        "org": "C2SI",
         "url": ""
       }
     ]
   },
   {
     "name": "Manshu Saini",
-    "github": "manshu-saini",
-    "headline": "Summer of Bitcoin 2025 contributor",
+    "github": "manshusainishab",
+    "headline": "GSoC 2026 @ OWASP Foundation — OpenCRE Noise & Relevance Filtering Pipeline",
     "programs": [
       {
-        "name": "Summer of Bitcoin",
-        "year": 2025,
-        "org": "Bitcoin FOSS",
+        "name": "GSoC",
+        "year": 2026,
+        "org": "OWASP Foundation",
         "url": ""
       }
     ]
   },
   {
-    "name": "Agnik Mishra",
-    "github": "agnik-mishra",
-    "headline": "MLH Fellowship 2025 fellow",
+    "name": "Tushar Verma",
+    "github": "vtushar06",
+    "headline": "GSoC 2026 @ JSON Schema",
     "programs": [
       {
-        "name": "MLH",
-        "year": 2025,
-        "org": "Major League Hacking",
+        "name": "GSoC",
+        "year": 2026,
+        "org": "JSON Schema",
         "url": ""
       }
     ]
