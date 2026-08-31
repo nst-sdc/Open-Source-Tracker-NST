@@ -4,11 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { StudentSummary } from '@/lib/github';
+import type { RankedSummary } from './page';
 
 interface GridProps {
-  realContributors: StudentSummary[];
+  /** Already carries each contributor's position on the full leaderboard for
+   *  this period, so filtering the list never renumbers anyone. */
+  realContributors: RankedSummary[];
   otherStudents: StudentSummary[];
   period: string;
+  /** Human-readable form of the selected period, e.g. "last 24 hours". */
+  periodLabel: string;
   from?: string;
   to?: string;
 }
@@ -137,12 +142,20 @@ function ContributorRow({
 export function ContributorGrid({
   realContributors,
   otherStudents,
+  periodLabel,
   period,
   from,
   to,
 }: GridProps) {
   const [visibleActiveCount, setVisibleActiveCount] = useState(50);
   const [visibleOtherCount, setVisibleOtherCount] = useState(50);
+
+  // Outside "all time", an empty result for someone means "nothing in this
+  // window", not "has never contributed" — so the heading has to say which.
+  const otherStudentsHeading =
+    period === 'all'
+      ? 'Registered, not contributing yet'
+      : `No activity in the ${periodLabel}`;
 
   const activePage = realContributors.slice(0, visibleActiveCount);
   const otherPage = otherStudents.slice(0, visibleOtherCount);
@@ -164,11 +177,11 @@ export function ContributorGrid({
         </div>
 
         {activePage.length > 0 ? (
-          activePage.map((summary, i) => (
+          activePage.map((summary) => (
             <ContributorRow
               key={summary.profile.login}
               summary={summary}
-              rank={i + 1}
+              rank={summary.rank}
               period={period}
               from={from}
               to={to}
@@ -204,7 +217,7 @@ export function ContributorGrid({
       {/* Other registered members */}
       <div>
         <div className="flex items-center gap-2.5 mb-4">
-          <h2 className="text-[15px] font-[650] text-ink">Registered, not contributing yet</h2>
+          <h2 className="text-[15px] font-[650] text-ink">{otherStudentsHeading}</h2>
           <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
             {otherStudents.length}
           </span>
