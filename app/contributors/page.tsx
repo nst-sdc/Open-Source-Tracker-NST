@@ -16,6 +16,11 @@ export const metadata = {
   description: 'Student open source contributions',
 };
 
+/** A summary plus its position on the full leaderboard for the selected
+ *  period. Carried through filtering so the number never depends on what is
+ *  currently on screen. */
+export type RankedSummary = StudentSummary & { rank: number };
+
 const PERIOD_KICKERS: Record<string, string> = {
   all: 'ALL TIME',
   '1day': 'LAST 24 HOURS',
@@ -230,7 +235,18 @@ export default async function ContributorsPage({
     allSummaries = [...allSummaries].sort((a, b) => b.scoreMergedPRs - a.scoreMergedPRs);
   }
 
-  const summaries = allSummaries.filter((s) => {
+  const hasActivity = (s: StudentSummary) => s.totalPRs > 0 || (s.issuesCount ?? 0) > 0;
+
+  // Rank is assigned over the whole leaderboard for the selected period, before
+  // any search/year/campus filter is applied. Searching for one person must not
+  // move them to #1 — the filters narrow what is listed, never what it means.
+  // Because allSummaries is fetched with this period's dateQuery, the numbers
+  // are already specific to the selected window.
+  const rankedLeaderboard: RankedSummary[] = allSummaries
+    .filter(hasActivity)
+    .map((summary, i) => ({ ...summary, rank: i + 1 }));
+
+  const matchesFilters = (s: StudentSummary) => {
     if (search) {
       const q = search.toLowerCase();
       const matchesText =
@@ -243,13 +259,20 @@ export default async function ContributorsPage({
     if (year && s.year !== year) return false;
     if (campus && s.campus !== campus) return false;
     return true;
-  });
+  };
+
+  const summaries = allSummaries.filter(matchesFilters);
   const totalPRs = summaries.reduce((s, c) => s + c.totalPRs, 0);
   const totalMerged = summaries.reduce((s, c) => s + c.mergedPRs, 0);
 
-  const realContributors = summaries.filter((s) => s.totalPRs > 0 || (s.issuesCount ?? 0) > 0);
-  const otherStudents = summaries.filter((s) => !(s.totalPRs > 0 || (s.issuesCount ?? 0) > 0));
-  const podium = realContributors.slice(0, 3);
+  const realContributors = rankedLeaderboard.filter(matchesFilters);
+  const otherStudents = summaries.filter((s) => !hasActivity(s));
+
+  // The podium is the leaderboard's top three, so it only makes sense on the
+  // unfiltered view. Showing the top three of a search result would either
+  // relabel people 1-3 (the bug this fixes) or put rank 47 on a podium.
+  const isFiltered = Boolean(search || year || campus);
+  const podium = isFiltered ? [] : rankedLeaderboard.slice(0, 3);
   const kicker = PERIOD_KICKERS[period] ?? 'ALL TIME';
 
   const refreshedAgo = cachedAt
@@ -382,6 +405,7 @@ export default async function ContributorsPage({
         realContributors={realContributors}
         otherStudents={otherStudents}
         period={period}
+        periodLabel={kicker.toLowerCase()}
         from={from}
         to={to}
       />
