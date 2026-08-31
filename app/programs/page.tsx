@@ -1,4 +1,9 @@
 import Link from 'next/link';
+import {
+  CycleCountdownCompact,
+  NextCycleHighlight,
+  ProgramCycleCountdown,
+} from '../components/CycleCountdown';
 
 export const metadata = { title: 'Open Source Programs — Opensource Tracker NST' };
 
@@ -437,10 +442,17 @@ export default function ProgramsPage() {
               Programs
             </span>
           </h1>
-          <p className="text-ink-soft text-lg max-w-2xl mx-auto leading-relaxed mb-8">
+          <p className="text-ink-soft text-lg max-w-2xl mx-auto leading-relaxed mb-6">
             A guide to the world&apos;s best paid open source programs — stipends, timelines,
             eligibility, and how NST students have fared.
           </p>
+
+          {/* Whichever cycle is open now, or opens soonest */}
+          <div className="flex justify-center mb-8">
+            <NextCycleHighlight
+              programs={PROGRAMS.map((p) => ({ id: p.id, short: p.short }))}
+            />
+          </div>
 
           {/* Quick jump */}
           <div className="flex flex-wrap gap-2 justify-center">
@@ -473,6 +485,7 @@ export default function ProgramsPage() {
                   <div className="flex justify-between"><span className="text-ink-soft">Stipend</span><span>{p.stipend}</span></div>
                   <div className="flex justify-between"><span className="text-ink-soft">Duration</span><span>{p.duration.split('(')[0].trim()}</span></div>
                   <div className="flex justify-between"><span className="text-ink-soft">Deadline</span><span>{p.deadline.split('—')[0].trim()}</span></div>
+                  <CycleCountdownCompact programId={p.id} />
                 </div>
               </div>
             ))}
@@ -523,6 +536,9 @@ export default function ProgramsPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Countdown to the next application cycle */}
+              <ProgramCycleCountdown programId={p.id} />
 
               {/* Tips */}
               <div className="p-6 border-t border-line">
