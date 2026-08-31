@@ -6,8 +6,7 @@ export const metadata = { title: 'Common Issues — Opensource Tracker NST' };
 const ISSUES = [
   {
     id: 'pr-extra-files',
-    emoji: '😱',
-    severity: 'common',
+    kind: 'common',
     title: 'My PR shows hundreds of file changes and commits that are not mine',
     tags: ['git', 'pull request', 'fork'],
     whatHappened: `You opened a PR and GitHub is showing you modified 200+ files and have 50+ commits — most of which you never touched. This is one of the most confusing things beginners hit.`,
@@ -47,8 +46,7 @@ git rebase upstream/main`,
   },
   {
     id: 'undo-bad-commit',
-    emoji: '⏪',
-    severity: 'common',
+    kind: 'common',
     title: 'I made a wrong commit — how do I remove it?',
     tags: ['git', 'commit', 'reset', 'revert'],
     whatHappened: `You committed something you shouldn't have — wrong file, debug code, secrets, or just a completely wrong change. You want it gone.`,
@@ -94,8 +92,7 @@ git commit -m "remove .env from tracking"`,
   },
   {
     id: 'pickup-abandoned-pr',
-    emoji: '🔄',
-    severity: 'common',
+    kind: 'common',
     title: 'How do I continue working on someone else\'s abandoned PR?',
     tags: ['git', 'pull request', 'collaboration', 'fork'],
     whatHappened: `A contributor opened a PR, the maintainer asked for changes, and then the contributor went silent. The maintainer says "feel free to pick this up." You want to continue from where they left off.`,
@@ -139,8 +136,7 @@ git push origin pickup-pr-142`,
   },
   {
     id: 'test-before-push',
-    emoji: '🧪',
-    severity: 'best-practice',
+    kind: 'best-practice',
     title: 'How do I properly test my changes before pushing?',
     tags: ['testing', 'git', 'CI', 'best practice'],
     whatHappened: `You push your changes, CI fails, and the maintainer asks why you didn't test first. Or worse — your change breaks something in production.`,
@@ -222,8 +218,7 @@ chmod +x .git/hooks/pre-push`,
   },
   {
     id: 'merge-conflict',
-    emoji: '⚔️',
-    severity: 'common',
+    kind: 'common',
     title: 'I have merge conflicts — what do I do?',
     tags: ['git', 'merge conflict', 'rebase'],
     whatHappened: 'You try to rebase or merge and git says "CONFLICT" — files have <<<<<<, =======, >>>>>>> markers everywhere. Everything looks broken.',
@@ -264,8 +259,7 @@ git merge --abort`,
   },
   {
     id: 'wrong-branch',
-    emoji: '🌿',
-    severity: 'common',
+    kind: 'common',
     title: 'I committed to the wrong branch (or directly to main)',
     tags: ['git', 'branch', 'reset'],
     whatHappened: `You realized you made commits directly on main instead of a feature branch — or you committed to someone else's feature branch by mistake.`,
@@ -297,8 +291,7 @@ git push origin my-feature-branch`,
   },
   {
     id: 'commit-message',
-    emoji: '✍️',
-    severity: 'best-practice',
+    kind: 'best-practice',
     title: 'How do I write a good commit message?',
     tags: ['git', 'commit', 'best practice'],
     whatHappened: `Your PR gets reviewed and the maintainer says "please clean up your commit messages" — or your git log is full of "fix", "wip", "asdf", "changes".`,
@@ -346,46 +339,35 @@ Fixes #234`,
 export default function IssuesPage() {
   return (
     <main className="min-h-screen bg-panel">
-      {/* Hero */}
-      <div className="relative overflow-hidden pt-14 pb-10 px-4">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[350px] rounded-full bg-warning-0 blur-[100px]" />
-          <div className="absolute top-0 right-1/4 w-[400px] h-[300px] rounded-full bg-error-0 blur-[100px]" />
-        </div>
-        <div className="relative max-w-3xl mx-auto text-center">
-          <div className="flex justify-start mb-6">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
-              </svg>
-              Home
-            </Link>
-          </div>
+      <header className="border-b border-line bg-ground">
+        <div className="max-w-3xl mx-auto px-4 pt-8 pb-10">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+            </svg>
+            Home
+          </Link>
 
-          {/* Cross-link to Get Started */}
-          <div className="flex justify-center mb-6">
-            <Link href="/get-started" className="inline-flex items-center gap-2 text-xs px-4 py-1.5 rounded-full bg-brand-0 border border-brand-100 text-brand-600/70 hover:text-brand-600 hover:bg-brand-0 transition-all">
-              📖 New to open source? Start here first →
+          <h1 className="mt-6 text-4xl md:text-5xl font-[650] tracking-tight text-ink">
+            Common issues
+          </h1>
+          <p className="mt-3 text-ink-mid text-lg leading-relaxed max-w-xl">
+            The Git and GitHub problems contributors hit most often, with the exact
+            commands that fix them.
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-soft">
+            <span>{ISSUES.length} issues</span>
+            <span aria-hidden="true" className="text-ink-faint">·</span>
+            <Link href="/get-started" className="text-brand-600 hover:text-brand-700 underline underline-offset-2 decoration-brand-200 hover:decoration-brand-600 transition-colors">
+              New to open source? Start here
             </Link>
           </div>
-          <div className="inline-flex items-center gap-2 bg-panel border border-line rounded-full px-4 py-1.5 text-xs text-warning-600 mb-6">
-            Real problems, real solutions
-          </div>
-          <h1 className="text-5xl md:text-6xl font-[650] text-ink mb-4 tracking-tight">
-            Common{' '}
-            <span className="text-warning-600">
-              Issues
-            </span>
-          </h1>
-          <p className="text-ink-soft text-lg max-w-xl mx-auto leading-relaxed mb-3">
-            Git and GitHub problems every open source contributor runs into — explained and solved.
-          </p>
-          <p className="text-ink-soft text-sm mb-8">{ISSUES.length} common issues with step-by-step solutions</p>
         </div>
-      </div>
+      </header>
 
       <IssuesClient issues={ISSUES} />
     </main>
