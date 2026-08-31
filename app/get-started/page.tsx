@@ -2,495 +2,547 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Get Started — Opensource Tracker NST',
-  description: 'Discover how open source powers global tech innovation, explore world-class projects like Linux, Android, VLC, and Python, and learn how to make your first contribution.',
+  description:
+    'A plain-language introduction to open source for people who have never contributed: what the words mean, why it is worth doing, and how to get your first change accepted.',
 };
+
+/* Every term a first-timer will hit in their first week, defined before the page
+   uses it anywhere else. */
+const glossary = [
+  {
+    term: 'Repository (or "repo")',
+    def: 'One project\'s code, kept in a single folder along with a record of every change ever made to it. When people say "the React repo", they mean all of React\'s code and its history.',
+  },
+  {
+    term: 'GitHub',
+    def: 'The website where most open source repositories live. It hosts the code, the discussions, and the review process. You will need a free account.',
+  },
+  {
+    term: 'Maintainer',
+    def: 'A person who runs the project and decides which changes get accepted. Usually a volunteer. Usually busy.',
+  },
+  {
+    term: 'Issue',
+    def: 'A post on the repository describing a bug, or a feature somebody wants. This is where you find work to do. Anyone can open one.',
+  },
+  {
+    term: 'Fork',
+    def: 'Your own copy of someone else\'s repository, saved under your GitHub account. You need one because you are not allowed to change theirs directly.',
+  },
+  {
+    term: 'Clone',
+    def: 'Downloading a repository onto your own computer so you can open it in a code editor and run it.',
+  },
+  {
+    term: 'Branch',
+    def: 'A separate line of work inside a repository. You put your changes on their own branch so the main copy stays untouched while you experiment.',
+  },
+  {
+    term: 'Commit',
+    def: 'One saved change, together with a short message explaining what you changed and why. A contribution is usually made of a few commits.',
+  },
+  {
+    term: 'Push',
+    def: 'Uploading the commits from your computer back up to GitHub, so other people can see them.',
+  },
+  {
+    term: 'Pull request (or "PR")',
+    def: 'A formal request asking the maintainers to take your changes into the project. Opening a PR is the actual act of contributing.',
+  },
+  {
+    term: 'Review',
+    def: 'A maintainer reading your pull request and asking for changes before they accept it. This is normal and happens to everyone, including senior engineers. It is not criticism of you.',
+  },
+  {
+    term: 'Merge',
+    def: 'When a maintainer accepts your pull request and your code becomes part of the real project. This is the moment people mean by "my first contribution".',
+  },
+  {
+    term: 'Upstream',
+    def: 'The original repository you forked from. Your fork can fall behind it while you work, which is why you will see people talk about "syncing with upstream".',
+  },
+  {
+    term: 'CI (continuous integration)',
+    def: 'Automated checks that run on your pull request to confirm your change did not break anything. If CI fails, fix it before asking for a review.',
+  },
+];
 
 const giants = [
   {
     name: 'Linux',
-    category: 'Operating System',
-    desc: "Powers 100% of the world's top 500 supercomputers, 96.3% of the top 1 million web servers, and forms the core cloud infrastructure of AWS, Azure, and Google Cloud.",
-    funFact: 'Did you know? Linus Torvalds created Linux in 1991 as a personal hobby project because he wanted to learn how his computer’s processor worked. Today, it runs every Android phone, the Mars Ingenuity Helicopter, and the cloud servers of AWS, Google, and Azure.',
-    impact: 'Bedrock of the Internet',
-    keyUsers: 'AWS, NASA, SpaceX, Tesla',
-    icon: '🐧',
-    color: 'text-brand-600',
-    accent: 'border-brand-100 hover:border-brand-100 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]',
-    bg: 'from-brand-0 to-transparent',
+    category: 'Operating system',
+    desc: 'The operating system that runs most of the internet. Every Android phone, almost every web server, and the machines behind AWS, Google Cloud, and Azure run on it.',
+    origin:
+      'Linus Torvalds started it in 1991 as a personal hobby project, to understand how his own computer\'s processor worked. He gave the code away. Thousands of people have improved it since.',
+    users: 'AWS, NASA, SpaceX, Tesla',
   },
   {
     name: 'Android',
-    category: 'Mobile Platform',
-    desc: 'An open-source OS developed by Google and built on the Linux kernel, running on over 3 Billion active smartphones, tablets, TVs, and smartwatches globally.',
-    funFact: 'Did you know? Android started as a tiny startup targeting digital cameras. Google acquired it and open-sourced the code under the Android Open Source Project (AOSP). It democratized smartphones, allowing hardware companies worldwide to build on a world-class OS.',
-    impact: '3B+ Active Devices',
-    keyUsers: 'Samsung, Google, Xiaomi, OnePlus',
-    icon: '🤖',
-    color: 'text-green-400',
-    accent: 'border-green-500/10 hover:border-green-500/30 group-hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]',
-    bg: 'from-green-500/5 to-transparent',
+    category: 'Mobile platform',
+    desc: 'The phone operating system built on top of Linux. Because the code is public, any phone manufacturer can build on it instead of writing an operating system from scratch.',
+    origin:
+      'Android began as a small startup aimed at digital cameras. Google bought it and published the code as the Android Open Source Project, which is why so many companies could start making smartphones at once.',
+    users: 'Samsung, Google, Xiaomi, OnePlus',
   },
   {
     name: 'Python',
-    category: 'Programming & AI',
-    desc: "The open programming language and neural network library that serves as the absolute backbone for the modern AI boom (powering ChatGPT, Midjourney, and Tesla's FSD).",
-    funFact: 'Did you know? Guido van Rossum created Python as a "hobby programming project" over his Christmas holidays in 1989 to keep himself occupied. Today, Python is the foundation of the AI revolution, powering PyTorch, TensorFlow, and ChatGPT\'s backing framework.',
-    impact: 'Language of AI',
-    keyUsers: 'OpenAI, Meta, NASA, Netflix',
-    icon: '🐍',
-    color: 'text-gold-600',
-    accent: 'border-gold-100 hover:border-gold-100 group-hover:shadow-[0_0_20px_rgba(234,179,8,0.15)]',
-    bg: 'from-gold-0 to-transparent',
+    category: 'Programming language',
+    desc: 'A programming language that is free for anyone to use and improve. Most of today\'s AI tools, including the libraries behind ChatGPT, are written in it.',
+    origin:
+      'Guido van Rossum built the first version over a Christmas holiday in 1989 to keep himself occupied, and published it. It is now one of the most used languages in the world.',
+    users: 'OpenAI, Meta, NASA, Netflix',
   },
   {
-    name: 'VLC Media Player',
-    category: 'Media Utility',
-    desc: 'The universal media player that plays any audio/video format without ads or tracker modules. Developed by volunteers and downloaded over 3.5 Billion times.',
-    funFact: 'Did you know? VLC was written in 1996 by French students at École Centrale Paris to stream TV over their dorm network. The developer group VideoLAN kept it 100% free and open. They famously rejected buyout offers worth hundreds of millions of dollars to keep VLC ad-free.',
-    impact: '3.5B+ Downloads',
-    keyUsers: 'Millions of users globally',
-    icon: '🔸',
-    color: 'text-warning-600',
-    accent: 'border-line hover:border-warning-200',
-    bg: 'from-warning-0 to-transparent',
+    name: 'VLC',
+    category: 'Media player',
+    desc: 'The media player that opens practically any video or audio file, with no ads and no tracking, because no company needs to make money from it.',
+    origin:
+      'Students at a Paris engineering school wrote it in 1996 to stream television around their dorm network. The volunteers who maintain it have turned down buyout offers to keep it free.',
+    users: 'Several billion downloads worldwide',
   },
   {
-    name: 'VS Code & Git',
-    category: 'Developer Tools',
-    desc: 'The code editor and version control engine that are used by over 90% of developers worldwide to write, track, and collaborate on software engineering.',
-    funFact: 'Did you know? Linus Torvalds created Git in just 10 days because he was frustrated with existing version control systems. VS Code is built by Microsoft on top of Electron and open-sourced, enabling millions of plugins. Together, they form the global nervous system of coding.',
-    impact: 'Industry Standards',
-    keyUsers: 'Microsoft, GitHub, Google, Apple',
-    icon: '💻',
-    color: 'text-violet-600',
-    accent: 'border-violet-100 hover:border-violet-100 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.15)]',
-    bg: 'from-violet-0 to-transparent',
+    name: 'Git and VS Code',
+    category: 'Developer tools',
+    desc: 'Git records the history of a codebase and lets many people work on it at once. VS Code is the editor most developers write that code in. You will use both constantly.',
+    origin:
+      'Linus Torvalds wrote Git in about ten days because he was frustrated with the existing tools. Microsoft published VS Code\'s source, which is why it has so many community-built extensions.',
+    users: 'Effectively the whole industry',
   },
   {
     name: 'Blender',
-    category: '3D & Graphics',
-    desc: 'A professional open-source 3D computer graphics suite used in Hollywood blockbusters, visual effects pipelines, indie video games, and virtual reality development.',
-    funFact: 'Did you know? When Blender\'s parent company went bankrupt in 2002, the lead developer launched a crowdfunding campaign. The community raised €110,000 in just 7 weeks to buy back the source code and release it open source. Today, it rivals multi-thousand-dollar tools.',
-    impact: 'Hollywood-Grade 3D',
-    keyUsers: 'Netflix, Ubisoft, EA, NASA',
-    icon: '🎨',
-    color: 'text-violet-600',
-    accent: 'border-violet-100 hover:border-violet-100 group-hover:shadow-[0_0_20px_rgba(236,72,153,0.15)]',
-    bg: 'from-violet-0 to-transparent',
+    category: '3D and graphics',
+    desc: 'A 3D animation and visual effects tool that competes with software costing thousands of pounds per licence, and is free because its users own it.',
+    origin:
+      'When the company behind Blender went bankrupt in 2002, its community raised €110,000 in seven weeks to buy the source code back and release it publicly.',
+    users: 'Netflix, Ubisoft, EA, NASA',
   },
 ];
 
 const benefits = [
-  { icon: '🚀', title: 'Real-World Production Experience', desc: 'Work on actual production codebases used by millions of people — a scale you can never replicate in hobby or toy projects.' },
-  { icon: '🌐', title: 'Global Portfolio & Visibility', desc: 'Your GitHub profile becomes a living résumé. Tech recruiters actively headhunt developers based on their open source PRs.' },
-  { icon: '🤝', title: 'Connect with World-Class Engineers', desc: 'Collaborate and network with software engineers at companies like Google, Meta, Mozilla, and top research labs.' },
-  { icon: '🧠', title: 'Deep Technical Onboarding', desc: 'Reading codebase architectures and refactoring according to review comments accelerates your growth faster than any course.' },
-  { icon: '💰', title: 'High-Paying Global Programs', desc: 'Prestige programs like GSoC, LFX, Outreachy, and Summer of Bitcoin pay stipends of $3,000 to $6,600+ for summer contributions.' },
-  { icon: '📜', title: 'Unquestionable Credibility', desc: 'A merged PR in a major library is absolute proof of code competency, technical patience, and teamwork.' },
+  {
+    title: 'You work on code real people use',
+    desc: 'Tutorial projects are thrown away when the tutorial ends. A change you merge into an open source project keeps running on other people\'s machines. That difference is obvious to anyone reading your profile.',
+  },
+  {
+    title: 'Your work is public and permanent',
+    desc: 'Anyone can open your GitHub profile and read the actual code you wrote and the discussion around it. You do not have to convince them you can do the work; they can check.',
+  },
+  {
+    title: 'You learn to read code you did not write',
+    desc: 'Most of a working developer\'s time goes on understanding an existing codebase, not writing new code. Open source is the only place you can practise that before your first job.',
+  },
+  {
+    title: 'Experienced engineers review your work for free',
+    desc: 'A maintainer explaining why your approach will not work is career-changing feedback that nobody is charging you for. Take it seriously and it will make you better quickly.',
+  },
+  {
+    title: 'Some programmes pay',
+    desc: 'Google Summer of Code, LFX Mentorship, Outreachy, and Summer of Bitcoin pay students stipends, commonly between $3,000 and $6,600, to contribute over a summer. They select from people with an existing contribution record.',
+  },
+  {
+    title: 'You meet people who are further along',
+    desc: 'You end up in the same review threads as engineers at Google, Meta, Mozilla, and research labs. Being a known, reliable contributor is how a lot of people find their first opportunity.',
+  },
 ];
 
 const onboardingSteps = [
-  { n: '1', title: 'Master the Essentials of Git', desc: 'Learn to clone repositories, create descriptive feature branches, commit clean code segments, resolve merge conflicts, and open Pull Requests (PRs).' },
-  { n: '2', title: 'Pick a Project You Actually Use', desc: "Start with tools, languages, or libraries in your current stack. If you are learning React, contribute to a React package. Familiarity makes understanding the code 10x easier." },
-  { n: '3', title: 'Always Read CONTRIBUTING.md First', desc: 'Every repository outlines strict code formatting, pull request flows, testing procedures, and communication norms. Following this separates top contributors from spam.' },
-  { n: '4', title: 'Start with "Good First Issues"', desc: 'Filter GitHub issue queues using labels like "good first issue", "beginner-friendly", or "documentation". These are small, isolated tasks meant for onboarding newcomers.' },
-  { n: '5', title: 'Understand the Architecture Before Fixing', desc: 'Read the surrounding code, run the project locally, write failing test cases first to reproduce the bug. A surgical 5-line fix is infinitely better than a sprawling 200-line rewrite.' },
-  { n: '6', title: 'Write Clear, Meaningful PR Descriptions', desc: 'Volunteers review your code. Respect their time by explaining what you changed, why, and how to verify it. Include before/after screenshots for UI changes.' },
+  {
+    n: '1',
+    title: 'Set up GitHub and learn just enough Git',
+    desc: 'Create a free GitHub account. Then learn five things and no more for now: how to fork a repository, clone it to your computer, make a branch, commit a change, and push it back. You do not need to understand all of Git before you start. You need those five.',
+  },
+  {
+    n: '2',
+    title: 'Pick a project you already use',
+    desc: 'Not the biggest or most famous one. A tool or library you have personally used, so you already know what it is for and can tell when it is behaving oddly. If you are learning React, look at a React library you have installed.',
+  },
+  {
+    n: '3',
+    title: 'Read CONTRIBUTING.md before anything else',
+    desc: 'Almost every serious repository has a file called CONTRIBUTING.md at the top level. It tells you how that project wants changes submitted, how to run its tests, and what it will reject. Reading it first is the single clearest signal that you are not wasting the maintainer\'s time.',
+  },
+  {
+    n: '4',
+    title: 'Get the project running on your own machine first',
+    desc: 'Before you change a single line, follow the setup instructions until you can build and run it locally. This often takes an afternoon and teaches you more about the project than reading the code does. If the instructions are broken, fixing them is itself a genuinely useful first contribution.',
+  },
+  {
+    n: '5',
+    title: 'Find an issue labelled for newcomers',
+    desc: 'Open the repository\'s Issues tab and filter by labels like "good first issue", "beginner friendly", or "documentation". Maintainers add these labels specifically to mark work that does not need deep knowledge of the codebase.',
+  },
+  {
+    n: '6',
+    title: 'Comment on the issue before you start',
+    desc: 'Write something like "I would like to work on this, is it still open?" and wait for a reply. This stops two people doing the same work, and gives the maintainer a chance to warn you if the issue is harder than it looks.',
+  },
+  {
+    n: '7',
+    title: 'Reproduce the problem, then make the smallest fix that works',
+    desc: 'Run the code and see the bug happen with your own eyes before you try to fix it. Then change as little as possible. A five-line fix that clearly solves the stated problem gets merged. A 200-line rewrite that also reorganises things you did not like will not.',
+  },
+  {
+    n: '8',
+    title: 'Open the pull request, then stay for the review',
+    desc: 'Explain what you changed, why, and how the reviewer can check it themselves. Then keep watching it. Replying to review comments within a day or two is what separates contributors maintainers remember from the ones they do not.',
+  },
 ];
 
 const coreSkills = [
-  { title: 'Git & GitHub', items: ['Branching & Forking workflow', 'Rebasing vs. Merging commits', 'Resolving complex conflicts', 'Writing meaningful commit logs', 'Keeping upstream synced'] },
-  { title: 'Code Navigation', items: ['Tracing execution paths', 'Reading inline documentations', 'Understanding test suites', 'Using ripgrep / codebase search', 'Navigating large folder structures'] },
-  { title: 'Technical Comm', items: ['Writing clear issue bug reports', 'Responding to code reviews', 'Constructing concise questions', 'Explaining architectural choices', 'Constructive developer etiquette'] },
-  { title: 'Local Tooling', items: ['Running projects from scratch', 'Using linters and formatters', 'Reading CI/CD logs & workflows', 'Local debugging tools', 'Docker for isolated setups'] },
+  {
+    title: 'Git and GitHub',
+    items: [
+      'Forking and cloning a repository',
+      'Working on a branch instead of the main copy',
+      'Writing commit messages someone else can read',
+      'Keeping your fork in sync with the original',
+      'Untangling conflicts when two people edit the same lines',
+    ],
+  },
+  {
+    title: 'Finding your way around code',
+    items: [
+      'Following a feature through unfamiliar files',
+      'Working out what a function does from its tests',
+      'Searching a large codebase quickly',
+      'Reading documentation written for other developers',
+      'Knowing when to stop reading and start experimenting',
+    ],
+  },
+  {
+    title: 'Communicating with a team',
+    items: [
+      'Writing a bug report someone can act on',
+      'Asking a question that includes what you already tried',
+      'Responding to review comments without taking them personally',
+      'Explaining why you chose one approach over another',
+      'Saying clearly when you are stuck or cannot continue',
+    ],
+  },
+  {
+    title: 'Running things locally',
+    items: [
+      'Setting up a project from its README',
+      'Running the test suite and reading the failures',
+      'Using linters and formatters before you push',
+      'Working out why the automated checks failed',
+      'Basic Docker, when a project needs it',
+    ],
+  },
 ];
 
-const guidelines = [
+const dontDo = [
   {
-    icon: '🚫',
-    title: 'No AI-Generated Code Plagiarism',
-    severity: 'critical',
-    desc: 'Submitting code generated by ChatGPT, Copilot, or Claude as your own without deep understanding is plagiarism. Open source maintainers easily detect this, and many major projects ban it. Doing so will get you blacklisted.',
+    title: 'Do not submit AI-generated code you cannot explain',
+    desc: 'Pasting output from ChatGPT, Copilot, or Claude into a pull request without understanding it is treated as plagiarism. Maintainers spot it easily, because they ask a follow-up question and the answer never comes. Many large projects now ban it outright.',
   },
   {
-    icon: '🚫',
-    title: 'No Typos or Spam README Fixes',
-    severity: 'critical',
-    desc: "Fixing single-letter typos in READMEs, adding random empty lines, or changing indentation just to artificially inflate your PR count is considered spam. This will result in being blocked and blacklisted from paid programs.",
+    title: 'Do not submit typo fixes to inflate your count',
+    desc: 'Changing one letter in a README, adding blank lines, or reformatting whitespace purely to have another merged PR is spam. It is one of the fastest ways to get blocked by a repository and rejected from paid programmes.',
   },
   {
-    icon: '🚫',
-    title: 'No Drive-By Pull Requests',
-    severity: 'high',
-    desc: 'Opening a PR and then ignoring review comments or disappearing for weeks is highly disrespectful to the maintainers. Always follow through on feedback, or close the PR yourself if you cannot continue.',
+    title: 'Do not open a pull request and disappear',
+    desc: 'A maintainer who reviews your work and then hears nothing for three weeks has wasted their evening. If you cannot continue, that is completely fine. Say so in a comment and close the pull request yourself.',
   },
   {
-    icon: '🚫',
-    title: 'Do Not Copy-Paste Solutions',
-    severity: 'high',
-    desc: 'Do not copy code from Stack Overflow, blogs, or other repositories that you do not fully understand. If you cannot explain every single line of your pull request, it is not ready for review.',
+    title: 'Do not copy code you do not understand',
+    desc: 'Code lifted from Stack Overflow, a blog, or another repository often carries assumptions that do not hold in this project, and sometimes a licence that does not allow it. If you cannot explain every line of your change, it is not ready to submit.',
+  },
+];
+
+const doDo = [
+  {
+    title: 'Do use AI to understand things faster',
+    desc: 'Asking an AI to explain an unfamiliar algorithm, walk you through an error message, or clarify syntax is a good use of it. Learn from the explanation, then write and understand the final code yourself. The rule is about understanding, not about tools.',
   },
   {
-    icon: '✅',
-    title: 'Use AI for Learning, Not as a Shortcut',
-    severity: 'positive',
-    desc: 'Using AI to explain a complex codebase algorithm, debug a local compiler error, or clarify a programming syntax is perfectly fine. Leverage AI to learn faster, but always write and understand the final code yourself.',
+    title: 'Do ask questions in public',
+    desc: 'Ask on the issue rather than in a private message. Someone else will hit the same problem and find your question. Include what you tried and what happened, so a maintainer can help in one reply instead of five.',
   },
+];
+
+function SectionHeading({
+  id,
+  title,
+  intro,
+}: {
+  id?: string;
+  title: string;
+  intro?: string;
+}) {
+  return (
+    <div className="max-w-2xl">
+      <h2 id={id} className="text-2xl md:text-3xl font-[650] tracking-tight text-ink">
+        {title}
+      </h2>
+      {intro && <p className="mt-2.5 text-[15px] leading-relaxed text-ink-mid">{intro}</p>}
+    </div>
+  );
+}
+
+const JUMP_LINKS = [
+  { href: '#what-is-open-source', label: 'What it is' },
+  { href: '#words', label: 'The words' },
+  { href: '#projects', label: 'Projects you use' },
+  { href: '#why', label: 'Why bother' },
+  { href: '#first-contribution', label: 'Your first contribution' },
+  { href: '#rules', label: 'Rules' },
 ];
 
 export default function GetStartedPage() {
   return (
-    <main className="min-h-screen bg-panel text-ink relative">
-      {/* Visual background lines / grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+    <main className="min-h-screen bg-panel">
+      <header className="border-b border-line bg-ground">
+        <div className="max-w-4xl mx-auto px-4 pt-8 pb-10">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+            </svg>
+            Home
+          </Link>
 
-      {/* Hero */}
-      <div className="relative overflow-hidden pt-20 pb-16 px-4 border-b border-line">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute top-0 left-1/4 w-[600px] h-[400px] rounded-full bg-success-0 blur-[120px]" />
-          <div className="absolute top-0 right-1/4 w-[500px] h-[350px] rounded-full bg-violet-100/30 blur-[120px]" />
-        </div>
-        <div className="relative max-w-4xl mx-auto text-center">
-          <div className="flex justify-start mb-6">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm font-[500]"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 19l-7-7 7-7" />
-              </svg>
-              Home
-            </Link>
-          </div>
-
-          <div className="inline-flex items-center gap-2 bg-success-0 border border-success-100 rounded-full px-4 py-1.5 text-xs font-[550] text-success-600 mb-6">
-            ✨ Your Ultimate Open Source Playbook
-          </div>
-          <h1 className="text-5xl md:text-7xl font-[650] text-ink mb-6 tracking-tight leading-none">
-            Get{' '}
-            <span className="text-success-600">
-              Started
-            </span>
+          <h1 className="mt-6 text-4xl md:text-5xl font-[650] tracking-tight text-ink">
+            Get started with open source
           </h1>
-          <p className="text-ink-mid text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-            Open source is the hidden engine powering 99% of global technology. Explore how a shared ecosystem drives unstoppable innovation—and how you can claim your spot in it.
+          <p className="mt-3 max-w-2xl text-lg leading-relaxed text-ink-mid">
+            Open source means a project&apos;s code is published in public and anyone is
+            allowed to help improve it. This page assumes you have never done that
+            before. It explains what the words mean, why it is worth your time, and
+            what to actually do first.
           </p>
 
-          <div className="flex flex-wrap gap-2.5 justify-center mt-10">
-            <a href="#what-is-opensource" className="text-xs px-4 py-2 rounded-full bg-white border border-line text-ink-soft hover:text-ink hover:bg-panel hover:border-line-heavy transition-all">
-              🌐 What is Open Source?
-            </a>
-            <a href="#open-source-giants" className="text-xs px-4 py-2 rounded-full bg-white border border-line text-ink-soft hover:text-ink hover:bg-panel hover:border-line-heavy transition-all">
-              👑 Open Source Giants
-            </a>
-            <a href="#why-opensource" className="text-xs px-4 py-2 rounded-full bg-white border border-line text-ink-soft hover:text-ink hover:bg-panel hover:border-line-heavy transition-all">
-              🚀 Why Contribute?
-            </a>
-            <a href="#how-to-start" className="text-xs px-4 py-2 rounded-full bg-white border border-line text-ink-soft hover:text-ink hover:bg-panel hover:border-line-heavy transition-all">
-              🪜 Step-by-Step
-            </a>
-            <a href="#guidelines" className="text-xs px-4 py-2 rounded-full bg-error-0 border border-error-100 text-error-600 hover:text-error-600 hover:bg-error-0 transition-all">
-              🚫 Rules &amp; Guidelines
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-20 space-y-24">
-        {/* Section 1: What is Open Source & Why Innovation */}
-        <section id="what-is-opensource" className="space-y-8 scroll-mt-20">
-          <div className="bg-white border border-line rounded-2xl p-8 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-success-500/5 blur-3xl rounded-full" />
-            
-            <div className="space-y-6">
-              <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-success-600 border border-success-100 bg-success-500/5 px-2.5 py-1 rounded">
-                Understanding the movement
-              </div>
-              <h2 className="text-3xl font-[650] text-ink tracking-tight">The Global Collaboration Engine</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                <div className="md:col-span-2 space-y-4">
-                  <p className="text-ink-mid leading-relaxed text-sm md:text-base">
-                    <strong>What is Open Source?</strong> It is the largest collaborative movement in human history. Instead of working inside private corporate silos, programmers from every continent publish their source code completely in public, allowing anyone to inspect, modify, and improve it.
-                  </p>
-                  <p className="text-ink-mid leading-relaxed text-sm md:text-base">
-                    <strong>Why does it drive innovation?</strong> Because it enables <strong>Permissionless Innovation</strong>. Instead of spent developer-years rebuilding database engines, operating systems, or UI components from scratch, engineers build *on top of* rock-solid open utilities. A college student in their dorm room has access to the exact same world-class software infrastructure as Apple, Google, or Netflix.
-                  </p>
-                </div>
-                
-                <div className="flex flex-col gap-4">
-                  <div className="bg-white border border-line rounded-2xl p-5 text-center shadow-lg shadow-black/30">
-                    <div className="text-3xl font-[650] text-success-600 tracking-tight">99%</div>
-                    <div className="text-[10px] text-ink-soft font-mono mt-1.5 uppercase tracking-wider">of Modern Codebases</div>
-                  </div>
-                  <div className="bg-white border border-line rounded-2xl p-5 text-center shadow-lg shadow-black/30">
-                    <div className="text-3xl font-[650] text-brand-600 tracking-tight">96.3%</div>
-                    <div className="text-[10px] text-ink-soft font-mono mt-1.5 uppercase tracking-wider">of Web Servers</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Side-by-side comparison */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-line">
-                <div className="bg-error-500/[0.02] border border-error-100 rounded-2xl p-5 relative overflow-hidden">
-                  <h3 className="text-sm font-[650] text-error-600 mb-3 flex items-center gap-2">
-                    <span>🔒</span> Proprietary Silos
-                  </h3>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-xs text-ink-soft">
-                      <span className="text-error-600/70 mt-0.5">✕</span>
-                      <span><strong>Gatekeeping:</strong> Code is proprietary. You wait on corporate roadmaps for bug fixes.</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-xs text-ink-soft">
-                      <span className="text-error-600/70 mt-0.5">✕</span>
-                      <span><strong>High Fees:</strong> Small teams are locked out due to high software licensing costs.</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-xs text-ink-soft">
-                      <span className="text-error-600/70 mt-0.5">✕</span>
-                      <span><strong>Fragmented:</strong> Every company builds their own closed version of the same basic tools.</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="bg-success-500/[0.02] border border-success-100 rounded-2xl p-5 relative overflow-hidden">
-                  <h3 className="text-sm font-[650] text-success-600 mb-3 flex items-center gap-2">
-                    <span>🚀</span> Open Source Paradigm
-                  </h3>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-xs text-ink-soft">
-                      <span className="text-success-600/70 mt-0.5">✓</span>
-                      <span><strong>Collective Intelligence:</strong> Global developers refine, optimize, and test code together.</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-xs text-ink-soft">
-                      <span className="text-success-600/70 mt-0.5">✓</span>
-                      <span><strong>No Barriers:</strong> Deploy enterprise infrastructure instantly without licensing budget.</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-xs text-ink-soft">
-                      <span className="text-success-600/70 mt-0.5">✓</span>
-                      <span><strong>Rapid Iteration:</strong> Vulnerabilities are patched in hours because the entire community is reviewing the code.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* High-value economic stat card */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                <div className="bg-white border border-line rounded-2xl p-4 flex items-center gap-4 hover:bg-panel transition-all">
-                  <span className="text-3xl">👥</span>
-                  <div>
-                    <h4 className="text-sm font-[650] text-ink">100M+ Developers</h4>
-                    <p className="text-xs text-ink-soft mt-0.5">Collaborating on platforms like GitHub to shape software daily.</p>
-                  </div>
-                </div>
-                <div className="bg-white border border-line rounded-2xl p-4 flex items-center gap-4 hover:bg-panel transition-all">
-                  <span className="text-3xl">💎</span>
-                  <div>
-                    <h4 className="text-sm font-[650] text-ink">$36B+ Economic Value</h4>
-                    <p className="text-xs text-ink-soft mt-0.5">Created annually through shared, royalty-free open libraries.</p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </section>
-
-        {/* Section 2: Open Source Giants Grid */}
-        <section id="open-source-giants" className="space-y-8 scroll-mt-20">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-violet-600 border border-violet-100 bg-violet-0 px-2.5 py-1 rounded">
-              The Hall of Legends
-            </div>
-            <h2 className="text-3xl md:text-4xl font-[650] text-ink tracking-tight">Open Source Giants Powering the World</h2>
-            <p className="text-ink-soft text-sm">Familiar projects that form the absolute core infrastructure of modern computing.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {giants.map((g) => (
-              <div
-                key={g.name}
-                className={`group rounded-2xl border ${g.accent} bg-gradient-to-br ${g.bg} p-6 flex flex-col justify-between hover:bg-white hover:-translate-y-1 transition-all duration-300 relative overflow-hidden`}
+          <nav aria-label="On this page" className="mt-6 flex flex-wrap gap-1.5">
+            {JUMP_LINKS.map(({ href, label }) => (
+              <a
+                key={href}
+                href={href}
+                className="rounded-full border border-line-strong bg-ground px-3 py-1 text-xs font-medium text-ink-soft hover:border-line-heavy hover:text-ink transition-colors"
               >
-                <div>
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{g.icon}</span>
-                      <div>
-                        <h3 className="font-[650] text-ink text-base md:text-lg group-hover:text-ink transition-colors">{g.name}</h3>
-                        <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">{g.category}</span>
-                      </div>
-                    </div>
-                    <span className={`text-[10px] font-[550] px-2 py-0.5 rounded bg-panel border border-line ${g.color}`}>
-                      {g.impact}
-                    </span>
-                  </div>
-                  <p className="text-ink-mid text-xs leading-relaxed mb-4">{g.desc}</p>
-                  
-                  {/* Fun Fact Section */}
-                  <div className="mt-4 p-3 bg-ink rounded-xl text-[11px] leading-relaxed text-ink-soft">
-                    <strong className="text-violet-600">Fun Fact: </strong>{g.funFact}
-                  </div>
-                </div>
-
-                <div className="mt-5 pt-3 border-t border-line flex items-center justify-between text-[10px] text-ink-soft font-mono uppercase tracking-wider">
-                  <span>Key Users:</span>
-                  <span className="text-ink-mid font-[550] lowercase font-sans">{g.keyUsers}</span>
-                </div>
-              </div>
+                {label}
+              </a>
             ))}
+          </nav>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 py-14 space-y-16">
+        {/* What it is */}
+        <section id="what-is-open-source" className="scroll-mt-[76px]">
+          <SectionHeading title="What open source actually means" />
+
+          <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-ink-mid max-w-2xl">
+            <p>
+              Most software is written privately. A company employs developers, the
+              code sits on their servers, and nobody outside can read it. If it has a
+              bug that annoys you, your only option is to wait and hope somebody there
+              decides to fix it.
+            </p>
+            <p>
+              Open source works the other way round. The full source code is published
+              on the internet, usually on GitHub, and anyone is allowed to read it,
+              run it, change it, and suggest improvements back to the original
+              project. A small group of{' '}
+              <strong className="font-[600] text-ink">maintainers</strong> decides
+              which suggestions get accepted.
+            </p>
+            <p>
+              It is closer to a recipe published in a magazine than to a factory. You
+              can cook it, adjust it, and write to the author saying &ldquo;this step
+              works better the other way round&rdquo; — and if they agree, the printed
+              recipe changes for everybody.
+            </p>
+            <p>
+              You do not need permission, an invitation, or a job to take part. You do
+              need to follow the project&apos;s process, which is what the rest of this
+              page is about.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-line bg-ground p-5">
+              <h3 className="text-sm font-[650] text-ink">Closed source</h3>
+              <ul className="mt-3 space-y-2.5 text-[13px] leading-relaxed text-ink-mid">
+                <li>You cannot read the code, so you cannot tell what it does.</li>
+                <li>A bug gets fixed when the company decides to fix it.</li>
+                <li>Every company rebuilds the same basic tools separately.</li>
+                <li>Licences can price out small teams and students entirely.</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-line bg-ground p-5">
+              <h3 className="text-sm font-[650] text-ink">Open source</h3>
+              <ul className="mt-3 space-y-2.5 text-[13px] leading-relaxed text-ink-mid">
+                <li>Anyone can read the code and check what it really does.</li>
+                <li>Anyone who can fix a bug is allowed to try.</li>
+                <li>Everyone builds on the same shared foundation.</li>
+                <li>A student has access to the same tools as a large company.</li>
+              </ul>
+            </div>
           </div>
         </section>
 
-        {/* Student Spotlight Advertisements */}
-        <section id="student-spotlight" className="space-y-8 scroll-mt-20">
-          <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-0 to-brand-0 p-8">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-violet-0 blur-3xl rounded-full" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-500/5 blur-3xl rounded-full" />
-            
-            <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="max-w-md space-y-4 text-left">
-                <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-gold-600 border border-gold-100 bg-gold-0 px-2.5 py-1 rounded">
-                  Newton School Spotlight
+        {/* Glossary */}
+        <section id="words" className="scroll-mt-[76px]">
+          <SectionHeading
+            title="The words you will keep seeing"
+            intro="Most of what makes open source feel closed off is vocabulary. Here is the whole set you need for your first contribution. Nothing further down this page assumes more than these."
+          />
+
+          <dl className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-ground">
+            {glossary.map(({ term, def }) => (
+              <div key={term} className="grid gap-1 px-5 py-4 sm:grid-cols-[190px_1fr] sm:gap-5">
+                <dt className="text-sm font-[650] text-ink">{term}</dt>
+                <dd className="text-[14px] leading-relaxed text-ink-mid">{def}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="mt-4 text-sm text-ink-soft">
+            When one of these goes wrong in practice, the{' '}
+            <Link
+              href="/issues"
+              className="text-brand-600 underline underline-offset-2 decoration-brand-200 hover:decoration-brand-600 transition-colors"
+            >
+              common issues page
+            </Link>{' '}
+            has the exact commands to get out of it.
+          </p>
+        </section>
+
+        {/* Projects */}
+        <section id="projects" className="scroll-mt-[76px]">
+          <SectionHeading
+            title="You already depend on open source"
+            intro="These are not obscure hobby projects. Each one started small, was given away for free, and ended up underneath things you use every day."
+          />
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {giants.map((g) => (
+              <article key={g.name} className="rounded-2xl border border-line bg-ground p-5 card-hover">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="text-base font-[650] text-ink">{g.name}</h3>
+                  <span className="text-[11px] text-ink-soft">{g.category}</span>
                 </div>
-                <h2 className="text-3xl font-[650] text-ink tracking-tight leading-tight">
-                  You don&apos;t just have to use Open Source.<br/>
-                  <span className="text-brand-500">
-                    You can build it.
-                  </span>
-                </h2>
-                <p className="text-ink-mid text-xs md:text-sm leading-relaxed">
-                  Newton School of Technology students are building and maintaining actual production-grade utilities with thousands of developers globally. Get inspired by what your peers are coding in the real world.
+                <p className="mt-2.5 text-[13px] leading-relaxed text-ink-mid">{g.desc}</p>
+                <p className="mt-3 border-l-2 border-line-heavy pl-3 text-[13px] leading-relaxed text-ink-soft">
+                  {g.origin}
                 </p>
-              </div>
-
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                {/* Termstory Ad Card */}
-                <a
-                  href="https://github.com/bitflicker64/Termstory"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex flex-col justify-between p-5 rounded-2xl bg-ink-strong border border-ink-mid hover:border-violet-300 hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden"
-                >
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-0 border border-violet-100 text-violet-600 font-mono">AD</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl">🐧</span>
-                      <div>
-                        <h3 className="font-[650] text-ink text-xs group-hover:text-violet-600 transition-colors">Termstory</h3>
-                        <span className="text-[9px] text-ink-soft font-mono">by @bitflicker64</span>
-                      </div>
-                    </div>
-                    <p className="text-ink-soft text-[10px] leading-relaxed mb-3">
-                      Turns your terminal history into an AI-narrated timeline. Groups commands into sessions and correlates commits.
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between text-[9px] text-violet-600 font-mono uppercase tracking-wider pt-2 border-t border-line">
-                    <span>Memory Engine</span>
-                    <span className="group-hover:translate-x-0.5 transition-transform">Star Project →</span>
-                  </div>
-                </a>
-
-                {/* Filedrop Ad Card */}
-                <a
-                  href="https://github.com/Dreamstick9/filedrop"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex flex-col justify-between p-5 rounded-2xl bg-ink-strong border border-ink-mid hover:border-brand-300 hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden"
-                >
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 border border-brand-100 text-brand-600 font-mono">AD</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl">📦</span>
-                      <div>
-                        <h3 className="font-[650] text-ink text-xs group-hover:text-brand-600 transition-colors">filedrop</h3>
-                        <span className="text-[9px] text-ink-soft font-mono">by @Dreamstick9</span>
-                      </div>
-                    </div>
-                    <p className="text-ink-soft text-[10px] leading-relaxed mb-3">
-                      Instantly share files locally with AES-256-GCM browser encryption. QR code generation for mobile download.
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between text-[9px] text-brand-600 font-mono uppercase tracking-wider pt-2 border-t border-line">
-                    <span>File Sharing</span>
-                    <span className="group-hover:translate-x-0.5 transition-transform">Star Project →</span>
-                  </div>
-                </a>
-              </div>
-            </div>
+                <p className="mt-4 border-t border-line pt-3 text-[11px] text-ink-soft">
+                  Used by {g.users}
+                </p>
+              </article>
+            ))}
           </div>
         </section>
 
-        {/* Section 3: Why Contribute */}
-        <section id="why-opensource" className="space-y-8 scroll-mt-20">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-brand-600 border border-brand-100 bg-brand-0 px-2.5 py-1 rounded">
-              Your growth engine
-            </div>
-            <h2 className="text-3xl font-[650] text-ink tracking-tight">Why Do Developers Contribute?</h2>
-            <p className="text-ink-soft text-sm">How open source contributions supercharge your developer skills and career.</p>
-          </div>
+        {/* Student spotlight */}
+        <section id="student-spotlight" className="scroll-mt-[76px]">
+          <SectionHeading
+            title="Students here are already building these"
+            intro="Two projects written and maintained by Newton School of Technology students, published in the open for anyone to use or improve."
+          />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {benefits.map((b, i) => (
-              <div key={i} className="rounded-2xl border border-line bg-white p-5 hover:border-violet-100 hover:bg-white transition-all group">
-                <div className="flex items-start gap-4">
-                  <span className="text-3xl flex-shrink-0 mt-0.5 filter group-hover:drop-shadow-[0_0_8px_rgba(168,85,247,0.3)] transition-all duration-300">{b.icon}</span>
-                  <div>
-                    <h4 className="font-[550] text-ink text-sm mb-1 group-hover:text-violet-600 transition-colors">{b.title}</h4>
-                    <p className="text-ink-soft text-xs leading-relaxed">{b.desc}</p>
-                  </div>
-                </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <a
+              href="https://github.com/bitflicker64/Termstory"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-2xl border border-line bg-ground p-5 card-hover"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-base font-[650] text-ink group-hover:text-brand-600 transition-colors">
+                  Termstory
+                </h3>
+                <span className="text-[11px] text-ink-soft">@bitflicker64</span>
+              </div>
+              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-mid">
+                Turns your terminal history into a readable timeline, grouping commands
+                into sessions and matching them up with the commits you made.
+              </p>
+              <span className="mt-4 inline-block text-[13px] font-medium text-brand-600">
+                View on GitHub →
+              </span>
+            </a>
+
+            <a
+              href="https://github.com/Dreamstick9/filedrop"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-2xl border border-line bg-ground p-5 card-hover"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-base font-[650] text-ink group-hover:text-brand-600 transition-colors">
+                  filedrop
+                </h3>
+                <span className="text-[11px] text-ink-soft">@Dreamstick9</span>
+              </div>
+              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-mid">
+                Shares files across your local network, encrypted in the browser with
+                AES-256-GCM, with a QR code so a phone can pick them up.
+              </p>
+              <span className="mt-4 inline-block text-[13px] font-medium text-brand-600">
+                View on GitHub →
+              </span>
+            </a>
+          </div>
+        </section>
+
+        {/* Why */}
+        <section id="why" className="scroll-mt-[76px]">
+          <SectionHeading
+            title="Why bother contributing"
+            intro="Beyond it being satisfying, there are concrete reasons this is worth your evenings."
+          />
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {benefits.map((b) => (
+              <div key={b.title} className="rounded-2xl border border-line bg-ground p-5">
+                <h3 className="text-sm font-[650] text-ink">{b.title}</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-mid">{b.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Section 4: Steps to get started (Onboarding timeline) */}
-        <section id="how-to-start" className="space-y-8 scroll-mt-20">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-brand-600 border border-brand-100 bg-brand-500/5 px-2.5 py-1 rounded">
-              Road to your first merge
-            </div>
-            <h2 className="text-3xl font-[650] text-ink tracking-tight">The Contribution Roadmap</h2>
-            <p className="text-ink-soft text-sm">Your gamified roadmap from coding locally to merging your first Pull Request.</p>
-          </div>
+        {/* Steps */}
+        <section id="first-contribution" className="scroll-mt-[76px]">
+          <SectionHeading
+            title="Your first contribution, step by step"
+            intro="In order. Steps 3 and 4 are the ones beginners skip, and skipping them is the most common reason a first pull request goes nowhere."
+          />
 
-          <div className="relative border-l border-line ml-4 pl-8 space-y-12 py-2">
+          <ol className="mt-6 space-y-4">
             {onboardingSteps.map((step) => (
-              <div key={step.n} className="relative group">
-                {/* Timeline node */}
-                <div className="absolute -left-[42px] top-0 w-6 h-6 rounded-full bg-panel border-2 border-success-400 flex items-center justify-center text-[10px] font-[650] text-success-600 group-hover:bg-success-400 group-hover:text-white transition-all duration-300 shadow-[0_0_10px_rgba(52,211,153,0.2)]" />
-                
-                <div className="space-y-2">
-                  <h3 className="font-[650] text-ink/95 text-base md:text-lg flex items-center gap-2 group-hover:text-success-600 transition-colors">
-                    <span className="text-success-600/80 font-mono text-sm">Step {step.n}:</span> {step.title}
-                  </h3>
-                  <p className="text-ink-soft text-xs md:text-sm leading-relaxed max-w-2xl">{step.desc}</p>
+              <li key={step.n} className="flex gap-4 rounded-2xl border border-line bg-ground p-5">
+                <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full bg-brand-0 text-sm font-[650] text-brand-600">
+                  {step.n}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-[15px] font-[650] leading-snug text-ink">{step.title}</h3>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-ink-mid">{step.desc}</p>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
 
-        {/* Section 5: Core Skills Grid */}
-        <section className="space-y-8">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <h2 className="text-3xl font-[650] text-ink tracking-tight">Skills You Will Master</h2>
-            <p className="text-ink-soft text-sm">Core engineering standards you will learn naturally along your open source journey.</p>
-          </div>
+        {/* Skills */}
+        <section className="scroll-mt-[76px]">
+          <SectionHeading
+            title="What you will pick up along the way"
+            intro="Nobody teaches most of this on a course. You learn it by having your work reviewed by someone who has done it for years."
+          />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {coreSkills.map((c, i) => (
-              <div key={i} className="rounded-2xl border border-line bg-white p-6 hover:border-violet-100 transition-all duration-300">
-                <h3 className="font-[550] text-violet-600 text-sm mb-4 border-b border-line pb-2 font-mono uppercase tracking-wider">{c.title}</h3>
-                <ul className="space-y-2.5">
-                  {c.items.map((item, idx) => (
-                    <li key={idx} className="flex items-center gap-2.5 text-ink-mid text-xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500/60 flex-shrink-0" />
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {coreSkills.map((c) => (
+              <div key={c.title} className="rounded-2xl border border-line bg-ground p-5">
+                <h3 className="text-sm font-[650] text-ink">{c.title}</h3>
+                <ul className="mt-3 space-y-2">
+                  {c.items.map((item) => (
+                    <li key={item} className="flex gap-2.5 text-[13px] leading-relaxed text-ink-mid">
+                      <span aria-hidden="true" className="mt-[7px] h-1 w-1 flex-shrink-0 rounded-full bg-line-heavy" />
                       {item}
                     </li>
                   ))}
@@ -500,60 +552,54 @@ export default function GetStartedPage() {
           </div>
         </section>
 
-        {/* Section 6: Guidelines */}
-        <section id="guidelines" className="space-y-6 scroll-mt-20">
-          <div className="border border-error-100 bg-error-500/[0.015] rounded-2xl p-8 relative overflow-hidden space-y-6">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-error-500/[0.02] blur-3xl rounded-full" />
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-[650] text-error-600">Strict Contributor Guidelines</h2>
-              <span className="text-[10px] font-[650] px-2.5 py-0.5 rounded-full bg-error-0 border border-error-100 text-error-600 uppercase tracking-wide">Mandatory</span>
-            </div>
-            <p className="text-ink-soft text-xs md:text-sm leading-relaxed max-w-3xl">
-              These are strict community standards. Maintainers have long memories, and your GitHub username tracks you throughout your career.
-              Violations will lead to being blocked from the repository and programs like GSoC.
-            </p>
-            
-            <div className="space-y-3">
-              {guidelines.map((g, i) => (
-                <div key={i} className={`rounded-xl border p-5 flex gap-4 ${
-                  g.severity === 'critical' ? 'border-error-100 bg-error-500/5' :
-                  g.severity === 'high'     ? 'border-warning-200 bg-warning-0' :
-                                              'border-success-100 bg-success-500/5'
-                }`}>
-                  <span className="text-2xl flex-shrink-0">{g.icon}</span>
-                  <div>
-                    <div className={`font-[550] text-sm ${
-                      g.severity === 'critical' ? 'text-error-600' :
-                      g.severity === 'high'     ? 'text-warning-600' :
-                                                  'text-success-600'
-                    }`}>{g.title}</div>
-                    <div className="text-ink-soft text-xs leading-relaxed mt-1">{g.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Rules */}
+        <section id="rules" className="scroll-mt-[76px]">
+          <SectionHeading
+            title="Rules worth taking seriously"
+            intro="Open source runs on the goodwill of volunteers, and your GitHub username follows you for the rest of your career. Breaking these gets people blocked from repositories and rejected from paid programmes."
+          />
+
+          <div className="mt-6 space-y-3">
+            {dontDo.map((g) => (
+              <div key={g.title} className="rounded-2xl border border-error-100 bg-error-0 p-5">
+                <h3 className="text-sm font-[650] text-error-600">{g.title}</h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-mid">{g.desc}</p>
+              </div>
+            ))}
+            {doDo.map((g) => (
+              <div key={g.title} className="rounded-2xl border border-success-100 bg-success-0 p-5">
+                <h3 className="text-sm font-[650] text-success-600">{g.title}</h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-mid">{g.desc}</p>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* Call to Action Box */}
-        <section className="rounded-2xl border border-line bg-white p-8 md:p-10 text-center relative overflow-hidden">
-          <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-0 blur-3xl rounded-full" />
-          <h2 className="text-2xl md:text-3xl font-[650] text-ink mb-3 tracking-tight">Ready to Make Your Mark?</h2>
-          <p className="text-ink-soft text-sm max-w-md mx-auto mb-8 leading-relaxed">
-            Join the leaderboard, track your progress, and climb the ranks on the Hall of Fame.
+        {/* CTA */}
+        <section className="rounded-2xl border border-line bg-ground px-6 py-8">
+          <h2 className="text-xl font-[650] tracking-tight text-ink">Ready to start</h2>
+          <p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-soft">
+            Pick a project, find an issue labelled for newcomers, and comment on it.
+            Once your first pull request is open, this tracker will pick it up.
           </p>
-          <div className="flex flex-wrap gap-3.5 justify-center">
-            <Link href="/contributors"
-              className="px-6 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-[550] shadow-brand-btn transition-all cursor-pointer">
-              View Contributors
+          <div className="mt-5 flex flex-wrap gap-2.5">
+            <Link
+              href="/contributors"
+              className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-brand-btn hover:bg-brand-700 transition-colors"
+            >
+              See what others are shipping
             </Link>
-            <Link href="/achievers"
-              className="px-6 py-2.5 rounded-xl bg-white border border-line hover:bg-panel text-ink text-sm font-[550] transition-all cursor-pointer">
-              🏆 Hall of Fame
+            <Link
+              href="/issues"
+              className="rounded-lg border border-line-strong bg-ground px-3.5 py-2 text-sm font-medium text-ink-mid hover:border-line-heavy hover:text-ink transition-colors"
+            >
+              When something goes wrong
             </Link>
-            <Link href="/issues"
-              className="px-6 py-2.5 rounded-xl bg-white border border-line hover:bg-panel text-ink text-sm font-[550] transition-all cursor-pointer">
-              🔧 Common Issues
+            <Link
+              href="/achievers"
+              className="rounded-lg border border-line-strong bg-ground px-3.5 py-2 text-sm font-medium text-ink-mid hover:border-line-heavy hover:text-ink transition-colors"
+            >
+              Hall of Fame
             </Link>
           </div>
         </section>
