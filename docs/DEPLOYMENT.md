@@ -95,6 +95,8 @@ kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-N
 kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/03-service.yaml
 ```
 
+**After this initial setup, don't re-run `kubectl apply -f k8s/02-deployment.yaml` to ship a new image build.** That file's `image:` tag is a pinned snapshot, updated by hand after each manual deploy — re-applying it without first updating the tag will silently revert the cluster to whatever it was pinned to, undoing a since-tested deploy. For a new image, use `kubectl set image deployment/opensource-tracker opensource-tracker=<tag>` instead (see step 9's SHA-tag convention), and only re-apply this file for changes that aren't the image itself (replicas, resources, env vars) — updating the pinned tag in the file first if the running image has moved on since.
+
 The deployment runs 3 replicas with a CPU-based HorizontalPodAutoscaler (`k8s/06-hpa.yaml`) on top, since page renders here are CPU-heavy (see "Performance notes" below) — a traffic spike is a CPU-scaling problem more than an I/O one:
 
 ```bash

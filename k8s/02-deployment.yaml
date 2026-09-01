@@ -7,6 +7,19 @@
 # permissions" to be set to Read and write (org Settings > Actions >
 # General); until an org owner does that, the workflow will fail trying to
 # push, and the image needs to be built+pushed manually instead.
+#
+# The `image:` tag below MUST be a specific build (short git SHA), never
+# `latest`. Real incident: this file used to pin `:latest`, a routine
+# `kubectl apply -f 02-deployment.yaml` (to pick up an unrelated replicas/
+# resources change) silently reset the running container back to whatever
+# `:latest` happened to point at, wiping out a deploy that had actually been
+# reviewed and tested. Every manual deploy in this repo's history has used
+# `kubectl set image deployment/opensource-tracker opensource-tracker=<tag>`
+# with the short SHA from `git log`, which does NOT update this file — so
+# after every such deploy, also update the tag below to match, or the next
+# `kubectl apply` here will revert it again. (If build-and-push.yml is ever
+# turned on, note it tags with the *full* `github.sha`, not the short SHA
+# used everywhere manually so far — reconcile that before relying on it.)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,7 +42,7 @@ spec:
     spec:
       containers:
         - name: opensource-tracker
-          image: ghcr.io/nst-sdc/open-source-tracker-nst:latest
+          image: ghcr.io/nst-sdc/open-source-tracker-nst:7ea76fc
           ports:
             - containerPort: 3000
           envFrom:
