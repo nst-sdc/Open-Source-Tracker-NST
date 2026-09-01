@@ -481,10 +481,13 @@ export default function ProgramsPage() {
             {PROGRAMS.map((p) => (
               <div key={p.id} className={`rounded-xl border ${p.accent} ${p.bg} p-4`}>
                 <div className={`font-[650] text-sm mb-2 ${p.color}`}>{p.short}</div>
+                {/* Label left, value right. The label never shrinks and the gap
+                    always holds, so a value long enough to wrap can't run back
+                    into it — these cards get narrow at the 3-column breakpoint. */}
                 <div className="space-y-1 text-xs text-ink-soft">
-                  <div className="flex justify-between"><span className="text-ink-soft">Stipend</span><span>{p.stipend}</span></div>
-                  <div className="flex justify-between"><span className="text-ink-soft">Duration</span><span>{p.duration.split('(')[0].trim()}</span></div>
-                  <div className="flex justify-between"><span className="text-ink-soft">Deadline</span><span>{p.deadline.split('—')[0].trim()}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-ink-soft shrink-0">Stipend</span><span className="text-right">{p.stipend}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-ink-soft shrink-0">Duration</span><span className="text-right">{p.duration.split('(')[0].trim()}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-ink-soft shrink-0">Deadline</span><span className="text-right">{p.deadline.split('—')[0].trim()}</span></div>
                   <CycleCountdownCompact programId={p.id} />
                 </div>
               </div>
