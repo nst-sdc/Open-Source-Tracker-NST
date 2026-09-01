@@ -34,7 +34,7 @@ function PRBadge({ pr }: { pr: StudentPR }) {
 function ImpactBadge({ weight }: { weight: number }) {
   return (
     <span
-      title="Impact: how significant the project this PR landed in is (based on stars/forks), not a judgment of the PR itself"
+      title="Impact: what a merged PR into this project is worth on the leaderboard (repo quality score) — repeat PRs into the same repo count for progressively less"
       className="inline-flex items-center gap-1 bg-gold-0 text-gold-600 px-2 py-0.5 rounded-full text-[10.5px] font-[600] whitespace-nowrap"
     >
       ⚡ {weight.toFixed(1)}

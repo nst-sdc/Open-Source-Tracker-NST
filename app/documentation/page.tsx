@@ -142,43 +142,62 @@ export default function DocumentationPage() {
           <section>
             <H2 id="ranking">The ranking formula</H2>
             <P>
-              The leaderboard doesn&apos;t rank by merged-PR count directly — a PR into a massive, well-used project
-              should count for more than one into an empty personal repo. Each merged PR is weighted by its
-              target repo&apos;s popularity:
+              The leaderboard doesn&apos;t rank by merged-PR count directly — a PR into a real, used project should
+              count for more than one into a farm repo set up to harvest contributions. Every constant below is
+              deliberately public (<Code>lib/repo-score.ts</Code>): you should be able to see exactly why one PR
+              scored higher than another, and what kind of project is worth your time.
             </P>
-            <div className="bg-white border border-line rounded-2xl shadow-card p-5 mt-4 font-mono text-[13.5px] text-ink-mid leading-relaxed">
-              computeRepoWeight(stars, forks) = 1 + log₁₀(stars + 3·forks + 1)
+            <P>Each repo gets a quality multiplier <strong className="text-ink">M</strong> built in three stages:</P>
+            <div className="bg-white border border-line rounded-2xl shadow-card p-5 mt-4 font-mono text-[13.5px] text-ink-mid leading-relaxed space-y-2">
+              <div>C&nbsp;= weighted log-average of 9 signals &nbsp;→ [0..1]</div>
+              <div>G&nbsp;= penalty factors, multiplied &nbsp;&nbsp;&nbsp;&nbsp;→ (0..1]</div>
+              <div>M&nbsp;= 0.15 + 2.85·(C·G) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ [0.15..3]</div>
             </div>
             <P>
-              Log-scaled deliberately — a linear weight would let one PR into a huge project outweigh dozens of honest
-              contributions elsewhere. The result is bounded: 1 for an unknown/tiny repo (identical to a plain count)
-              up to roughly 6 for something like <Code>facebook/react</Code>. A student&apos;s{' '}
-              <strong className="text-ink">Score</strong> is the sum of this weight across every merged PR they have.
+              <strong className="text-ink">C</strong> follows the shape of OpenSSF&apos;s Criticality Score: contributor
+              count carries the most weight (3.0) and stars the least meaningful weight (1.0 of ~12.5 total), because
+              stars are the easiest signal to fake. Commits, merged PRs, closed issues, releases, forks, age and
+              recency make up the rest, each log-squashed and capped so nothing can run away.{' '}
+              <strong className="text-ink">G</strong> multiplies penalties for farm signatures: the biggest is the
+              audience ratio <Code>(stars + 5·watchers) / (forks + 0.2·mergedPRs)</Code> — farm repos are busy but
+              nobody actually uses them — plus penalties for zero releases, zero code, being a fork, content-only
+              topics (awesome/roadmap/tutorial/interview), a missing or CC-* license, and a heavy one (×0.1) for PRs
+              into your own repo.
+            </P>
+            <P>Then each merged PR is scored, and repeat PRs into the same repo decay:</P>
+            <div className="bg-white border border-line rounded-2xl shadow-card p-5 mt-4 font-mono text-[13.5px] text-ink-mid leading-relaxed">
+              PRScore = 10 · M<sup>0.75</sup> / (1 + 0.3·(k−1))
+            </div>
+            <P>
+              <Code>k</Code> is which PR this is into that repo — the 2nd is worth 77% of the 1st, the 3rd 63%, the
+              10th about 27%. Sustained work on one project still pays; the 74th PR into the same repo does not. The
+              exponent 0.75 dampens repo prestige so a big-name project helps but never decides on its own. Finally,
+              no single repo may contribute more than 40% of the uncapped total, and{' '}
+              <strong className="text-ink">Score</strong> is the sum. Repos owned by a short list of curated orgs
+              (Apache, Kubernetes, CNCF, …) never score below M = 1.5, so a young official project isn&apos;t punished
+              for being new.
             </P>
             <P>
-              A second, secondary number — <strong className="text-ink">Impact</strong> — is the average of that same
-              weight per merged PR (<Code>Score ÷ merged PRs</Code>), shown only once someone has 5+ merged PRs (below
-              that, one lucky merge into a big repo would read as a perfect average, which is noise, not signal).
-              It answers a different question than Score: not &quot;how much have they contributed&quot; but &quot;how
-              significant are the projects they tend to land in.&quot; Individual PRs also show their own Impact
-              value on a student&apos;s profile page, using the same weight math.
+              A second, secondary number — <strong className="text-ink">Impact</strong> — is{' '}
+              <Code>Score ÷ merged PRs</Code>, shown only once someone has 5+ merged PRs (below that, one lucky merge
+              into a big repo would read as a perfect average). Individual PRs on a profile show the repo&apos;s
+              first-PR value (<Code>10·M<sup>0.75</sup></Code>) as their Impact badge.
             </P>
             <Callout tone="warn">
-              <strong>Known weakness:</strong> weighting forks positively is exploitable. Repos set up specifically to
-              farm contributions (every participant forks to open a PR, nobody stars) accumulate lots of forks and
-              almost no stars — and this formula reads that as popularity. A repo with 2 real stars and 60 farmed forks
-              currently scores about half of what <Code>react</Code> scores. This is a real, identified problem
-              (see the repo&apos;s issue tracker for the full analysis and a proposed fix) — the formula above is what
-              is actually live today, not a fixed version.
+              <strong>Why it changed:</strong> the previous formula (<Code>1 + log₁₀(stars + 3·forks + 1)</Code>)
+              trusted forks — and farm repos accumulate forks mechanically, because every participant forks to open a
+              PR. A repo with 2 stars and 60 farmed forks scored half of <Code>react</Code>. Full analysis and the
+              measured numbers are in issue #4. Not implemented from that issue yet: the per-PR effort term E and
+              dependency counts (its step 8), and the admin review queue for low-M repos (step 7).
             </Callout>
           </section>
 
           <section>
             <H2 id="spam">Spam & data integrity</H2>
             <P>
-              Before a repo&apos;s PRs count toward anything, the repo has to clear a validity gate — currently just{' '}
-              <Code>stars ≥ 5</Code>, which is intentionally simple but also trivially gameable, and is the same
-              underlying weakness the ranking formula has. Repos that fail are marked invalid in{' '}
+              Before a repo&apos;s PRs count toward anything, the repo has to clear a validity gate:
+              not archived, not itself a fork, and not (audience ratio &lt; 0.15 with zero releases) — the signature
+              of a pure farm target. Repos that fail are marked invalid in{' '}
               <Code>repo_cache_map</Code> and every PR into them is stripped out before it&apos;s ever displayed or
               scored — not just deprioritized.
             </P>

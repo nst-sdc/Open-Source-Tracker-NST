@@ -2,7 +2,16 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getStudentsKV, removeStudent } from './kv-students';
 import { getExceptionRepoSetForUser, getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from './kv-own-repo-exceptions';
-import { getRepoCache, saveRepoCache, computeRepoWeight, MIN_PRS_FOR_AVG_SCORE } from './repo-cache';
+import { getRepoCache, saveRepoCache, isEntryStale, MIN_PRS_FOR_AVG_SCORE } from './repo-cache';
+import {
+  RepoSignals,
+  REPO_SCHEMA_VERSION,
+  repoMultiplier,
+  legacyMultiplier,
+  NEUTRAL_MULTIPLIER,
+  aggregateMergedPRScore,
+  isRepoValid,
+} from './repo-score';
 import { readProfileCache, writeProfileCache, type ProfileCacheEntry } from './profile-cache';
 import { execSync } from 'child_process';
 import { cookies } from 'next/headers';
@@ -318,6 +327,84 @@ export async function getStudentProfile(username: string, retryWithSystemToken =
 }
 
 /** Fetches missing repository metadata from GitHub and updates the repo cache */
+/** Fields fetched per repo — everything repo-score.ts wants, in one query.
+ * GraphQL costs 1 rate-limit point per ~repo regardless of how many fields we
+ * ask for, where gathering the same signals over REST would take 4-5 calls. */
+const REPO_SIGNALS_QUERY_FIELDS = `
+  nameWithOwner
+  stargazerCount
+  forkCount
+  watchers { totalCount }
+  releases { totalCount }
+  mentionableUsers { totalCount }
+  languages { totalCount }
+  repositoryTopics(first: 20) { nodes { topic { name } } }
+  licenseInfo { spdxId }
+  isArchived
+  isFork
+  createdAt
+  pushedAt
+  owner { login }
+  mergedPRs: pullRequests(states: MERGED) { totalCount }
+  closedIssues: issues(states: CLOSED) { totalCount }
+  defaultBranchRef {
+    target { ... on Commit { history(since: $since) { totalCount } } }
+  }
+`;
+
+interface GraphQLRepoNode {
+  stargazerCount: number;
+  forkCount: number;
+  watchers: { totalCount: number };
+  releases: { totalCount: number };
+  mentionableUsers: { totalCount: number };
+  languages: { totalCount: number };
+  repositoryTopics: { nodes: Array<{ topic: { name: string } }> };
+  licenseInfo: { spdxId: string | null } | null;
+  isArchived: boolean;
+  isFork: boolean;
+  createdAt: string;
+  pushedAt: string;
+  owner: { login: string };
+  mergedPRs: { totalCount: number };
+  closedIssues: { totalCount: number };
+  defaultBranchRef: { target: { history: { totalCount: number } } | null } | null;
+}
+
+function signalsFromNode(node: GraphQLRepoNode): RepoSignals {
+  return {
+    stars: node.stargazerCount ?? 0,
+    forks: node.forkCount ?? 0,
+    watchers: node.watchers?.totalCount ?? 0,
+    releases: node.releases?.totalCount ?? 0,
+    contributors: node.mentionableUsers?.totalCount ?? 0,
+    commitsLastYear: node.defaultBranchRef?.target?.history?.totalCount ?? 0,
+    mergedPRCount: node.mergedPRs?.totalCount ?? 0,
+    closedIssueCount: node.closedIssues?.totalCount ?? 0,
+    languageCount: node.languages?.totalCount ?? 0,
+    topics: (node.repositoryTopics?.nodes ?? []).map((n) => n.topic.name),
+    licenseSpdxId: node.licenseInfo?.spdxId ?? null,
+    isFork: node.isFork ?? false,
+    isArchived: node.isArchived ?? false,
+    ownerLogin: node.owner?.login ?? '',
+    createdAt: node.createdAt,
+    pushedAt: node.pushedAt,
+  };
+}
+
+/** Entry for a repo that 404s / went private: complete (so it is not retried
+ * every refresh) but permanently invalid. */
+function deadRepoEntry(): import('./repo-cache').RepoCacheEntry {
+  const emptySignals: RepoSignals = {
+    stars: 0, forks: 0, watchers: 0, releases: 0, contributors: 0,
+    commitsLastYear: 0, mergedPRCount: 0, closedIssueCount: 0,
+    languageCount: 0, topics: [], licenseSpdxId: null,
+    isFork: false, isArchived: true, ownerLogin: '',
+    createdAt: new Date(0).toISOString(), pushedAt: new Date(0).toISOString(),
+  };
+  return { schemaVersion: REPO_SCHEMA_VERSION, stars: 0, forks: 0, valid: false, signals: emptySignals };
+}
+
 export async function validateNewRepos(
   prs: StudentPR[],
   repoCacheMap: import('./repo-cache').RepoCacheMap,
@@ -325,12 +412,15 @@ export async function validateNewRepos(
 ): Promise<{ updated: boolean, map: import('./repo-cache').RepoCacheMap }> {
   let updated = false;
 
-  // Extract unique repo full names (e.g. "owner/repo")
+  // Collect repos needing a fetch: never seen, or written by an older schema.
+  // The schema check is the #4 cache migration — without it, pre-overhaul
+  // entries (only {stars, forks, valid}) would sit in the cache forever and
+  // silently score through the legacy fallback.
   const uniqueRepos = new Set<string>();
   for (const pr of prs) {
     if (!pr.repository_url) continue;
     const repoFullName = pr.repository_url.replace('https://api.github.com/repos/', '');
-    if (!repoCacheMap[repoFullName]) {
+    if (isEntryStale(repoCacheMap[repoFullName])) {
       uniqueRepos.add(repoFullName);
     }
   }
@@ -338,58 +428,142 @@ export async function validateNewRepos(
   if (uniqueRepos.size === 0) return { updated, map: repoCacheMap };
 
   const headers = await getGitHubHeaders(token);
+  const hasAuth = Boolean((headers as Record<string, string>).Authorization);
 
-  for (const repoFullName of uniqueRepos) {
+  // GraphQL refuses unauthenticated requests entirely. Without a token, fall
+  // back to the old REST lookup and write a legacy-shaped entry (no
+  // schemaVersion), which the next authenticated refresh upgrades.
+  if (!hasAuth) {
+    for (const repoFullName of uniqueRepos) {
+      // Legacy entries exist already for schema-stale repos — don't re-fetch
+      // those over REST, we'd learn nothing the entry doesn't already know.
+      if (repoCacheMap[repoFullName]) continue;
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repoFullName}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          repoCacheMap[repoFullName] = {
+            stars: data.stargazers_count || 0,
+            forks: data.forks_count || 0,
+            valid: (data.stargazers_count || 0) >= 5,
+          };
+          updated = true;
+        } else if (res.status === 404 || res.status === 401) {
+          repoCacheMap[repoFullName] = deadRepoEntry();
+          updated = true;
+        }
+      } catch (err) {
+        console.error(`Failed to check repo ${repoFullName}:`, err);
+      }
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    return { updated, map: repoCacheMap };
+  }
+
+  // Authenticated path: batches of 20 repos per GraphQL query via aliases.
+  const repoList = [...uniqueRepos];
+  // 10 per query, not more: history(since:) is expensive, and a chunk that
+  // exceeds GitHub's GraphQL time budget fails as a whole.
+  const CHUNK = 10;
+  const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+
+  let backoffRetries = 0;
+  const MAX_BACKOFF_RETRIES = 3; // across the whole batch — then finish without
+  for (let i = 0; i < repoList.length; i += CHUNK) {
+    const chunk = repoList.slice(i, i + CHUNK);
+    const aliases = chunk.map((full, idx) => {
+      const [owner, ...rest] = full.split('/');
+      const name = rest.join('/');
+      return `r${idx}: repository(owner: ${JSON.stringify(owner)}, name: ${JSON.stringify(name)}) { ...RepoFields }`;
+    });
+    const query = `query RepoSignals($since: GitTimestamp!) {\n${aliases.join('\n')}\n}\nfragment RepoFields on Repository {${REPO_SIGNALS_QUERY_FIELDS}}`;
+
     try {
-      const res = await fetch(`https://api.github.com/repos/${repoFullName}`, { headers });
-      if (res.ok) {
-        const data = await res.json();
-        const stars = data.stargazers_count || 0;
-        const forks = data.forks_count || 0;
-        repoCacheMap[repoFullName] = {
-          stars,
-          forks,
-          valid: stars >= 5 // MUST have 5 stars to be considered valid
-        };
-        updated = true;
-      } else if (res.status === 404) {
-        // Deleted or private repo
-        repoCacheMap[repoFullName] = { stars: 0, forks: 0, valid: false };
-        updated = true;
-      } else if (res.status === 401 && token) {
-        // A 401 on a single repo lookup usually means this specific repo
-        // became inaccessible to the token (e.g. went private), not that the
-        // token itself is broken — a genuinely dead token fails earlier, in
-        // githubSearch/getStudentProfile, before validateNewRepos ever runs.
-        // Treat it like the 404 case: skip this one repo, keep validating
-        // the rest instead of aborting the whole batch.
-        repoCacheMap[repoFullName] = { stars: 0, forks: 0, valid: false };
-        updated = true;
-      } else if (res.status === 403 || res.status === 429) {
-        // This endpoint (GET /repos/:owner/:repo) is core-API, not search — its
-        // budget is 5000/hr, so a 403/429 here is almost always GitHub's secondary
-        // abuse-detection reacting to a tight request burst, not real quota
-        // exhaustion. Previously this `break`d the whole batch, silently leaving
-        // every remaining repo unvalidated (and therefore fail-open / treated as
-        // valid by scoring) until they happened to come up again in some later
-        // run. Only stop early if we've actually run out of primary quota;
-        // otherwise back off briefly and keep going so one unlucky repo can't
-        // strand the rest of the batch.
+      const res = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: { since } }),
+      });
+
+      if (res.status === 401) {
+        console.warn('GraphQL repo validation: token unauthorized. Stopping batch.');
+        break;
+      }
+      if (res.status === 403 || res.status === 429) {
         const remaining = res.headers.get('x-ratelimit-remaining');
         if (remaining === '0') {
-          console.warn(`Core rate limit exhausted checking repo: ${repoFullName}. Stopping batch.`);
+          console.warn('GraphQL rate limit exhausted validating repos. Stopping batch.');
           break;
         }
-        console.warn(`Secondary rate limit hit checking repo: ${repoFullName}. Backing off and continuing.`);
-        await new Promise((r) => setTimeout(r, 2000));
+        if (backoffRetries >= MAX_BACKOFF_RETRIES) {
+          console.warn('Secondary rate limit persisting during repo validation. Stopping batch; remaining repos retry next refresh.');
+          break;
+        }
+        backoffRetries++;
+        console.warn('Secondary rate limit during repo validation. Backing off and retrying chunk.');
+        await new Promise((r) => setTimeout(r, 3000));
+        i -= CHUNK; // retry this chunk once backoff elapses
+        continue;
       }
+      if (!res.ok) {
+        console.error(`GraphQL repo validation failed with ${res.status}; skipping chunk.`);
+        continue;
+      }
+
+      const body = await res.json();
+      // Per-alias errors (NOT_FOUND for deleted/private repos) coexist with
+      // partial data — a null alias with data present means that one repo is
+      // gone, not that the query failed.
+      const data: Record<string, GraphQLRepoNode | null> = body.data ?? {};
+      if (!body.data && Array.isArray(body.errors)) {
+        console.error('GraphQL repo validation returned only errors; skipping chunk:', body.errors[0]?.message);
+        continue;
+      }
+
+      // Error type per alias: only NOT_FOUND / FORBIDDEN are permanent.
+      // Anything else (RATE_LIMITED, timeouts) must NOT write a dead entry —
+      // that entry would be schema-complete and never re-fetched, silently
+      // excluding a live repo forever. Leaving it absent retries next refresh.
+      const errorTypeByAlias = new Map<string, string>();
+      if (Array.isArray(body.errors)) {
+        for (const err of body.errors) {
+          const alias = Array.isArray(err.path) ? String(err.path[0]) : undefined;
+          if (alias) errorTypeByAlias.set(alias, String(err.type ?? 'UNKNOWN'));
+        }
+      }
+
+      chunk.forEach((repoFullName, idx) => {
+        const node = data[`r${idx}`];
+        const previous = repoCacheMap[repoFullName];
+        if (!node) {
+          const errType = errorTypeByAlias.get(`r${idx}`);
+          if (errType === 'NOT_FOUND' || errType === 'FORBIDDEN') {
+            repoCacheMap[repoFullName] = { ...deadRepoEntry(), manualOverride: previous?.manualOverride };
+            updated = true;
+          } else {
+            console.warn(`Repo ${repoFullName} returned transient GraphQL error (${errType ?? 'no error entry'}); will retry next refresh.`);
+          }
+          return;
+        }
+        const signals = signalsFromNode(node);
+        repoCacheMap[repoFullName] = {
+          schemaVersion: REPO_SCHEMA_VERSION,
+          stars: signals.stars,
+          forks: signals.forks,
+          // A manual override pins the admin's validity decision across
+          // refreshes; the signals still update underneath it.
+          valid: previous?.manualOverride ? previous.valid : isRepoValid(signals),
+          manualOverride: previous?.manualOverride,
+          signals,
+        };
+        updated = true;
+      });
     } catch (err) {
-      console.error(`Failed to check repo ${repoFullName}:`, err);
+      console.error('GraphQL repo validation chunk failed:', err);
     }
 
-    // Small pacing between requests so a long batch doesn't itself trigger
-    // secondary rate limiting.
-    await new Promise((r) => setTimeout(r, 150));
+    // Pacing between chunks so a long backlog doesn't trip abuse detection.
+    if (i + CHUNK < repoList.length) await new Promise((r) => setTimeout(r, 500));
   }
 
   return { updated, map: repoCacheMap };
@@ -517,6 +691,37 @@ async function getOwnRepoExceptionPRs(username: string, allowedRepos: Set<string
   return allPRs.filter((pr) => pr.repository_url && allowedRepos.has(repoFromUrl(pr.repository_url).toLowerCase()));
 }
 
+/** Resolves a repo full name to its scoring multiplier for one student.
+ * Shared by the cached and live scoring paths so they cannot drift.
+ *
+ * Three cases, in order:
+ *  - current-schema entry: the full #4 multiplier. Self-owned repos (owner
+ *    prefix matches the student) are crushed by g_self unless an admin has
+ *    whitelisted that repo via the own-repo exceptions list.
+ *  - legacy entry (pre-#4 cache): stars-only fallback until the next refresh
+ *    upgrades it.
+ *  - no entry at all: neutral 1.0.
+ */
+function makeRepoMultiplierResolver(
+  cacheMap: import('./repo-cache').RepoCacheMap,
+  studentLogin: string,
+  ownRepoExceptions: Set<string>,
+  nowMs: number,
+): (repoFullName: string) => number {
+  const login = studentLogin.toLowerCase();
+  return (repoFullName: string) => {
+    const entry = cacheMap[repoFullName];
+    if (!entry) return NEUTRAL_MULTIPLIER;
+    if (entry.signals && entry.schemaVersion === REPO_SCHEMA_VERSION) {
+      const selfOwned =
+        repoFullName.split('/')[0]?.toLowerCase() === login &&
+        !ownRepoExceptions.has(repoFullName.toLowerCase());
+      return repoMultiplier(entry.signals, nowMs, { selfOwned });
+    }
+    return legacyMultiplier(entry.stars);
+  };
+}
+
 export function getSummaryFromCache(
   cached: ProfileCacheEntry,
   dateQuery: string,
@@ -574,18 +779,15 @@ export function getSummaryFromCache(
   const openPRs = prs.filter((pr) => pr.state === 'open').length;
   const closedPRs = prs.filter((pr) => pr.state === 'closed' && !pr.pull_request?.merged_at).length;
 
-  // Weighted by the target repo's stars/forks (computeRepoWeight), not a
-  // plain count — a PR into an established, widely-used project counts for
-  // more than one into an unknown repo. Junk is already stripped out of
-  // `prs` above. Repos with no cache entry (shouldn't normally happen, since
-  // every PR's repo gets validated on refresh) fall back to weight 1, same
-  // as today's plain count.
-  const totalWeightedScore = mergedPRList.reduce((sum, pr) => {
-    if (!pr.repository_url) return sum + 1;
-    const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
-    const repoEntry = repoCacheMap[repo];
-    return sum + (repoEntry ? computeRepoWeight(repoEntry.stars, repoEntry.forks) : 1);
-  }, 0);
+  // #4 scoring: each merged PR earns 10·M^0.75 where M is the repo's quality
+  // multiplier, repeat PRs into the same repo decay by 1/(1+0.3(k−1)), and no
+  // single repo may carry more than 40% of the total. Junk is already
+  // stripped out of `prs` above; see lib/repo-score.ts for the whole model.
+  const totalWeightedScore = aggregateMergedPRScore(
+    mergedPRList,
+    (pr) => (pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null),
+    makeRepoMultiplierResolver(repoCacheMap, cached.profile.login, ownRepoExceptions, Date.now()),
+  );
 
   return {
     profile: cached.profile,
@@ -817,14 +1019,13 @@ export async function getAllStudentSummaries(
     const openPRs = validPRs.filter((pr) => pr.state === 'open').length;
     const closedPRs = validPRs.filter((pr) => pr.state === 'closed' && !pr.pull_request?.merged_at).length;
 
-    // See getSummaryFromCache's comment — same repo-quality weighting, kept
-    // in sync between both code paths.
-    const liveWeightedScore = mergedPRList.reduce((sum, pr) => {
-      if (!pr.repository_url) return sum + 1;
-      const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
-      const repoEntry = repoCache[repo];
-      return sum + (repoEntry ? computeRepoWeight(repoEntry.stars, repoEntry.forks) : 1);
-    }, 0);
+    // Same #4 scoring as getSummaryFromCache, through the same resolver.
+    const liveOwnRepoExceptions = ownRepoExceptionMap.get(lowerName) ?? EMPTY_REPO_SET;
+    const liveWeightedScore = aggregateMergedPRScore(
+      mergedPRList,
+      (pr) => (pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null),
+      makeRepoMultiplierResolver(repoCache, student.github, liveOwnRepoExceptions, Date.now()),
+    );
 
     summaries.push({
       profile,

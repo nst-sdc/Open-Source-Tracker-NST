@@ -15,7 +15,8 @@ import { readProfileCache, writeProfileCache } from '@/lib/profile-cache';
 import { getStudentsKV } from '@/lib/kv-students';
 import { kvGet, kvSet } from '@/lib/kv';
 import { cookies } from 'next/headers';
-import { getRepoCache, computeRepoWeight } from '@/lib/repo-cache';
+import { getRepoCache } from '@/lib/repo-cache';
+import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION } from '@/lib/repo-score';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
 
@@ -296,16 +297,27 @@ export default async function ContributorPage({
   const lifetimeMergedCount = validPRs.filter(pr => pr.pull_request?.merged_at).length;
   const badges = getBadges(validPRs, lifetimeMergedCount);
 
-  // Per-PR Impact: same repo-weight math used for the leaderboard score, just
-  // surfaced per PR instead of only as an aggregate — a repo's weight is fixed
-  // regardless of which PR into it, so this is computed once per distinct repo.
+  // Per-PR Impact: what one merged PR into this repo is worth under the #4
+  // scoring (10·M^0.75), computed once per distinct repo. The leaderboard
+  // total additionally decays repeat PRs into the same repo and caps any
+  // single repo at 40% — so these badges are each PR's *first-PR* value, not
+  // shares of the total.
+  const nowMs = Date.now();
+  const viewedLogin = username.toLowerCase();
   const repoWeights: Record<string, number> = {};
   for (const pr of prs) {
     if (!pr.repository_url) continue;
     const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
     if (repo in repoWeights) continue;
     const entry = repoCache[repo];
-    repoWeights[repo] = computeRepoWeight(entry?.stars ?? 0, entry?.forks ?? 0);
+    if (entry?.signals && entry.schemaVersion === REPO_SCHEMA_VERSION) {
+      const selfOwned = repo.split('/')[0]?.toLowerCase() === viewedLogin;
+      repoWeights[repo] = prScore(repoMultiplier(entry.signals, nowMs, { selfOwned }), 1);
+    } else if (entry) {
+      repoWeights[repo] = prScore(legacyMultiplier(entry.stars), 1);
+    } else {
+      repoWeights[repo] = prScore(1, 1);
+    }
   }
 
   return (

@@ -107,8 +107,8 @@ export function CachingFlowDiagram() {
         <Box x={330} y={160} w={240} h={60} fill={BRAND_0} stroke={BRAND} labelColor={BRAND} label="getAllStudentSummaries()" sublabel="cache missing / stale" />
 
         <Box x={40} y={280} w={230} h={60} fill={PANEL} stroke={LINE} label="profile_cache:{student}" sublabel="× ~1,800, per-student" />
-        <Box x={340} y={280} w={220} h={60} fill={PANEL} stroke={LINE} label="repo_cache_map" sublabel="stars/forks per repo" />
-        <Box x={630} y={280} w={230} h={60} fill={GOLD_0} stroke={GOLD} labelColor={GOLD} label="computeRepoWeight()" sublabel="1 + log₁₀(stars + 3·forks + 1)" />
+        <Box x={340} y={280} w={220} h={60} fill={PANEL} stroke={LINE} label="repo_cache_map" sublabel="~16 quality signals per repo" />
+        <Box x={630} y={280} w={230} h={60} fill={GOLD_0} stroke={GOLD} labelColor={GOLD} label="repoMultiplier()" sublabel="10·M^0.75, M = 0.15 + 2.85·C·G" />
 
         <Arrow d="M220 57 L326 57" />
         <Arrow d="M570 57 L666 57" />
