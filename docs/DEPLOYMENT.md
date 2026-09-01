@@ -95,6 +95,12 @@ kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-N
 kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/03-service.yaml
 ```
 
+The deployment runs 3 replicas with a CPU-based HorizontalPodAutoscaler (`k8s/06-hpa.yaml`) on top, since page renders here are CPU-heavy (see "Performance notes" below) — a traffic spike is a CPU-scaling problem more than an I/O one:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/06-hpa.yaml
+```
+
 Before applying the Ingress, double-check the hostname isn't already claimed by someone else's app on this shared cluster:
 
 ```bash

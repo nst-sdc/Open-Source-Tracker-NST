@@ -1,0 +1,31 @@
+# Horizontal Pod Autoscaler for opensource-tracker.
+#
+# Requests here are CPU-heavy (large JSON parse of the ~3MB summary_cache
+# blob + big React tree render on every page load — see 02-deployment.yaml's
+# resources comment and docs/DEPLOYMENT.md's "Performance notes"), so a
+# traffic spike is primarily a CPU problem: extra replicas are the real
+# lever for handling concurrent users, more so than for a typical I/O-bound
+# app. minReplicas matches 02-deployment.yaml's baseline so this only ever
+# scales up from there, never below it.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: opensource-tracker
+  namespace: opensource-tracker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: opensource-tracker
+  minReplicas: 3
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300

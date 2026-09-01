@@ -15,7 +15,10 @@ metadata:
   labels:
     app: opensource-tracker
 spec:
-  replicas: 1
+  # Baseline replica count; the HPA in 06-hpa.yaml takes over scaling from
+  # here once applied. Kept in sync with that file's minReplicas so this
+  # value is still correct if the HPA is ever removed.
+  replicas: 3
   selector:
     matchLabels:
       app: opensource-tracker
