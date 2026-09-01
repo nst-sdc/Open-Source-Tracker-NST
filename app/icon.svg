@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <title>Opensource Tracker</title>
+  <path fill="#0673f9" fill-rule="evenodd" d="M 34 10 H 66 A 24 24 0 0 1 90 34 V 66 A 24 24 0 0 1 66 90 H 34 A 24 24 0 0 1 10 66 V 34 A 24 24 0 0 1 34 10 Z M 58 40 m -19 0 a 19 19 0 1 0 38 0 a 19 19 0 1 0 -38 0"/>
+  <circle cx="58" cy="40" r="7" fill="#0673f9"/>
+</svg>
