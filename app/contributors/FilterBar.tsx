@@ -38,13 +38,34 @@ export function FilterBar() {
   const [search, setSearch] = useState(searchQuery);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Search values this component has itself written into the URL. A navigation
+  // carrying one of these is the echo of our own debounced update, not a fresh
+  // instruction from outside — and it can land seconds late, because the page
+  // it navigates to re-queries every student. Adopting it would overwrite
+  // whatever has been typed in the meantime.
+  const [selfPushedSearches, setSelfPushedSearches] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
   const [loadingTarget, setLoadingTarget] = useState<string | null>(null);
 
-  // Clear loading state when the URL finally changes
-  // Using .toString() prevents unstable object references from clearing it instantly
-  useEffect(() => {
+  // Clear the loading state once the URL actually changes. Compared during
+  // render rather than in an effect, matching how period and search are handled
+  // below, so a URL change costs one render instead of two.
+  const paramsKey = searchParams.toString();
+  const [prevParamsKey, setPrevParamsKey] = useState(paramsKey);
+  if (paramsKey !== prevParamsKey) {
+    setPrevParamsKey(paramsKey);
     setLoadingTarget(null);
-  }, [searchParams.toString()]);
+  }
+
+  // Never leave a debounced navigation queued after unmount.
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   const [prevPeriod, setPrevPeriod] = useState(period);
   if (period !== prevPeriod) {
@@ -55,7 +76,16 @@ export function FilterBar() {
   const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
   if (searchQuery !== prevSearchQuery) {
     setPrevSearchQuery(searchQuery);
-    setSearch(searchQuery);
+    if (selfPushedSearches.has(searchQuery)) {
+      // Our own echo. Consume it, so that genuinely navigating back to this
+      // value later is still honoured, and leave the typed text alone.
+      const remaining = new Set(selfPushedSearches);
+      remaining.delete(searchQuery);
+      setSelfPushedSearches(remaining);
+    } else {
+      // A real external change: back/forward, or a link that sets the query.
+      setSearch(searchQuery);
+    }
   }
 
   function buildParams(overrides: Record<string, string>) {
@@ -78,9 +108,13 @@ export function FilterBar() {
     return p.toString();
   }
 
-  function pushWithRefresh(url: string, targetValue?: string) {
+  function pushWithRefresh(url: string, targetValue?: string, mode: 'push' | 'replace' = 'push') {
     if (targetValue) setLoadingTarget(targetValue);
-    router.push(url, { scroll: false });
+    // Recorded here rather than in each caller so no navigation can bypass it.
+    const outgoing = new URLSearchParams(url.split('?')[1] ?? '').get('search') ?? '';
+    setSelfPushedSearches((prev) => new Set(prev).add(outgoing));
+    if (mode === 'replace') router.replace(url, { scroll: false });
+    else router.push(url, { scroll: false });
     setTimeout(() => {
       router.refresh();
     }, 20);
@@ -109,7 +143,9 @@ export function FilterBar() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       const qs = buildParams({ search: value });
-      pushWithRefresh(qs ? `/contributors?${qs}` : '/contributors', 'search');
+      // replace, not push: typing a nine-character name would otherwise leave
+      // several entries in history for Back to walk through one at a time.
+      pushWithRefresh(qs ? `/contributors?${qs}` : '/contributors', 'search', 'replace');
     }, 350);
   }
 
