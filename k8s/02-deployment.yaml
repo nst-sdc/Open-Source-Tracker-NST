@@ -42,7 +42,7 @@ spec:
     spec:
       containers:
         - name: opensource-tracker
-          image: ghcr.io/nst-sdc/open-source-tracker-nst:7ea76fc
+          image: ghcr.io/nst-sdc/open-source-tracker-nst:f2f067e
           ports:
             - containerPort: 3000
           envFrom:
