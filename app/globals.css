@@ -44,6 +44,12 @@
   --color-brand-solid: #005ed1;
   --color-brand-solid-hover: #004599;
 
+  /* Foreground for solid *light* accents (gold badges, rank chips). Those
+   * backgrounds stay light in both themes, so their text must stay dark in
+   * both — text-ink would flip to near-white in dark and vanish. Deliberately
+   * NOT redefined in the dark block below. */
+  --color-ink-on-accent: #0b0c0e;
+
   /* ── Success (merged) ───────────────────────────────────────── */
   --color-success-0: #d9fced;
   --color-success-100: #acf7d3;

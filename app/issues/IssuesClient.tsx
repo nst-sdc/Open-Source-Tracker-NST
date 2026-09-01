@@ -289,7 +289,7 @@ export function IssuesClient({ issues }: { issues: Issue[] }) {
           aria-pressed={!activeTag}
           className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
             !activeTag
-              ? 'border-ink bg-ink text-white'
+              ? 'border-ink bg-ink text-ground'
               : 'border-line-strong bg-ground text-ink-soft hover:border-line-heavy hover:text-ink'
           }`}
         >
@@ -303,7 +303,7 @@ export function IssuesClient({ issues }: { issues: Issue[] }) {
             aria-pressed={activeTag === tag}
             className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
               activeTag === tag
-                ? 'border-ink bg-ink text-white'
+                ? 'border-ink bg-ink text-ground'
                 : 'border-line-strong bg-ground text-ink-soft hover:border-line-heavy hover:text-ink'
             }`}
           >

@@ -68,7 +68,7 @@ function PodiumCard({
   const isSecond = rank === 2;
 
   const rankBadge = isFirst ? (
-    <span className="inline-flex items-center gap-1.5 bg-gold-400 text-ink rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
+    <span className="inline-flex items-center gap-1.5 bg-gold-400 text-ink-on-accent rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
       <CrownIcon className="w-3.5 h-3.5" /> 1st Place
     </span>
   ) : isSecond ? (
@@ -81,11 +81,16 @@ function PodiumCard({
     </span>
   );
 
+  // Tailwind v4 compiles -translate-y-* to the standalone `translate` property,
+  // not `transform` — the card's transition list must name `translate` or the
+  // lift snaps instantly instead of easing.
   const cardStyle = isFirst
-    ? 'bg-gradient-to-b from-gold-0/70 via-white to-white border-2 border-gold-400/70 shadow-pop md:-translate-y-2 relative'
+    // Hover offsets are per-card because the winner already rests 8px higher on
+    // md+; a shared -translate-y-1 would move it *down* on hover.
+    ? 'bg-gradient-to-b from-gold-0/70 via-ground to-ground border-2 border-gold-400/70 shadow-pop md:-translate-y-2 relative hover:-translate-y-1 md:hover:-translate-y-3'
     : isSecond
-    ? 'bg-gradient-to-b from-panel-2/90 via-ground to-ground border border-line-strong hover:border-line-heavy shadow-card'
-    : 'bg-gradient-to-b from-warning-0/80 via-white to-white border border-warning-200 hover:border-warning-400 shadow-card';
+    ? 'bg-gradient-to-b from-panel-2/90 via-ground to-ground border border-line-strong hover:border-line-heavy shadow-card hover:-translate-y-1'
+    : 'bg-gradient-to-b from-warning-0/80 via-ground to-ground border border-warning-200 hover:border-warning-400 shadow-card hover:-translate-y-1';
 
   const avatarRing = isFirst
     ? 'ring-4 ring-gold-100 border-2 border-gold-500'
@@ -98,7 +103,7 @@ function PodiumCard({
   return (
     <Link
       href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
-      className={`group flex flex-col items-center text-center rounded-2xl p-5 md:p-6 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 ${cardStyle}`}
+      className={`group flex flex-col items-center text-center rounded-2xl p-5 md:p-6 transition-[translate,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none hover:shadow-card-hover ${cardStyle}`}
     >
       <div className="mb-4">{rankBadge}</div>
 
@@ -112,7 +117,7 @@ function PodiumCard({
           className={`rounded-full object-cover ${avatarRing} ${isFirst ? 'w-20 h-20' : 'w-16 h-16'}`}
         />
         {isFirst && (
-          <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gold-400 text-ink rounded-full flex items-center justify-center text-xs shadow-sm" aria-hidden="true">
+          <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gold-400 text-ink-on-accent rounded-full flex items-center justify-center text-xs shadow-sm" aria-hidden="true">
             👑
           </span>
         )}
@@ -354,7 +359,7 @@ export default async function ContributorsPage({
 
       {/* CTA Banner */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-        <div className="bg-gradient-to-r from-brand-0/70 via-white to-violet-0/60 border border-brand-100 rounded-2xl shadow-card p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-brand-0/70 via-ground to-violet-0/60 border border-brand-100 rounded-2xl shadow-card p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex-1 min-w-[260px]">
             <h2 className="text-ink text-[16px] md:text-[17px] font-[650]">Get PRs merged to climb the leaderboard!</h2>
             <p className="text-ink-soft text-[13px] mt-1">

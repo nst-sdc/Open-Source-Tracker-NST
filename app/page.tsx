@@ -27,7 +27,7 @@ function MergeIcon({ className }: { className?: string }) {
 function RankChip({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
-      <span className="inline-flex items-center gap-1 bg-gold-400 text-ink rounded-full px-2 py-0.5 text-[11.5px] font-[650] tabular-nums">
+      <span className="inline-flex items-center gap-1 bg-gold-400 text-ink-on-accent rounded-full px-2 py-0.5 text-[11.5px] font-[650] tabular-nums">
         <CrownIcon className="w-3 h-3" />{rank}
       </span>
     );

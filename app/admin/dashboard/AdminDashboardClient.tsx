@@ -623,7 +623,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
               {label}
               {badge !== null && (
                 <span className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-[650] flex items-center justify-center ${
-                  id === 'queue' ? 'bg-gold-400 text-ink' : 'bg-error-500 text-white'
+                  id === 'queue' ? 'bg-gold-400 text-ink-on-accent' : 'bg-error-500 text-white'
                 }`}>
                   {badge}
                 </span>
@@ -1607,7 +1607,7 @@ function AchieversTab() {
             className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         </div>
         <button type="submit" disabled={adding || !form.github.trim()}
-          className="bg-gold-400 disabled:opacity-40 text-ink font-[550] px-5 py-2 rounded-xl text-sm transition-all">
+          className="bg-gold-400 disabled:opacity-40 text-ink-on-accent font-[550] px-5 py-2 rounded-xl text-sm transition-all">
           {adding ? 'Adding…' : '+ Add to Hall of Fame'}
         </button>
       </form>
@@ -1656,7 +1656,7 @@ function AchieversTab() {
 
                 <div className="flex items-center gap-2 pt-1 border-t border-panel">
                   <button type="button" disabled={saving} onClick={() => saveEdit(a.github)}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-gold-400 disabled:opacity-40 text-ink font-[550] transition-all cursor-pointer">
+                    className="text-xs px-3 py-1.5 rounded-lg bg-gold-400 disabled:opacity-40 text-ink-on-accent font-[550] transition-all cursor-pointer">
                     {saving ? 'Saving…' : 'Save Changes'}
                   </button>
                   <button type="button" onClick={cancelEdit}
