@@ -455,7 +455,7 @@ export function IssuesClient({ issues }: { issues: Issue[] }) {
             href="https://github.com/nst-sdc/Open-Source-Tracker-NST/issues/new"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-brand-btn hover:bg-brand-700 transition-colors"
+            className="rounded-lg bg-brand-solid px-3.5 py-2 text-sm font-medium text-white shadow-brand-btn hover:bg-brand-solid-hover transition-colors"
           >
             Open an issue
           </a>

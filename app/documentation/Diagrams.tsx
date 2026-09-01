@@ -51,7 +51,7 @@ function ArrowDefs() {
 
 export function ArchitectureDiagram() {
   return (
-    <div className="bg-white border border-line rounded-2xl shadow-card p-5 overflow-x-auto">
+    <div className="bg-ground border border-line rounded-2xl shadow-card p-5 overflow-x-auto">
       <svg viewBox="0 0 900 460" className="w-full h-auto min-w-[640px]">
         <ArrowDefs />
 
@@ -94,7 +94,7 @@ export function ArchitectureDiagram() {
 
 export function CachingFlowDiagram() {
   return (
-    <div className="bg-white border border-line rounded-2xl shadow-card p-5 overflow-x-auto">
+    <div className="bg-ground border border-line rounded-2xl shadow-card p-5 overflow-x-auto">
       <svg viewBox="0 0 900 400" className="w-full h-auto min-w-[640px]">
         <ArrowDefs />
 

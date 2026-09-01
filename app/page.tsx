@@ -69,9 +69,9 @@ export default async function Home() {
   const topContributors = cache?.summaries.slice(0, 5) ?? [];
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-ground">
       {/* Announcement banner */}
-      <div className="bg-brand-500">
+      <div className="bg-brand-solid">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-[52px] flex items-center gap-3">
           <MergeIcon className="w-4 h-4 text-white shrink-0" />
           <p className="text-white text-[13.5px] font-[550] truncate">
@@ -79,7 +79,7 @@ export default async function Home() {
           </p>
           <Link
             href="/join"
-            className="ml-auto shrink-0 flex items-center h-[34px] px-4 rounded-[9px] bg-white text-brand-600 text-[13px] font-[650] hover:bg-brand-0 transition-colors"
+            className="ml-auto shrink-0 flex items-center h-[34px] px-4 rounded-[9px] bg-ground text-brand-600 text-[13px] font-[650] hover:bg-brand-0 transition-colors"
           >
             Join now
           </Link>
@@ -110,7 +110,7 @@ export default async function Home() {
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
               href="/contributors"
-              className="flex items-center gap-2 h-[46px] px-5 rounded-[11px] bg-brand-500 hover:bg-brand-600 text-white text-[14.5px] font-[550] shadow-brand-btn transition-colors"
+              className="flex items-center gap-2 h-[46px] px-5 rounded-[11px] bg-brand-solid hover:bg-brand-solid-hover text-white text-[14.5px] font-[550] shadow-brand-btn transition-colors"
             >
               View contributors
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -119,7 +119,7 @@ export default async function Home() {
             </Link>
             <Link
               href="/achievers"
-              className="flex items-center gap-2 h-[46px] px-5 rounded-[11px] bg-white border border-line-strong hover:bg-panel text-ink text-[14.5px] font-[550] transition-colors"
+              className="flex items-center gap-2 h-[46px] px-5 rounded-[11px] bg-ground border border-line-strong hover:bg-panel text-ink text-[14.5px] font-[550] transition-colors"
             >
               <svg className="w-4 h-4 text-gold-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
@@ -131,7 +131,7 @@ export default async function Home() {
 
         {/* Leaderboard preview card */}
         {topContributors.length > 0 && (
-          <div className="w-full lg:w-[380px] shrink-0 bg-white border border-line rounded-2xl shadow-card px-5 pt-4 pb-2">
+          <div className="w-full lg:w-[380px] shrink-0 bg-ground border border-line rounded-2xl shadow-card px-5 pt-4 pb-2">
             <div className="flex items-center justify-between pb-1.5">
               <h2 className="text-[15px] font-[650] text-ink">Top contributors</h2>
               <span className="inline-flex items-center gap-1.5 text-[10.5px] font-[650] tracking-[0.05em] text-success-600 bg-success-0 rounded-full px-2.5 py-1">
@@ -205,7 +205,7 @@ export default async function Home() {
               numClass: 'text-success-600',
             },
           ].map((s) => (
-            <div key={s.label} className="bg-white border border-line rounded-2xl shadow-card p-5 flex flex-col gap-3.5">
+            <div key={s.label} className="bg-ground border border-line rounded-2xl shadow-card p-5 flex flex-col gap-3.5">
               <span className={`w-9 h-9 rounded-[10px] flex items-center justify-center ${s.tile}`}>{s.icon}</span>
               <div>
                 <div className={`text-[28px] leading-none font-[650] tabular-nums tracking-[-0.01em] ${s.numClass}`}>
@@ -221,7 +221,7 @@ export default async function Home() {
       {/* Hall of fame band */}
       {achievers.length > 0 && (
         <div className="max-w-6xl mx-auto px-4 md:px-6 pt-12">
-          <div className="bg-white border border-line rounded-2xl shadow-card p-6">
+          <div className="bg-ground border border-line rounded-2xl shadow-card p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <span className="w-11 h-11 rounded-xl bg-gold-0 text-gold-600 flex items-center justify-center">
@@ -255,7 +255,7 @@ export default async function Home() {
               ))}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
                 {[...programSet].map((prog) => (
-                  <span key={prog} className="text-xs font-[550] px-2.5 py-1 rounded-full bg-white border border-line-strong text-ink-mid">
+                  <span key={prog} className="text-xs font-[550] px-2.5 py-1 rounded-full bg-ground border border-line-strong text-ink-mid">
                     {prog}
                   </span>
                 ))}
@@ -285,7 +285,7 @@ export default async function Home() {
             href="https://github.com/bitflicker64/Termstory"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-5 rounded-2xl bg-white border border-line shadow-card card-hover"
+            className="group flex flex-col justify-between p-5 rounded-2xl bg-ground border border-line shadow-card card-hover"
           >
             <div>
               <div className="flex items-center gap-3 mb-3">
@@ -322,7 +322,7 @@ export default async function Home() {
             href="https://github.com/Dreamstick9/filedrop"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-5 rounded-2xl bg-white border border-line shadow-card card-hover"
+            className="group flex flex-col justify-between p-5 rounded-2xl bg-ground border border-line shadow-card card-hover"
           >
             <div>
               <div className="flex items-center gap-3 mb-3">
@@ -384,7 +384,7 @@ export default async function Home() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-line shadow-card card-hover"
+              className="flex items-center gap-3 p-3.5 rounded-2xl bg-ground border border-line shadow-card card-hover"
             >
               <span className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 ${item.tile}`}>{item.icon}</span>
               <span className="min-w-0">

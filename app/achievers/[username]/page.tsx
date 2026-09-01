@@ -133,7 +133,7 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
               { label: 'Merged PRs',    value: mergedCount,   color: 'text-success-600' },
               { label: 'Repos',         value: repoCount,     color: 'text-ink'       },
             ].map(stat => (
-              <div key={stat.label} className="bg-white border border-line rounded-xl p-4 text-center">
+              <div key={stat.label} className="bg-ground border border-line rounded-xl p-4 text-center">
                 <div className={`text-2xl font-[650] tabular-nums ${stat.color}`}>{stat.value}</div>
                 <div className="text-ink-soft text-xs mt-0.5">{stat.label}</div>
               </div>
@@ -196,7 +196,7 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
             <div className="space-y-2">
               {prs.slice(0, 10).map(pr => (
                 <a key={pr.id} href={pr.pull_request?.html_url ?? pr.html_url} target="_blank" rel="noopener noreferrer"
-                  className="group flex items-start gap-4 bg-white border border-line rounded-xl p-4 hover:bg-panel hover:border-line-heavy transition-all">
+                  className="group flex items-start gap-4 bg-ground border border-line rounded-xl p-4 hover:bg-panel hover:border-line-heavy transition-all">
                   <div className="flex-shrink-0 mt-0.5">
                     {pr.pull_request?.merged_at ? (
                       <span className="inline-flex items-center bg-violet-0 text-violet-600 border border-violet-100 px-2.5 py-1 rounded-full text-xs font-[500]">Merged</span>

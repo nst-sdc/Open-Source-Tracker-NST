@@ -78,7 +78,7 @@ function DeadlineCard({ event }: { event: EventItem }) {
   const urgent = r !== null && r.diff < 24 * 3_600_000;
 
   const inner = (
-    <div className={`relative h-full rounded-2xl bg-white border border-line shadow-card p-5 flex flex-col gap-4 ${
+    <div className={`relative h-full rounded-2xl bg-ground border border-line shadow-card p-5 flex flex-col gap-4 ${
       event.link ? 'cursor-pointer card-hover' : ''
     }`}>
       {/* Top row */}

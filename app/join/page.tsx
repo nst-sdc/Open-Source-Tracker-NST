@@ -124,7 +124,7 @@ export default function JoinRequestPage() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-white border border-line rounded-2xl p-8 shadow-card">
+        <div className="bg-ground border border-line rounded-2xl p-8 shadow-card">
           <div className="flex items-center gap-3.5 mb-6">
             <div className="w-11 h-11 rounded-xl bg-brand-0 border border-violet-100 flex items-center justify-center text-xl">
               📥
@@ -157,7 +157,7 @@ export default function JoinRequestPage() {
                     }
                   }}
                   disabled={loading}
-                  className="w-full bg-white border border-line rounded-2xl pl-4 pr-12 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-panel transition-all"
+                  className="w-full bg-ground border border-line rounded-2xl pl-4 pr-12 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-panel transition-all"
                 />
                 {verifying && (
                   <div className="absolute right-4 top-4">
@@ -201,19 +201,19 @@ export default function JoinRequestPage() {
                     id="year-select"
                     value={year}
                     onChange={(e) => setYear(e.target.value as any)}
-                    className="w-full bg-[#0a0e1a]/80 border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
+                    className="w-full bg-ground border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
                     style={{
-                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(140,149,166,0.95)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'right 16px center',
                       backgroundSize: '16px',
                     }}
                   >
-                    <option value="" className="bg-white text-ink">Select Year</option>
-                    <option value="1st year" className="bg-white text-ink">1st Year</option>
-                    <option value="2nd year" className="bg-white text-ink">2nd Year</option>
-                    <option value="3rd year" className="bg-white text-ink">3rd Year</option>
-                    <option value="4th year" className="bg-white text-ink">4th Year</option>
+                    <option value="" className="bg-ground text-ink">Select Year</option>
+                    <option value="1st year" className="bg-ground text-ink">1st Year</option>
+                    <option value="2nd year" className="bg-ground text-ink">2nd Year</option>
+                    <option value="3rd year" className="bg-ground text-ink">3rd Year</option>
+                    <option value="4th year" className="bg-ground text-ink">4th Year</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -224,18 +224,18 @@ export default function JoinRequestPage() {
                     id="campus-select"
                     value={campus}
                     onChange={(e) => setCampus(e.target.value as any)}
-                    className="w-full bg-[#0a0e1a]/80 border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
+                    className="w-full bg-ground border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
                     style={{
-                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(140,149,166,0.95)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'right 16px center',
                       backgroundSize: '16px',
                     }}
                   >
-                    <option value="" className="bg-white text-ink">Select Campus</option>
-                    <option value="Rishihood" className="bg-white text-ink">Rishihood</option>
-                    <option value="ADYPU" className="bg-white text-ink">ADYPU</option>
-                    <option value="SVYASA" className="bg-white text-ink">SVYASA</option>
+                    <option value="" className="bg-ground text-ink">Select Campus</option>
+                    <option value="Rishihood" className="bg-ground text-ink">Rishihood</option>
+                    <option value="ADYPU" className="bg-ground text-ink">ADYPU</option>
+                    <option value="SVYASA" className="bg-ground text-ink">SVYASA</option>
                   </select>
                 </div>
               </div>
@@ -311,7 +311,7 @@ export default function JoinRequestPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] py-3.5 rounded-2xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] py-3.5 rounded-2xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { ThemeToggle } from './ThemeToggle';
 
 // "Join Tracker" is elevated to the nav's primary action button; every other
 // destination stays a plain link.
@@ -103,7 +104,7 @@ export function Nav() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 border-b border-line bg-white/90 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-line bg-ground/90 backdrop-blur-md">
         <div className="w-full px-4 md:px-8 flex items-center justify-between gap-4" style={{ height: 60 }}>
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
@@ -137,10 +138,12 @@ export function Nav() {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
+            <ThemeToggle />
+
             {/* Primary action */}
             <Link
               href="/join"
-              className="hidden sm:flex items-center h-9 px-4 rounded-[10px] bg-brand-500 hover:bg-brand-600 text-white text-[13.5px] font-[550] shadow-brand-btn transition-colors whitespace-nowrap"
+              className="hidden sm:flex items-center h-9 px-4 rounded-[10px] bg-brand-solid hover:bg-brand-solid-hover text-white text-[13.5px] font-[550] shadow-brand-btn transition-colors whitespace-nowrap"
             >
               Join the tracker
             </Link>
@@ -151,7 +154,7 @@ export function Nav() {
                 <div id="user-profile-dropdown-container" className="relative">
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-2 bg-white border border-line-strong hover:border-line-heavy hover:bg-panel px-2.5 py-1.5 rounded-[10px] transition-colors whitespace-nowrap shrink-0"
+                    className="flex items-center gap-2 bg-ground border border-line-strong hover:border-line-heavy hover:bg-panel px-2.5 py-1.5 rounded-[10px] transition-colors whitespace-nowrap shrink-0"
                   >
                     <img
                       src={session.user.avatarUrl}
@@ -167,7 +170,7 @@ export function Nav() {
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-52 rounded-xl bg-white border border-line p-1.5 shadow-pop flex flex-col gap-0.5">
+                    <div className="absolute right-0 mt-2 w-52 rounded-xl bg-ground border border-line p-1.5 shadow-pop flex flex-col gap-0.5">
                       <div className="px-3 py-2 border-b border-line mb-1">
                         <div className="text-ink text-xs font-[650] truncate">{session.user.name}</div>
                         <div className="text-ink-soft text-[10px] truncate">@{session.user.username}</div>
@@ -208,7 +211,7 @@ export function Nav() {
               ) : (
                 <a
                   href="/api/auth/github"
-                  className="flex items-center gap-2 px-3.5 h-9 rounded-[10px] text-[13px] font-[550] bg-white border border-line-strong hover:border-line-heavy hover:bg-panel text-ink transition-colors whitespace-nowrap shrink-0"
+                  className="flex items-center gap-2 px-3.5 h-9 rounded-[10px] text-[13px] font-[550] bg-ground border border-line-strong hover:border-line-heavy hover:bg-panel text-ink transition-colors whitespace-nowrap shrink-0"
                 >
                   <GitHubIcon />
                   <span>Sign In</span>
@@ -236,7 +239,7 @@ export function Nav() {
           {/* Backdrop */}
           <div className="absolute inset-0 bg-ink/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
           {/* Panel */}
-          <div className="absolute top-[60px] left-0 right-0 bg-white border-b border-line shadow-pop max-h-[calc(100vh-60px)] overflow-y-auto">
+          <div className="absolute top-[60px] left-0 right-0 bg-ground border-b border-line shadow-pop max-h-[calc(100vh-60px)] overflow-y-auto">
             <div className="flex flex-col py-2 px-2">
               {LINKS.map(({ href, label }) => {
                 const active = href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
@@ -256,7 +259,7 @@ export function Nav() {
 
               <Link
                 href="/join"
-                className="flex items-center justify-center gap-2 mx-2 mt-2 px-4 py-3 rounded-xl text-sm font-[550] bg-brand-500 text-white shadow-brand-btn"
+                className="flex items-center justify-center gap-2 mx-2 mt-2 px-4 py-3 rounded-xl text-sm font-[550] bg-brand-solid text-white shadow-brand-btn"
               >
                 Join the tracker
               </Link>
@@ -281,7 +284,7 @@ export function Nav() {
                         <Link
                           href={`/contributors/${session.user.username}`}
                           onClick={() => setOpen(false)}
-                          className="flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-[500] text-ink-mid hover:text-ink hover:bg-white transition-colors"
+                          className="flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-[500] text-ink-mid hover:text-ink hover:bg-ground transition-colors"
                         >
                           <svg className="w-3.5 h-3.5 text-ink-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -291,7 +294,7 @@ export function Nav() {
                         <Link
                           href={`/check-work/${session.user.username}`}
                           onClick={() => setOpen(false)}
-                          className="flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-[500] text-ink-mid hover:text-ink hover:bg-white transition-colors"
+                          className="flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-[500] text-ink-mid hover:text-ink hover:bg-ground transition-colors"
                         >
                           <svg className="w-3.5 h-3.5 text-ink-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -312,7 +315,7 @@ export function Nav() {
                   ) : (
                     <a
                       href="/api/auth/github"
-                      className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-[550] bg-white text-ink border border-line-strong hover:bg-panel transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-[550] bg-ground text-ink border border-line-strong hover:bg-panel transition-colors"
                     >
                       <GitHubIcon />
                       Sign In with GitHub

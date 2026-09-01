@@ -163,7 +163,7 @@ export function ContributorGrid({
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 pb-20 mt-6 space-y-10">
       {/* Ranked leaderboard table */}
-      <div className="bg-white border border-line rounded-2xl shadow-card overflow-hidden">
+      <div className="bg-ground border border-line rounded-2xl shadow-card overflow-hidden">
         <div className={`${ROW_GRID} px-4 md:px-5 py-3.5 bg-panel`}>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">RANK</span>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">NAME</span>
@@ -206,7 +206,7 @@ export function ContributorGrid({
             </span>
             <button
               onClick={() => setVisibleActiveCount((c) => c + 50)}
-              className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-white text-ink hover:bg-panel transition-colors"
+              className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
             >
               Load more
             </button>
@@ -230,7 +230,7 @@ export function ContributorGrid({
                 <Link
                   key={summary.profile.login}
                   href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
-                  className="flex items-center gap-3 bg-white border border-line rounded-xl px-4 py-3 card-hover group"
+                  className="flex items-center gap-3 bg-ground border border-line rounded-xl px-4 py-3 card-hover group"
                 >
                   <Image
                     src={summary.profile.avatar_url}
@@ -259,7 +259,7 @@ export function ContributorGrid({
               <div className="flex justify-center">
                 <button
                   onClick={() => setVisibleOtherCount((c) => c + 50)}
-                  className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-white text-ink hover:bg-panel transition-colors"
+                  className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
                 >
                   Load more members
                 </button>
@@ -267,7 +267,7 @@ export function ContributorGrid({
             )}
           </div>
         ) : (
-          <div className="text-center py-8 text-ink-soft text-sm bg-white border border-line rounded-2xl">
+          <div className="text-center py-8 text-ink-soft text-sm bg-ground border border-line rounded-2xl">
             No other registered members match the filters.
           </div>
         )}

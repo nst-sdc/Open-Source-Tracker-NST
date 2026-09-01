@@ -150,7 +150,7 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
               ? 'bg-panel border-line text-ink-faint cursor-not-allowed'
               : isLoggedIn
                 ? 'bg-brand-0 border-brand-100 text-brand-600 hover:bg-brand-100'
-                : 'bg-white border-line-strong text-ink-mid hover:text-ink hover:bg-panel hover:border-line-heavy'
+                : 'bg-ground border-line-strong text-ink-mid hover:text-ink hover:bg-panel hover:border-line-heavy'
         }`}
       >
         <svg
@@ -195,7 +195,7 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
 
       {/* Custom Premium Toast Alert */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3.5 rounded-xl border border-line bg-white shadow-pop text-xs max-w-xs transition-all duration-300">
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3.5 rounded-xl border border-line bg-ground shadow-pop text-xs max-w-xs transition-all duration-300">
           {toast.type === 'success' && (
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75"></span>

@@ -41,7 +41,7 @@ export default function AdminLoginPage() {
 
       <div className="relative w-full max-w-md">
         {/* Card */}
-        <div className="bg-white border border-line rounded-2xl p-8 shadow-card">
+        <div className="bg-ground border border-line rounded-2xl p-8 shadow-card">
           {/* Icon */}
           <div className="flex items-center justify-center mb-6">
             <div className="w-14 h-14 rounded-2xl bg-brand-0 flex items-center justify-center">
@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
                 placeholder="Enter admin password"
                 required
                 autoFocus
-                className="w-full bg-white border border-line rounded-xl px-4 py-3 text-ink placeholder:text-ink-soft focus:outline-none focus:border-violet-200 focus:bg-panel transition-all text-sm"
+                className="w-full bg-ground border border-line rounded-xl px-4 py-3 text-ink placeholder:text-ink-soft focus:outline-none focus:border-violet-200 focus:bg-panel transition-all text-sm"
               />
             </div>
 
@@ -85,7 +85,7 @@ export default function AdminLoginPage() {
               type="submit"
               disabled={loading || !password}
               id="admin-login-btn"
-              className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] py-3 rounded-xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              className="w-full bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] py-3 rounded-xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

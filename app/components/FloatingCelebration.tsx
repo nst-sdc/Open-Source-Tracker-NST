@@ -57,7 +57,7 @@ export function FloatingCelebration() {
             } as React.CSSProperties}
           >
             {/* Bubble element */}
-            <div className="relative flex items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.08] p-1 shadow-lg shadow-purple-950/5 hover:bg-purple-950/20 hover:border-purple-500/40 hover:scale-125 hover:shadow-purple-500/20 transition-all duration-300 backdrop-blur-[2px]">
+            <div className="relative flex items-center justify-center rounded-full bg-panel border border-line p-1 shadow-card hover:bg-violet-0 hover:border-violet-200 hover:scale-125 hover:shadow-card transition-all duration-300 backdrop-blur-[2px]">
               <img
                 src={c.avatarUrl}
                 alt={c.username}
@@ -68,15 +68,15 @@ export function FloatingCelebration() {
               />
 
               {/* Weekly highlight indicator */}
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-[9px] font-bold text-white flex items-center justify-center border border-[#030712] group-hover:scale-110 transition-transform">
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gradient-to-r from-violet-500 to-brand-500 text-[9px] font-bold text-white flex items-center justify-center border border-[#030712] group-hover:scale-110 transition-transform">
                 {totalContributions}
               </span>
 
               {/* Tooltip on hover */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-[#0a0f1d] border border-white/10 rounded-xl px-3 py-2 text-center pointer-events-none opacity-0 scale-90 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-200 z-50 shadow-2xl min-w-[120px] shadow-black/80">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-ink border border-line-heavy rounded-xl px-3 py-2 text-center pointer-events-none opacity-0 scale-90 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-200 z-50 shadow-2xl min-w-[120px] shadow-black/80">
                 <div className="text-white text-[11px] font-bold truncate max-w-[100px]">{c.name}</div>
-                <div className="text-purple-400 text-[9px] font-mono mt-0.5">@{c.username}</div>
-                <div className="text-white/40 text-[9px] mt-1 pt-1 border-t border-white/5 flex flex-col gap-0.5 whitespace-nowrap">
+                <div className="text-violet-600 text-[9px] font-mono mt-0.5">@{c.username}</div>
+                <div className="text-ink-faint text-[9px] mt-1 pt-1 border-t border-line-heavy flex flex-col gap-0.5 whitespace-nowrap">
                   {c.mergedCount > 0 && <span>🟢 {c.mergedCount} merged PRs</span>}
                   {c.totalCount - c.mergedCount > 0 && <span>🔵 {c.totalCount - c.mergedCount} open PRs</span>}
                   {c.issuesCount > 0 && <span>🟣 {c.issuesCount} issue{c.issuesCount > 1 ? 's' : ''}</span>}

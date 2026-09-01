@@ -231,7 +231,7 @@ export function ShareButton({
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-white border border-line rounded-2xl p-6 shadow-pop flex flex-col gap-5">
+          <div className="relative w-full max-w-lg bg-ground border border-line rounded-2xl p-6 shadow-pop flex flex-col gap-5">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
@@ -303,7 +303,7 @@ export function ShareButton({
               <button
                 onClick={downloadCard}
                 disabled={downloading}
-                className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[11px] bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-sm font-[550] shadow-brand-btn transition-colors cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[11px] bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-50 text-white text-sm font-[550] shadow-brand-btn transition-colors cursor-pointer"
               >
                 <svg className={`w-4 h-4 ${downloading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {downloading ? (
@@ -316,7 +316,7 @@ export function ShareButton({
               </button>
               <button
                 onClick={copyLink}
-                className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[11px] bg-white border border-line-strong hover:bg-panel text-ink text-sm font-[550] transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-[11px] bg-ground border border-line-strong hover:bg-panel text-ink text-sm font-[550] transition-colors cursor-pointer"
               >
                 {copied ? (
                   <>

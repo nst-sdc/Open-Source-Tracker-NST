@@ -4,8 +4,11 @@
  * grauity light — token foundation for the Athena-native redesign.
  * Values lifted from Newton-School/grauity ui/themes/constantGlobalStyle.ts
  * (neutral / brand / success / error / warning / yellow / purple primitives)
- * mapped to the roles this app actually uses. Dark theme is intentionally
- * not offered: the product (my.newtonschool.co) ships light-only.
+ * mapped to the roles this app actually uses.
+ *
+ * A dark theme sits alongside it further down. The light values below stay the
+ * source of truth for every role; dark only redefines the same variables, so
+ * components keep using one set of semantic class names and never branch.
  */
 
 @theme {
@@ -34,6 +37,12 @@
   --color-brand-600: #005ed1;      /* small-text-safe blue on white */
   --color-brand-700: #004599;
   --color-brand-900: #002452;
+
+  /* Filled brand button. Deliberately outside the tint→text ramp above: it must
+   * stay dark enough for white text in BOTH themes, whereas brand-600 has to
+   * flip light so body text stays readable on a dark ground. */
+  --color-brand-solid: #005ed1;
+  --color-brand-solid-hover: #004599;
 
   /* ── Success (merged) ───────────────────────────────────────── */
   --color-success-0: #d9fced;
@@ -86,6 +95,188 @@
   --shadow-pop: 0 4px 8px rgb(11 12 14 / 0.06), 0 20px 48px -16px rgb(11 12 14 / 0.18);
   --shadow-brand-btn: 0 2px 8px rgb(6 115 249 / 0.28);
   --shadow-violet-band: 0 12px 32px -12px rgb(70 39 155 / 0.45);
+}
+
+
+/* ── Dark theme ───────────────────────────────────────────────────────────────
+ * Only the variables change; no component branches on theme. Two rules, because
+ * the theme has three states: an explicit choice stamps data-theme on <html>,
+ * while the default "system" setting stamps nothing and leaves
+ * prefers-color-scheme to decide. The media query is guarded so an explicit
+ * "light" still wins under a dark OS.
+ *
+ * Role inversions worth knowing when editing:
+ *   ink-*         text: light on dark instead of dark on light
+ *   ground/panel  surfaces: dark
+ *   <hue>-0/100   soft tints, now dark tints — still backgrounds
+ *   <hue>-600     still the small-text-safe step, now light instead of dark
+ *   brand-solid   unchanged in role: a filled button carrying white text
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+  /* Ink — light on dark */
+  --color-ink: #f2f5f8;
+  --color-ink-strong: #e4e9ef;
+  --color-ink-mid: #c3cbd6;
+  --color-ink-soft: #99a3b3;
+  --color-ink-faint: #6e7887;
+
+  /* Surfaces & lines */
+  --color-ground: #0d0f12;
+  --color-panel: #15181d;
+  --color-panel-2: #1e232a;
+  --color-line: #242a32;
+  --color-line-strong: #333a45;
+  --color-line-heavy: #4a5461;
+
+  /* Brand */
+  --color-brand-0: #10243a;
+  --color-brand-100: #1b3d61;
+  --color-brand-200: #245485;
+  --color-brand-300: #3477bd;
+  --color-brand-400: #4d9aeb;
+  --color-brand-500: #5aa9ff;
+  --color-brand-600: #8fc5ff;
+  --color-brand-700: #b6daff;
+  --color-brand-900: #ddedff;
+  --color-brand-solid: #0a6ae0;
+  --color-brand-solid-hover: #0d7bff;
+
+  /* Success */
+  --color-success-0: #0b2b20;
+  --color-success-100: #124834;
+  --color-success-200: #1a6b4d;
+  --color-success-400: #2fbd88;
+  --color-success-500: #4ed6a1;
+  --color-success-600: #6fe3b5;
+  --color-success-700: #9aeecd;
+
+  /* Error */
+  --color-error-0: #33161a;
+  --color-error-100: #5c252c;
+  --color-error-400: #f0666b;
+  --color-error-500: #f78489;
+  --color-error-600: #ff9ba0;
+
+  /* Warning */
+  --color-warning-0: #33200f;
+  --color-warning-200: #7a441f;
+  --color-warning-400: #f0842f;
+  --color-warning-600: #ffab6b;
+  --color-warning-800: #ffd0ad;
+
+  /* Gold */
+  --color-gold-0: #332711;
+  --color-gold-100: #5c4820;
+  --color-gold-400: #f5b73d;
+  --color-gold-500: #ffc65c;
+  --color-gold-600: #ffd483;
+  --color-gold-700: #ffe4b0;
+
+  /* Violet */
+  --color-violet-0: #221942;
+  --color-violet-100: #342763;
+  --color-violet-200: #46358a;
+  --color-violet-300: #6a54c4;
+  --color-violet-500: #9b83f5;
+  --color-violet-600: #b6a3ff;
+  --color-violet-700: #cdc0ff;
+  --color-violet-800: #ded5ff;
+  --color-violet-900: #eee9ff;
+
+  /* Elevation — offset shadows read as depth on dark too, but need more weight */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.45), 0 14px 32px -12px rgb(0 0 0 / 0.7);
+  --shadow-pop: 0 4px 8px rgb(0 0 0 / 0.5), 0 20px 48px -16px rgb(0 0 0 / 0.75);
+  --shadow-brand-btn: 0 2px 8px rgb(10 106 224 / 0.4);
+  --shadow-violet-band: 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  }
+}
+
+:root[data-theme='dark'] {
+  /* Ink — light on dark */
+  --color-ink: #f2f5f8;
+  --color-ink-strong: #e4e9ef;
+  --color-ink-mid: #c3cbd6;
+  --color-ink-soft: #99a3b3;
+  --color-ink-faint: #6e7887;
+
+  /* Surfaces & lines */
+  --color-ground: #0d0f12;
+  --color-panel: #15181d;
+  --color-panel-2: #1e232a;
+  --color-line: #242a32;
+  --color-line-strong: #333a45;
+  --color-line-heavy: #4a5461;
+
+  /* Brand */
+  --color-brand-0: #10243a;
+  --color-brand-100: #1b3d61;
+  --color-brand-200: #245485;
+  --color-brand-300: #3477bd;
+  --color-brand-400: #4d9aeb;
+  --color-brand-500: #5aa9ff;
+  --color-brand-600: #8fc5ff;
+  --color-brand-700: #b6daff;
+  --color-brand-900: #ddedff;
+  --color-brand-solid: #0a6ae0;
+  --color-brand-solid-hover: #0d7bff;
+
+  /* Success */
+  --color-success-0: #0b2b20;
+  --color-success-100: #124834;
+  --color-success-200: #1a6b4d;
+  --color-success-400: #2fbd88;
+  --color-success-500: #4ed6a1;
+  --color-success-600: #6fe3b5;
+  --color-success-700: #9aeecd;
+
+  /* Error */
+  --color-error-0: #33161a;
+  --color-error-100: #5c252c;
+  --color-error-400: #f0666b;
+  --color-error-500: #f78489;
+  --color-error-600: #ff9ba0;
+
+  /* Warning */
+  --color-warning-0: #33200f;
+  --color-warning-200: #7a441f;
+  --color-warning-400: #f0842f;
+  --color-warning-600: #ffab6b;
+  --color-warning-800: #ffd0ad;
+
+  /* Gold */
+  --color-gold-0: #332711;
+  --color-gold-100: #5c4820;
+  --color-gold-400: #f5b73d;
+  --color-gold-500: #ffc65c;
+  --color-gold-600: #ffd483;
+  --color-gold-700: #ffe4b0;
+
+  /* Violet */
+  --color-violet-0: #221942;
+  --color-violet-100: #342763;
+  --color-violet-200: #46358a;
+  --color-violet-300: #6a54c4;
+  --color-violet-500: #9b83f5;
+  --color-violet-600: #b6a3ff;
+  --color-violet-700: #cdc0ff;
+  --color-violet-800: #ded5ff;
+  --color-violet-900: #eee9ff;
+
+  /* Elevation — offset shadows read as depth on dark too, but need more weight */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.45), 0 14px 32px -12px rgb(0 0 0 / 0.7);
+  --shadow-pop: 0 4px 8px rgb(0 0 0 / 0.5), 0 20px 48px -16px rgb(0 0 0 / 0.75);
+  --shadow-brand-btn: 0 2px 8px rgb(10 106 224 / 0.4);
+  --shadow-violet-band: 0 12px 32px -12px rgb(0 0 0 / 0.7);
+}
+
+/* Native widgets (scrollbars, form controls, the tap highlight) follow suit. */
+:root[data-theme='dark'] { color-scheme: dark; }
+:root[data-theme='light'] { color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { color-scheme: dark; }
 }
 
 body {

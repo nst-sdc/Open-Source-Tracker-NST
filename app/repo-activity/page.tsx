@@ -191,12 +191,12 @@ export default function RepoActivityPage() {
             value={repoInput}
             onChange={(e) => setRepoInput(e.target.value)}
             disabled={loading}
-            className="flex-1 bg-white border border-line hover:border-line-heavy rounded-2xl px-5 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-white transition-all"
+            className="flex-1 bg-ground border border-line hover:border-line-heavy rounded-2xl px-5 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-ground transition-all"
           />
           <button
             type="submit"
             disabled={loading || !repoInput.trim()}
-            className="bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] px-8 py-3.5 rounded-2xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            className="bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] px-8 py-3.5 rounded-2xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
           >
             {loading ? (
               <>
@@ -217,7 +217,7 @@ export default function RepoActivityPage() {
           <span className="text-xs font-[550] text-ink-soft uppercase tracking-wider">
             Time Period Filter
           </span>
-          <div className="flex bg-white border border-line rounded-xl p-1 shrink-0">
+          <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0">
             {([
               { id: '1day',    label: '24h' },
               { id: 'week',    label: 'Week' },
@@ -256,7 +256,7 @@ export default function RepoActivityPage() {
         {repoInfo && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
             {/* Repo Info Card */}
-            <div className="bg-white border border-line rounded-2xl p-6">
+            <div className="bg-ground border border-line rounded-2xl p-6">
               <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
                 <div>
                   <a
@@ -283,7 +283,7 @@ export default function RepoActivityPage() {
                   { label: 'Forks', value: repoInfo.forks.toLocaleString(), icon: '🍴' },
                   { label: 'Open Issues', value: repoInfo.openIssues.toLocaleString(), icon: '🔧' },
                 ].map((s) => (
-                  <div key={s.label} className="bg-white border border-line rounded-2xl p-4 text-center">
+                  <div key={s.label} className="bg-ground border border-line rounded-2xl p-4 text-center">
                     <div className="text-ink-soft text-xs mb-1 font-mono uppercase tracking-wider flex items-center justify-center gap-1">
                       <span>{s.icon}</span>
                       <span>{s.label}</span>
@@ -302,7 +302,7 @@ export default function RepoActivityPage() {
 
                 <div className="flex flex-wrap gap-2.5">
                   {/* Filter Tabs */}
-                  <div className="flex bg-white border border-line rounded-xl p-1 shrink-0">
+                  <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0">
                     {([
                       { id: 'all',    label: 'All Activity' },
                       { id: 'prs',    label: 'PRs' },
@@ -348,13 +348,13 @@ export default function RepoActivityPage() {
                       ? 'bg-panel-2 border-line-strong text-ink-mid'
                       : index === 2
                       ? 'bg-gold-0 border-gold-100 text-gold-600'
-                      : 'bg-white border-line text-ink-soft';
+                      : 'bg-ground border-line text-ink-soft';
 
                   return (
                     <div
                       key={c.username}
                       onClick={() => handleContributorClick(c.username)}
-                      className="group border rounded-2xl bg-white border-line sys-card-hover flex flex-col justify-between relative overflow-hidden cursor-pointer active:scale-[0.98]"
+                      className="group border rounded-2xl bg-ground border-line sys-card-hover flex flex-col justify-between relative overflow-hidden cursor-pointer active:scale-[0.98]"
                     >
                       {/* Top Rank Badge & Avatar Info */}
                       <div className="p-5 flex-1 flex flex-col justify-between gap-4">
@@ -386,19 +386,19 @@ export default function RepoActivityPage() {
 
                         {/* Activity stats strip */}
                         <div className="grid grid-cols-4 gap-1.5 mt-2">
-                          <div className="bg-white border border-line rounded-xl p-1.5 text-center">
+                          <div className="bg-ground border border-line rounded-xl p-1.5 text-center">
                             <div className="text-[9px] text-ink-soft font-mono uppercase tracking-wider">PRs</div>
                             <div className="text-sm font-[650] text-ink font-mono">{c.prsCount}</div>
                           </div>
-                          <div className="bg-white border border-line rounded-xl p-1.5 text-center">
+                          <div className="bg-ground border border-line rounded-xl p-1.5 text-center">
                             <div className="text-[9px] text-ink-soft font-mono uppercase tracking-wider">Merged</div>
                             <div className="text-sm font-[650] text-success-600 font-mono">{c.mergedPRs}</div>
                           </div>
-                          <div className="bg-white border border-line rounded-xl p-1.5 text-center">
+                          <div className="bg-ground border border-line rounded-xl p-1.5 text-center">
                             <div className="text-[9px] text-ink-soft font-mono uppercase tracking-wider">Open</div>
                             <div className="text-sm font-[650] text-brand-600 font-mono">{c.openPRs}</div>
                           </div>
-                          <div className="bg-white border border-line rounded-xl p-1.5 text-center">
+                          <div className="bg-ground border border-line rounded-xl p-1.5 text-center">
                             <div className="text-[9px] text-ink-soft font-mono uppercase tracking-wider">Issues</div>
                             <div className="text-sm font-[650] text-violet-600 font-mono">{c.issuesCount}</div>
                           </div>
@@ -410,7 +410,7 @@ export default function RepoActivityPage() {
                             <span>Contribution share</span>
                             <span>{Math.round(widthPercent)}%</span>
                           </div>
-                          <div className="w-full h-1.5 bg-white rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-ground rounded-full overflow-hidden">
                             <div
                               className="h-full bg-brand-500 rounded-full transition-all duration-500"
                               style={{ width: `${widthPercent}%` }}
@@ -423,7 +423,7 @@ export default function RepoActivityPage() {
                 })}
 
                 {sortedContributors.length === 0 && (
-                  <div className="text-center py-16 bg-white border border-line rounded-2xl text-ink-soft col-span-full">
+                  <div className="text-center py-16 bg-ground border border-line rounded-2xl text-ink-soft col-span-full">
                     <div className="text-3xl mb-2">📭</div>
                     <p className="text-sm font-[500]">No activity found for this category</p>
                     <p className="text-xs text-ink-faint mt-1">Try toggling to &quot;All Activity&quot; or scan another repository.</p>
@@ -437,7 +437,7 @@ export default function RepoActivityPage() {
 
         {/* Scanning Empty State */}
         {!repoInfo && !loading && !error && (
-          <div className="text-center py-20 text-ink-soft border border-line bg-white rounded-2xl animate-in fade-in duration-300">
+          <div className="text-center py-20 text-ink-soft border border-line bg-ground rounded-2xl animate-in fade-in duration-300">
             <svg className="w-12 h-12 mx-auto mb-4 opacity-30 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -452,7 +452,7 @@ export default function RepoActivityPage() {
       {/* User Activity Modal */}
       {selectedUser && (
         <div data-lenis-prevent className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-in fade-in duration-200">
-          <div className="bg-white border border-line rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/30 animate-in zoom-in-95 duration-200">
+          <div className="bg-ground border border-line rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-pop animate-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
             <div className="p-6 border-b border-line flex items-center justify-between">
@@ -468,7 +468,7 @@ export default function RepoActivityPage() {
                   setSelectedUser(null);
                   setUserActivity(null);
                 }}
-                className="text-ink-soft hover:text-ink transition-colors p-1.5 rounded-lg bg-white border border-line cursor-pointer"
+                className="text-ink-soft hover:text-ink transition-colors p-1.5 rounded-lg bg-ground border border-line cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -507,24 +507,24 @@ export default function RepoActivityPage() {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {userActivity.repositories.map((repo: any) => (
-                          <div key={repo.repoName} className="bg-white border border-line rounded-2xl p-4 space-y-3">
+                          <div key={repo.repoName} className="bg-ground border border-line rounded-2xl p-4 space-y-3">
                             <div className="font-[650] text-sm text-ink truncate" title={repo.repoName}>
                               {repo.repoName}
                             </div>
                             <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                              <div className="bg-white border border-line rounded-lg p-1">
+                              <div className="bg-ground border border-line rounded-lg p-1">
                                 <div className="text-[9px] text-ink-soft">Total</div>
                                 <div className="font-mono font-[650] text-ink">{repo.totalPRs}</div>
                               </div>
-                              <div className="bg-white border border-line rounded-lg p-1">
+                              <div className="bg-ground border border-line rounded-lg p-1">
                                 <div className="text-[9px] text-success-600">Merged</div>
                                 <div className="font-mono font-[650] text-success-600">{repo.mergedPRs}</div>
                               </div>
-                              <div className="bg-white border border-line rounded-lg p-1">
+                              <div className="bg-ground border border-line rounded-lg p-1">
                                 <div className="text-[9px] text-brand-600">Open</div>
                                 <div className="font-mono font-[650] text-brand-600">{repo.openPRs}</div>
                               </div>
-                              <div className="bg-white border border-line rounded-lg p-1">
+                              <div className="bg-ground border border-line rounded-lg p-1">
                                 <div className="text-[9px] text-violet-600">Closed</div>
                                 <div className="font-mono font-[650] text-violet-600">{repo.closedPRs}</div>
                               </div>
@@ -548,7 +548,7 @@ export default function RepoActivityPage() {
                             href={pr.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-start justify-between gap-4 p-3.5 rounded-2xl bg-white border border-line hover:bg-white hover:border-line transition-all text-xs text-ink hover:text-ink"
+                            className="flex items-start justify-between gap-4 p-3.5 rounded-2xl bg-ground border border-line hover:bg-ground hover:border-line transition-all text-xs text-ink hover:text-ink"
                           >
                             <div className="space-y-1.5 min-w-0">
                               <div className="font-[500] line-clamp-2">
