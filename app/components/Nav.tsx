@@ -34,16 +34,23 @@ function GitHubIcon() {
   );
 }
 
+// The mark is its own tile — a solid squircle with the lens cut out of it —
+// so it fills the 32px footprint directly instead of sitting on a blue chip.
 function LogoMark() {
   return (
-    <span className="w-8 h-8 rounded-[9px] bg-brand-500 flex items-center justify-center flex-shrink-0">
-      <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 3v12" />
-        <circle cx="18" cy="6" r="3" />
-        <circle cx="6" cy="18" r="3" />
-        <path d="M18 9a9 9 0 0 1-9 9" />
-      </svg>
-    </span>
+    <svg
+      className="w-8 h-8 text-brand-500 flex-shrink-0"
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label="Opensource Tracker"
+    >
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        d="M 34 10 H 66 A 24 24 0 0 1 90 34 V 66 A 24 24 0 0 1 66 90 H 34 A 24 24 0 0 1 10 66 V 34 A 24 24 0 0 1 34 10 Z M 58 40 m -19 0 a 19 19 0 1 0 38 0 a 19 19 0 1 0 -38 0"
+      />
+      <circle cx="58" cy="40" r="7" fill="currentColor" />
+    </svg>
   );
 }
 
