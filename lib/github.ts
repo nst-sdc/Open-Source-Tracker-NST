@@ -277,13 +277,17 @@ export interface StudentSummary {
    * is computed, same as mergedPRs. Fractional — display mergedPRs for the
    * actual PR count. */
   scoreMergedPRs: number;
-  /** scoreMergedPRs / mergedPRs — a secondary "project impact" signal, not
-   * used for ranking. Answers a different question than the total score:
-   * not "how much have they done" but "when they do contribute, how
-   * significant are the projects they land in." Undefined below
-   * MIN_PRS_FOR_AVG_SCORE (see lib/repo-cache.ts) — a 1-PR average is noise,
-   * not a signal, and would otherwise let one lucky mega-repo PR read as a
-   * perfect score. */
+  /** Plain mean of each merged PR's own repo multiplier (M) — a secondary
+   * "project impact" signal, not used for ranking. Answers a different
+   * question than the total score: not "how much have they done" but "when
+   * they do contribute, how significant are the projects they land in."
+   * Deliberately NOT scoreMergedPRs / mergedPRs: that total is decayed and
+   * capped for anti-farming reasons, which would otherwise crush a genuine,
+   * sustained single-project contributor's impact for the same reason their
+   * score growth slows down — the wrong answer for a pure quality signal.
+   * Undefined below MIN_PRS_FOR_AVG_SCORE (see lib/repo-cache.ts) — a 1-PR
+   * average is noise, not a signal, and would otherwise let one lucky
+   * mega-repo PR read as a perfect score. */
   avgScore?: number;
   issuesCount: number;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
@@ -783,11 +787,27 @@ export function getSummaryFromCache(
   // multiplier, repeat PRs into the same repo decay by 1/(1+0.3(k−1)), and no
   // single repo may carry more than 40% of the total. Junk is already
   // stripped out of `prs` above; see lib/repo-score.ts for the whole model.
+  const repoMultiplierFor = makeRepoMultiplierResolver(repoCacheMap, cached.profile.login, ownRepoExceptions, Date.now());
   const totalWeightedScore = aggregateMergedPRScore(
     mergedPRList,
     (pr) => (pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null),
-    makeRepoMultiplierResolver(repoCacheMap, cached.profile.login, ownRepoExceptions, Date.now()),
+    repoMultiplierFor,
   );
+
+  // Secondary "project impact" signal — see StudentSummary.avgScore doc.
+  // Deliberately the plain mean of each merged PR's own repo multiplier, NOT
+  // totalWeightedScore / mergedPRs: that sum is already decayed and capped
+  // for anti-farming purposes, and dividing it back down would let decay
+  // (a volume control on the *ranking*) leak into what's supposed to be a
+  // pure *quality* signal — crushing a genuine, sustained contributor's
+  // impact number for the same reason their score growth slows down, which
+  // is exactly the wrong answer for "how good are the projects they pick".
+  const avgScore = mergedPRs >= MIN_PRS_FOR_AVG_SCORE
+    ? mergedPRList.reduce((sum, pr) => {
+        const repo = pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null;
+        return sum + (repo ? repoMultiplierFor(repo) : NEUTRAL_MULTIPLIER);
+      }, 0) / mergedPRs
+    : undefined;
 
   return {
     profile: cached.profile,
@@ -796,8 +816,7 @@ export function getSummaryFromCache(
     openPRs,
     closedPRs,
     scoreMergedPRs: totalWeightedScore,
-    // Secondary "project impact" signal — see StudentSummary.avgScore doc.
-    avgScore: mergedPRs >= MIN_PRS_FOR_AVG_SCORE ? totalWeightedScore / mergedPRs : undefined,
+    avgScore,
     issuesCount: issues.length,
     cachedAt: cached.cachedAt,
   };
@@ -1021,11 +1040,21 @@ export async function getAllStudentSummaries(
 
     // Same #4 scoring as getSummaryFromCache, through the same resolver.
     const liveOwnRepoExceptions = ownRepoExceptionMap.get(lowerName) ?? EMPTY_REPO_SET;
+    const liveRepoMultiplierFor = makeRepoMultiplierResolver(repoCache, student.github, liveOwnRepoExceptions, Date.now());
     const liveWeightedScore = aggregateMergedPRScore(
       mergedPRList,
       (pr) => (pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null),
-      makeRepoMultiplierResolver(repoCache, student.github, liveOwnRepoExceptions, Date.now()),
+      liveRepoMultiplierFor,
     );
+    // Plain mean of each merged PR's own repo multiplier — see the doc
+    // comment on the equivalent computation in getSummaryFromCache for why
+    // this is deliberately not liveWeightedScore / mergedPRs.
+    const liveAvgScore = mergedPRs >= MIN_PRS_FOR_AVG_SCORE
+      ? mergedPRList.reduce((sum, pr) => {
+          const repo = pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null;
+          return sum + (repo ? liveRepoMultiplierFor(repo) : NEUTRAL_MULTIPLIER);
+        }, 0) / mergedPRs
+      : undefined;
 
     summaries.push({
       profile,
@@ -1034,7 +1063,7 @@ export async function getAllStudentSummaries(
       openPRs,
       closedPRs,
       scoreMergedPRs: liveWeightedScore,
-      avgScore: mergedPRs >= MIN_PRS_FOR_AVG_SCORE ? liveWeightedScore / mergedPRs : undefined,
+      avgScore: liveAvgScore,
       issuesCount: issues.length,
       year: student.year,
       campus: student.campus,
