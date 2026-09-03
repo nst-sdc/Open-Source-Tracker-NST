@@ -68,21 +68,21 @@ export function FloatingCelebration() {
               />
 
               {/* Weekly highlight indicator */}
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gradient-to-r from-violet-500 to-brand-500 text-[9px] font-bold text-white flex items-center justify-center border border-[#030712] group-hover:scale-110 transition-transform">
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gradient-to-r from-violet-500 to-brand-500 text-[9px] font-bold text-white flex items-center justify-center border border-ground group-hover:scale-110 transition-transform">
                 {totalContributions}
               </span>
 
               {/* Tooltip on hover */}
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-ink border border-line-heavy rounded-xl px-3 py-2 text-center pointer-events-none opacity-0 scale-90 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-200 z-50 shadow-2xl min-w-[120px] shadow-black/80">
-                <div className="text-white text-[11px] font-bold truncate max-w-[100px]">{c.name}</div>
-                <div className="text-violet-600 text-[9px] font-mono mt-0.5">@{c.username}</div>
-                <div className="text-ink-faint text-[9px] mt-1 pt-1 border-t border-line-heavy flex flex-col gap-0.5 whitespace-nowrap">
+                <div className="text-ground text-[11px] font-bold truncate max-w-[100px]">{c.name}</div>
+                <div className="text-ground/70 text-[9px] font-mono mt-0.5">@{c.username}</div>
+                <div className="text-ground/60 text-[9px] mt-1 pt-1 border-t border-ink-soft/40 flex flex-col gap-0.5 whitespace-nowrap">
                   {c.mergedCount > 0 && <span>🟢 {c.mergedCount} merged PRs</span>}
                   {c.totalCount - c.mergedCount > 0 && <span>🔵 {c.totalCount - c.mergedCount} open PRs</span>}
                   {c.issuesCount > 0 && <span>🟣 {c.issuesCount} issue{c.issuesCount > 1 ? 's' : ''}</span>}
                 </div>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-white/10" />
-                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-[#0a0f1d]" />
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-ink-soft/40" />
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-ink" />
               </div>
             </div>
           </div>

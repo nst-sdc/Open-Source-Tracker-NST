@@ -299,7 +299,7 @@ export default async function ContributorsPage({
               )}
             </span>
             <Link
-              href="/get-started"
+              href="/documentation#ranking"
               className="flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] bg-panel border border-line-strong hover:bg-panel-2 text-ink text-[13px] font-[550] transition-colors"
             >
               <span>How ranking works</span>

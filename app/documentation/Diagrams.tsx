@@ -1,21 +1,27 @@
-// Hand-built inline SVG diagrams for /documentation. Matches the app's
-// existing chart style (see ContributionChart in app/contributors/[username]/page.tsx) —
-// light theme, --color-* tokens via inline hex (SVG can't read CSS vars
-// reliably across all renderers, so values are the token's literal hex).
+// Hand-built inline SVG diagrams for /documentation.
+//
+// These reference the CSS custom properties rather than literal hex, so the
+// diagrams follow the light/dark theme like everything else. Inline SVG in an
+// HTML document resolves var() in presentation attributes normally — the
+// caveat about custom properties applies to standalone .svg files fetched as
+// images, which have no access to the page's cascade. Previously these were
+// the light palette's literal hex, which drew a white diagram with near-black
+// labels onto the dark card in dark mode.
 
-const INK = '#0b0c0e';
-const INK_MID = '#30363d';
-const INK_SOFT = '#5b6271';
-const LINE = '#e1e5ea';
-const PANEL = '#f6f7f9';
-const BRAND = '#0673f9';
-const BRAND_0 = '#e5f1ff';
-const GOLD = '#d17300';
-const GOLD_0 = '#fff3d6';
-const VIOLET = '#6138d3';
-const VIOLET_0 = '#f5e5ff';
-const SUCCESS = '#007a51';
-const SUCCESS_0 = '#d9fced';
+const INK = 'var(--color-ink)';
+const INK_MID = 'var(--color-ink-mid)';
+const INK_SOFT = 'var(--color-ink-soft)';
+const LINE = 'var(--color-line-strong)';
+const PANEL = 'var(--color-panel)';
+const GROUND = 'var(--color-ground)';
+const BRAND = 'var(--color-brand-500)';
+const BRAND_0 = 'var(--color-brand-0)';
+const GOLD = 'var(--color-gold-600)';
+const GOLD_0 = 'var(--color-gold-0)';
+const VIOLET = 'var(--color-violet-600)';
+const VIOLET_0 = 'var(--color-violet-0)';
+const SUCCESS = 'var(--color-success-600)';
+const SUCCESS_0 = 'var(--color-success-0)';
 
 function Box({
   x, y, w, h, fill, stroke, label, sublabel, labelColor = INK,
@@ -57,12 +63,12 @@ export function ArchitectureDiagram() {
 
         <Box x={370} y={20} w={160} h={54} fill={PANEL} stroke={LINE} label="Browser" sublabel="any visitor" />
 
-        <rect x={40} y={110} width={820} height={330} rx={16} fill="#faf7ff" stroke={VIOLET_0} strokeWidth={1.5} />
+        <rect x={40} y={110} width={820} height={330} rx={16} fill={VIOLET_0} stroke={VIOLET} strokeWidth={1.5} opacity={0.35} />
         <text x={60} y={135} fontSize={11} fontWeight={650} fill={VIOLET}>CLOUDFLARE TUNNEL — the only way in, no open ports on the node</text>
 
         <Box x={370} y={160} w={160} h={54} fill={VIOLET_0} stroke={VIOLET} labelColor={VIOLET} label="cloudflared" sublabel="outbound-only daemon" />
 
-        <rect x={70} y={250} width={760} height={165} rx={14} fill="#fff" stroke={LINE} strokeWidth={1.5} />
+        <rect x={70} y={250} width={760} height={165} rx={14} fill={GROUND} stroke={LINE} strokeWidth={1.5} />
         <text x={90} y={272} fontSize={11} fontWeight={650} fill={INK_SOFT}>PHYSICAL NODE — nst-n1 (single k3s cluster)</text>
 
         <Box x={340} y={295} w={220} h={60} fill={BRAND_0} stroke={BRAND} labelColor={BRAND} label="Next.js app pod" sublabel="opensource-tracker deployment" />

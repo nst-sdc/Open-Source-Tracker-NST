@@ -118,14 +118,23 @@ export function Nav() {
           </Link>
 
           {/* Desktop links */}
-          <div className="hidden lg:flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 justify-center mx-4">
+          {/* Two things keep this row from eating its own links.
+              `safe center` is the important one: plain `center` splits any
+              overflow across BOTH ends, so the "H" of Home was being cut off
+              the left edge with no scrollbar to hint at it. `safe` falls back
+              to start-alignment the moment the row stops fitting.
+              The row then only appears from 1440px, which is where all eight
+              links fit beside the logo and the actions even when a signed-in
+              user's avatar and handle widen the right-hand group. Below that
+              the hamburger carries the same links. */}
+          <div className="hidden min-[1440px]:flex items-center gap-0.5 overflow-x-auto scrollbar-none flex-1 min-w-0 [justify-content:safe_center] mx-2">
             {LINKS.map(({ href, label }) => {
               const active = href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[13.5px] transition-colors ${
+                  className={`whitespace-nowrap px-2.5 py-1.5 rounded-lg text-[13.5px] transition-colors ${
                     active
                       ? 'bg-brand-0 text-brand-600 font-[550]'
                       : 'text-ink-soft font-[450] hover:text-ink hover:bg-panel'
