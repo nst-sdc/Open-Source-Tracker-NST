@@ -135,7 +135,7 @@ function ContributionChart({ prs }: { prs: StudentPR[] }) {
   const areaD = `${lineD} L ${points[points.length - 1].x} ${paddingTop + chartHeight} L ${points[0].x} ${paddingTop + chartHeight} Z`;
 
   return (
-    <div className="bg-white border border-line rounded-2xl p-5 relative overflow-hidden">
+    <div className="bg-ground border border-line rounded-2xl p-5 relative overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-ink-mid text-xs font-[550] uppercase tracking-wider">Contribution Trend (PRs / Month)</h2>
         {maxVal > 0 && (
@@ -250,7 +250,7 @@ export default async function CheckWorkUserPage({
   if (isRateLimited) {
     return (
       <main className="min-h-screen bg-panel flex flex-col items-center justify-center text-center px-4 py-12">
-        <div className="bg-white border border-line rounded-2xl p-8 max-w-md shadow-card">
+        <div className="bg-ground border border-line rounded-2xl p-8 max-w-md shadow-card">
           <div className="text-4xl mb-4">⏳</div>
           <h1 className="text-xl font-[650] text-ink mb-3">GitHub API Rate Limit Hit</h1>
           <p className="text-ink-soft text-sm leading-relaxed mb-6">
@@ -260,7 +260,7 @@ export default async function CheckWorkUserPage({
             <Link
               href="/api/auth/github"
               prefetch={false}
-              className="w-full flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl text-sm font-[550] transition-all shadow-md active:scale-95 cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 bg-brand-solid hover:bg-brand-solid-hover text-white py-3 rounded-xl text-sm font-[550] transition-all shadow-md active:scale-95 cursor-pointer"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
@@ -283,7 +283,7 @@ export default async function CheckWorkUserPage({
   if (!profile || genericError) {
     return (
       <main className="min-h-screen bg-panel flex flex-col items-center justify-center text-center px-4 py-12">
-        <div className="bg-white border border-line rounded-2xl p-8 max-w-md">
+        <div className="bg-ground border border-line rounded-2xl p-8 max-w-md">
           <div className="text-4xl mb-4">🔍</div>
           <h1 className="text-xl font-[650] text-ink mb-3">GitHub User Not Found</h1>
           <p className="text-ink-soft text-sm leading-relaxed mb-6">
@@ -291,7 +291,7 @@ export default async function CheckWorkUserPage({
           </p>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl transition-all text-xs font-[550]"
+            className="inline-flex items-center gap-2 bg-brand-solid hover:bg-brand-solid-hover text-white px-5 py-2.5 rounded-xl transition-all text-xs font-[550]"
           >
             Back to Home
           </Link>
@@ -339,7 +339,7 @@ export default async function CheckWorkUserPage({
           </span>
           <Link
             href="/join"
-            className="bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-1.5 rounded-xl transition-all text-xs font-[550] "
+            className="bg-brand-solid hover:bg-brand-solid-hover text-white px-3.5 py-1.5 rounded-xl transition-all text-xs font-[550] "
           >
             Request to Join Tracker
           </Link>
@@ -356,7 +356,7 @@ export default async function CheckWorkUserPage({
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="relative flex-shrink-0">
               <Image src={profile.avatar_url} alt={profile.login} width={112} height={112} unoptimized
-                className="w-28 h-28 rounded-full ring-4 ring-violet-200 shadow-2xl shadow-purple-900/30 object-cover" />
+                className="w-28 h-28 rounded-full ring-4 ring-violet-200 shadow-pop object-cover" />
             </div>
 
             <div className="flex-1 text-center sm:text-left">
@@ -413,7 +413,7 @@ export default async function CheckWorkUserPage({
                   className={`rounded-xl p-4 text-center transition-all border ${
                     active
                       ? `bg-panel border-line-strong ring-1 ${ring}`
-                      : 'bg-white border-line hover:bg-panel hover:border-line-heavy'
+                      : 'bg-ground border-line hover:bg-panel hover:border-line-heavy'
                   }`}
                 >
                   <div className={`text-2xl font-[650] tabular-nums ${color}`}>{value}</div>

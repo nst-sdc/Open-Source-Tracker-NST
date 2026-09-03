@@ -289,7 +289,7 @@ export function IssuesClient({ issues }: { issues: Issue[] }) {
           aria-pressed={!activeTag}
           className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
             !activeTag
-              ? 'border-ink bg-ink text-white'
+              ? 'border-ink bg-ink text-ground'
               : 'border-line-strong bg-ground text-ink-soft hover:border-line-heavy hover:text-ink'
           }`}
         >
@@ -303,7 +303,7 @@ export function IssuesClient({ issues }: { issues: Issue[] }) {
             aria-pressed={activeTag === tag}
             className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
               activeTag === tag
-                ? 'border-ink bg-ink text-white'
+                ? 'border-ink bg-ink text-ground'
                 : 'border-line-strong bg-ground text-ink-soft hover:border-line-heavy hover:text-ink'
             }`}
           >
@@ -455,7 +455,7 @@ export function IssuesClient({ issues }: { issues: Issue[] }) {
             href="https://github.com/nst-sdc/Open-Source-Tracker-NST/issues/new"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-brand-btn hover:bg-brand-700 transition-colors"
+            className="rounded-lg bg-brand-solid px-3.5 py-2 text-sm font-medium text-white shadow-brand-btn hover:bg-brand-solid-hover transition-colors"
           >
             Open an issue
           </a>

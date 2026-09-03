@@ -37,7 +37,7 @@ const PROGRAMS = [
     id: 'lfx',
     name: 'LFX Mentorship',
     short: 'LFX',
-    color: 'text-violet-400',
+    color: 'text-violet-600',
     accent: 'border-violet-500/30',
     bg: 'bg-violet-500/5',
     dot: 'bg-violet-500',
@@ -62,11 +62,11 @@ const PROGRAMS = [
     id: 'outreachy',
     name: 'Outreachy',
     short: 'Outreachy',
-    color: 'text-green-400',
-    accent: 'border-green-500/30',
-    bg: 'bg-green-500/5',
-    dot: 'bg-green-400',
-    dotBorder: 'border-green-500/40',
+    color: 'text-success-600',
+    accent: 'border-success-100',
+    bg: 'bg-success-0',
+    dot: 'bg-success-400',
+    dotBorder: 'border-success-200',
     stipend: '$7,000',
     duration: '3 months',
     eligibility: 'People underrepresented in tech. Specific eligibility criteria applies — check the site.',
@@ -287,11 +287,11 @@ const PROGRAMS = [
     id: 'cncf',
     name: 'CNCF Mentoring Programs',
     short: 'CNCF',
-    color: 'text-sky-400',
-    accent: 'border-sky-500/30',
-    bg: 'bg-sky-500/5',
-    dot: 'bg-sky-400',
-    dotBorder: 'border-sky-500/40',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-0',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-200',
     stipend: '$3,000 – $6,600',
     duration: '12 weeks',
     eligibility: 'Students and beginners globally',
@@ -526,7 +526,7 @@ export default function ProgramsPage() {
               </div>
 
               {/* Details */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-white">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-ground">
                 {[
                   { label: 'Stipend', value: p.stipend },
                   { label: 'Duration', value: p.duration },
@@ -559,7 +559,7 @@ export default function ProgramsPage() {
               </div>
 
               {/* NST track record */}
-              <div className={`px-6 py-4 border-t border-line bg-white`}>
+              <div className={`px-6 py-4 border-t border-line bg-ground`}>
                 <span className={`text-xs font-[550] ${p.color}`}>NST track record — </span>
                 <span className="text-ink-soft text-xs">{p.nst}</span>
               </div>
@@ -568,7 +568,7 @@ export default function ProgramsPage() {
         ))}
 
         {/* CTA */}
-        <section className="rounded-2xl border border-line bg-white p-8 text-center">
+        <section className="rounded-2xl border border-line bg-ground p-8 text-center">
           <h2 className="text-xl font-[650] text-ink mb-2">Ready to start your journey?</h2>
           <p className="text-ink-soft text-sm mb-6">
             See who is contributing and learn how to get started.

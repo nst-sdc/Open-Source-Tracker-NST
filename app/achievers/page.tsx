@@ -52,7 +52,7 @@ function AchieverCard({
   const bio = entry.headline ?? profile?.bio;
 
   const inner = (
-    <div className="group relative bg-white border border-line rounded-2xl p-6 hover:bg-panel hover:border-gold-100 transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/10 hover:-translate-y-1 h-full">
+    <div className="group relative bg-ground border border-line rounded-2xl p-6 hover:bg-panel hover:border-gold-100 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 h-full">
       {index < 3 && (
         <div className="absolute top-4 right-4 text-lg">
           {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
@@ -215,7 +215,7 @@ export default async function AchieversPage() {
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="bg-white border border-line rounded-2xl px-8 py-4"
+                  className="bg-ground border border-line rounded-2xl px-8 py-4"
                 >
                   <div className="text-3xl font-[650] text-ink tabular-nums">{stat.value}</div>
                   <div className="text-ink-soft text-sm mt-0.5">{stat.label}</div>
@@ -265,7 +265,7 @@ export default async function AchieversPage() {
             href="https://github.com/bitflicker64/Termstory"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-white border border-line hover:bg-panel hover:border-violet-100 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+            className="group flex flex-col justify-between p-6 rounded-2xl bg-ground border border-line hover:bg-panel hover:border-violet-100 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
           >
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -304,7 +304,7 @@ export default async function AchieversPage() {
             href="https://github.com/Dreamstick9/filedrop"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-white border border-line hover:bg-panel hover:border-brand-100 hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+            className="group flex flex-col justify-between p-6 rounded-2xl bg-ground border border-line hover:bg-panel hover:border-brand-100 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
           >
             <div>
               <div className="flex items-center gap-3 mb-4">

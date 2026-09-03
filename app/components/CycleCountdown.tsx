@@ -233,7 +233,7 @@ export function NextCycleHighlight({
   return (
     <a
       href={`#${featured.id}`}
-      className="inline-flex items-center gap-3 rounded-full border border-line bg-white px-4 py-2.5 shadow-card card-hover"
+      className="inline-flex items-center gap-3 rounded-full border border-line bg-ground px-4 py-2.5 shadow-card card-hover"
     >
       <span
         className={`w-2 h-2 rounded-full shrink-0 ${open ? 'bg-success-500 animate-pulse' : 'bg-brand-500'}`}

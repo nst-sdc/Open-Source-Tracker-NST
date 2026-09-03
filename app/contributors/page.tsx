@@ -68,12 +68,12 @@ function PodiumCard({
   const isSecond = rank === 2;
 
   const rankBadge = isFirst ? (
-    <span className="inline-flex items-center gap-1.5 bg-gold-400 text-ink rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
+    <span className="inline-flex items-center gap-1.5 bg-gold-400 text-ink-on-accent rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
       <CrownIcon className="w-3.5 h-3.5" /> 1st Place
     </span>
   ) : isSecond ? (
-    <span className="inline-flex items-center gap-1.5 bg-slate-200 text-slate-800 border border-slate-300 rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
-      <CrownIcon className="w-3.5 h-3.5 text-slate-500" /> 2nd Place
+    <span className="inline-flex items-center gap-1.5 bg-panel-2 text-ink-strong border border-line-strong rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
+      <CrownIcon className="w-3.5 h-3.5 text-ink-soft" /> 2nd Place
     </span>
   ) : (
     <span className="inline-flex items-center gap-1.5 bg-warning-0 text-warning-800 border border-warning-200 rounded-full px-3 py-1 text-[12px] font-[650] tabular-nums shadow-sm">
@@ -81,16 +81,21 @@ function PodiumCard({
     </span>
   );
 
+  // Tailwind v4 compiles -translate-y-* to the standalone `translate` property,
+  // not `transform` — the card's transition list must name `translate` or the
+  // lift snaps instantly instead of easing.
   const cardStyle = isFirst
-    ? 'bg-gradient-to-b from-gold-0/70 via-white to-white border-2 border-gold-400/70 shadow-pop md:-translate-y-2 relative'
+    // Hover offsets are per-card because the winner already rests 8px higher on
+    // md+; a shared -translate-y-1 would move it *down* on hover.
+    ? 'bg-gradient-to-b from-gold-0/70 via-ground to-ground border-2 border-gold-400/70 shadow-pop md:-translate-y-2 relative hover:-translate-y-1 md:hover:-translate-y-3'
     : isSecond
-    ? 'bg-gradient-to-b from-slate-100/90 via-white to-white border border-slate-300 hover:border-slate-400 shadow-card'
-    : 'bg-gradient-to-b from-warning-0/80 via-white to-white border border-warning-200 hover:border-warning-400 shadow-card';
+    ? 'bg-gradient-to-b from-panel-2/90 via-ground to-ground border border-line-strong hover:border-line-heavy shadow-card hover:-translate-y-1'
+    : 'bg-gradient-to-b from-warning-0/80 via-ground to-ground border border-warning-200 hover:border-warning-400 shadow-card hover:-translate-y-1';
 
   const avatarRing = isFirst
     ? 'ring-4 ring-gold-100 border-2 border-gold-500'
     : isSecond
-    ? 'ring-4 ring-slate-100 border-2 border-slate-400'
+    ? 'ring-4 ring-line border-2 border-line-heavy'
     : 'ring-4 ring-warning-0 border-2 border-warning-400';
 
   const avatarSize = isFirst ? 80 : 64;
@@ -98,7 +103,7 @@ function PodiumCard({
   return (
     <Link
       href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
-      className={`group flex flex-col items-center text-center rounded-2xl p-5 md:p-6 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 ${cardStyle}`}
+      className={`group flex flex-col items-center text-center rounded-2xl p-5 md:p-6 transition-[translate,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none hover:shadow-card-hover ${cardStyle}`}
     >
       <div className="mb-4">{rankBadge}</div>
 
@@ -112,7 +117,7 @@ function PodiumCard({
           className={`rounded-full object-cover ${avatarRing} ${isFirst ? 'w-20 h-20' : 'w-16 h-16'}`}
         />
         {isFirst && (
-          <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gold-400 text-ink rounded-full flex items-center justify-center text-xs shadow-sm" aria-hidden="true">
+          <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gold-400 text-ink-on-accent rounded-full flex items-center justify-center text-xs shadow-sm" aria-hidden="true">
             👑
           </span>
         )}
@@ -171,7 +176,7 @@ export default async function ContributorsPage({
   if (students.length === 0) {
     return (
       <main className="min-h-screen bg-panel flex items-center justify-center px-4">
-        <div className="text-center max-w-md bg-white border border-line rounded-2xl shadow-card p-8">
+        <div className="text-center max-w-md bg-ground border border-line rounded-2xl shadow-card p-8">
           <span className="w-12 h-12 rounded-xl bg-brand-0 text-brand-600 flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
@@ -282,7 +287,7 @@ export default async function ContributorsPage({
   return (
     <main className="min-h-screen bg-panel pb-20">
       {/* Contest hero */}
-      <div className="bg-white border-b border-line">
+      <div className="bg-ground border-b border-line">
         <div className="max-w-6xl mx-auto px-4 md:px-6 pt-8 pb-12">
           {/* Top metadata strip */}
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -294,7 +299,7 @@ export default async function ContributorsPage({
               )}
             </span>
             <Link
-              href="/get-started"
+              href="/documentation#ranking"
               className="flex items-center gap-1.5 h-9 px-3.5 rounded-[9px] bg-panel border border-line-strong hover:bg-panel-2 text-ink text-[13px] font-[550] transition-colors"
             >
               <span>How ranking works</span>
@@ -354,7 +359,7 @@ export default async function ContributorsPage({
 
       {/* CTA Banner */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-        <div className="bg-gradient-to-r from-brand-0/70 via-white to-violet-0/60 border border-brand-100 rounded-2xl shadow-card p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-brand-0/70 via-ground to-violet-0/60 border border-brand-100 rounded-2xl shadow-card p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex-1 min-w-[260px]">
             <h2 className="text-ink text-[16px] md:text-[17px] font-[650]">Get PRs merged to climb the leaderboard!</h2>
             <p className="text-ink-soft text-[13px] mt-1">
@@ -364,13 +369,13 @@ export default async function ContributorsPage({
           <div className="flex items-center gap-3">
             <Link
               href="/issues"
-              className="flex items-center h-[38px] px-4 rounded-[9px] bg-brand-500 hover:bg-brand-600 text-white text-[13.5px] font-[550] shadow-brand-btn transition-colors"
+              className="flex items-center h-[38px] px-4 rounded-[9px] bg-brand-solid hover:bg-brand-solid-hover text-white text-[13.5px] font-[550] shadow-brand-btn transition-colors"
             >
               Find an issue
             </Link>
             <Link
               href="/check-work"
-              className="flex items-center h-[38px] px-4 rounded-[9px] bg-white border border-line-strong hover:bg-panel text-ink text-[13.5px] font-[550] transition-colors"
+              className="flex items-center h-[38px] px-4 rounded-[9px] bg-ground border border-line-strong hover:bg-panel text-ink text-[13.5px] font-[550] transition-colors"
             >
               Check my work
             </Link>
@@ -380,7 +385,7 @@ export default async function ContributorsPage({
 
       {/* Summary strip */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-        <div className="bg-white border border-line rounded-2xl shadow-card grid grid-cols-2 md:grid-cols-4">
+        <div className="bg-ground border border-line rounded-2xl shadow-card grid grid-cols-2 md:grid-cols-4">
           {[
             { label: 'Students', value: summaries.length, num: 'text-ink' },
             { label: 'Contributors', value: realContributors.length, num: 'text-brand-600' },
@@ -416,7 +421,7 @@ export default async function ContributorsPage({
 function FilterBarSkeleton() {
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-      <div className="bg-white border border-line rounded-2xl shadow-card p-4 flex flex-col gap-3">
+      <div className="bg-ground border border-line rounded-2xl shadow-card p-4 flex flex-col gap-3">
         <div className="flex flex-wrap gap-3">
           <div className="h-10 bg-panel rounded-[11px] flex-1 min-w-[200px] animate-pulse" />
           <div className="h-10 bg-panel rounded-[11px] w-32 animate-pulse" />

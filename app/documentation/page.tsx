@@ -45,7 +45,7 @@ function Callout({ tone = 'info', children }: { tone?: 'info' | 'warn'; children
 export default function DocumentationPage() {
   return (
     <main className="min-h-screen bg-panel">
-      <div className="bg-white border-b border-line">
+      <div className="bg-ground border-b border-line">
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-10">
           <span className="text-[11px] font-[650] text-brand-600 bg-brand-0 rounded-full px-3 py-1 tracking-[0.06em] uppercase">
             Internal documentation
@@ -66,7 +66,7 @@ export default function DocumentationPage() {
             <p className="text-ink-faint text-[10.5px] font-[650] uppercase tracking-[0.08em] px-3 mb-2">On this page</p>
             {SECTIONS.map((s) => (
               <a key={s.id} href={`#${s.id}`}
-                className="block px-3 py-1.5 rounded-lg text-[13.5px] text-ink-soft hover:text-ink hover:bg-white transition-colors">
+                className="block px-3 py-1.5 rounded-lg text-[13.5px] text-ink-soft hover:text-ink hover:bg-ground transition-colors">
                 {s.label}
               </a>
             ))}
@@ -148,7 +148,7 @@ export default function DocumentationPage() {
               scored higher than another, and what kind of project is worth your time.
             </P>
             <P>Each repo gets a quality multiplier <strong className="text-ink">M</strong> built in three stages:</P>
-            <div className="bg-white border border-line rounded-2xl shadow-card p-5 mt-4 font-mono text-[13.5px] text-ink-mid leading-relaxed space-y-2">
+            <div className="bg-ground border border-line rounded-2xl shadow-card p-5 mt-4 font-mono text-[13.5px] text-ink-mid leading-relaxed space-y-2">
               <div>C&nbsp;= weighted log-average of 9 signals &nbsp;→ [0..1]</div>
               <div>G&nbsp;= penalty factors, multiplied &nbsp;&nbsp;&nbsp;&nbsp;→ (0..1]</div>
               <div>M&nbsp;= 0.15 + 2.85·(C·G) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ [0.15..3]</div>
@@ -165,7 +165,7 @@ export default function DocumentationPage() {
               into your own repo.
             </P>
             <P>Then each merged PR is scored, and repeat PRs into the same repo decay:</P>
-            <div className="bg-white border border-line rounded-2xl shadow-card p-5 mt-4 font-mono text-[13.5px] text-ink-mid leading-relaxed">
+            <div className="bg-ground border border-line rounded-2xl shadow-card p-5 mt-4 font-mono text-[13.5px] text-ink-mid leading-relaxed">
               PRScore = 10 · M<sup>0.75</sup> / (1 + 0.3·(k−1))
             </div>
             <P>

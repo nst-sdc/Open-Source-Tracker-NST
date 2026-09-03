@@ -148,7 +148,7 @@ function RepoHeader({ repo, count }: { repo: string; count: number }) {
 
 function Empty({ text }: { text: string }) {
   return (
-    <div className="text-center py-14 bg-white border border-line rounded-2xl shadow-card">
+    <div className="text-center py-14 bg-ground border border-line rounded-2xl shadow-card">
       <p className="text-ink-soft text-sm">{text}</p>
     </div>
   );
@@ -185,7 +185,7 @@ export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWe
           <div className="space-y-2">
             {repoPRs.map((pr) => (
               <a key={pr.id} href={pr.pull_request?.html_url ?? pr.html_url} target="_blank" rel="noopener noreferrer"
-                className="group flex items-start gap-4 bg-white border border-line rounded-xl shadow-card p-4 card-hover">
+                className="group flex items-start gap-4 bg-ground border border-line rounded-xl shadow-card p-4 card-hover">
                 <div className="flex-shrink-0 mt-0.5 flex flex-col items-center gap-1.5">
                   <PRBadge pr={pr} />
                   {pr.pull_request?.merged_at && repoFromUrl(pr.repository_url) in repoWeights && (
@@ -213,7 +213,7 @@ export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWe
         <div className="flex justify-center pt-2">
           <button
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="h-10 px-5 rounded-[11px] text-[13.5px] font-[550] border border-line-strong bg-white text-ink hover:bg-panel transition-colors"
+            className="h-10 px-5 rounded-[11px] text-[13.5px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
           >
             Load more ({prs.length - visibleCount} remaining)
           </button>
@@ -241,7 +241,7 @@ export function IssuesSection({ issues }: { issues: StudentIssue[] }) {
           <div className="space-y-2">
             {repoIssues.map((issue) => (
               <a key={issue.id} href={issue.html_url} target="_blank" rel="noopener noreferrer"
-                className="group flex items-start gap-4 bg-white border border-line rounded-xl shadow-card p-4 card-hover">
+                className="group flex items-start gap-4 bg-ground border border-line rounded-xl shadow-card p-4 card-hover">
                 <div className="flex-shrink-0 mt-0.5"><IssueBadge issue={issue} /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
@@ -271,7 +271,7 @@ export function IssuesSection({ issues }: { issues: StudentIssue[] }) {
         <div className="flex justify-center pt-2">
           <button
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="h-10 px-5 rounded-[11px] text-[13.5px] font-[550] border border-line-strong bg-white text-ink hover:bg-panel transition-colors"
+            className="h-10 px-5 rounded-[11px] text-[13.5px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
           >
             Load more ({issues.length - visibleCount} remaining)
           </button>

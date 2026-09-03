@@ -168,12 +168,12 @@ export function FilterBar() {
     `appearance-none cursor-pointer h-10 pl-4 pr-9 rounded-[11px] text-[13.5px] font-[500] transition-colors border focus:outline-none focus-visible:outline-2 ${
       active
         ? 'bg-brand-0 border-brand-100 text-brand-600 font-[550]'
-        : 'bg-white border-line-strong text-ink-mid hover:border-line-heavy'
+        : 'bg-ground border-line-strong text-ink-mid hover:border-line-heavy'
     }`;
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-      <div className="bg-white border border-line rounded-2xl shadow-card p-4 flex flex-col gap-3">
+      <div className="bg-ground border border-line rounded-2xl shadow-card p-4 flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap">
           {/* Search input */}
           <div className="relative flex-1 min-w-[200px]">
@@ -185,7 +185,7 @@ export function FilterBar() {
               placeholder="Search by name or GitHub username…"
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full h-10 bg-white border border-line-strong text-ink placeholder:text-ink-soft text-[13.5px] rounded-[11px] pl-10 pr-9 focus:outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-0 transition-colors"
+              className="w-full h-10 bg-ground border border-line-strong text-ink placeholder:text-ink-soft text-[13.5px] rounded-[11px] pl-10 pr-9 focus:outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-0 transition-colors"
             />
             {search && (
               <button
@@ -247,8 +247,8 @@ export function FilterBar() {
                 disabled={isPending}
                 className={`relative h-9 px-4 rounded-full text-[13px] transition-colors border ${
                   active
-                    ? 'bg-brand-500 border-brand-500 text-white font-[550]'
-                    : 'bg-white border-line-strong text-ink-mid font-[450] hover:border-line-heavy hover:text-ink'
+                    ? 'bg-brand-solid border-brand-solid text-white font-[550]'
+                    : 'bg-ground border-line-strong text-ink-mid font-[450] hover:border-line-heavy hover:text-ink'
                 } ${isPending && !isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <span className={isLoading ? 'opacity-0' : 'opacity-100 transition-opacity'}>{label}</span>
@@ -267,8 +267,8 @@ export function FilterBar() {
             disabled={isPending}
             className={`relative h-9 px-4 rounded-full text-[13px] transition-colors border ${
               isCustomActive || showCustom
-                ? 'bg-brand-500 border-brand-500 text-white font-[550]'
-                : 'bg-white border-line-strong text-ink-mid font-[450] hover:border-line-heavy hover:text-ink'
+                ? 'bg-brand-solid border-brand-solid text-white font-[550]'
+                : 'bg-ground border-line-strong text-ink-mid font-[450] hover:border-line-heavy hover:text-ink'
             } ${isPending && loadingTarget !== 'custom' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className={isPending && loadingTarget === 'custom' ? 'opacity-0' : 'opacity-100 transition-opacity'}>Custom</span>
@@ -288,7 +288,7 @@ export function FilterBar() {
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               disabled={isPending}
-              className="h-10 bg-white border border-line-strong text-ink text-[13.5px] rounded-[11px] px-3 focus:outline-none focus:border-brand-300 disabled:opacity-50"
+              className="h-10 bg-ground border border-line-strong text-ink text-[13.5px] rounded-[11px] px-3 focus:outline-none focus:border-brand-300 disabled:opacity-50"
             />
             <span className="text-ink-soft text-sm">→</span>
             <input
@@ -297,12 +297,12 @@ export function FilterBar() {
               onChange={(e) => setTo(e.target.value)}
               min={from}
               disabled={isPending}
-              className="h-10 bg-white border border-line-strong text-ink text-[13.5px] rounded-[11px] px-3 focus:outline-none focus:border-brand-300 disabled:opacity-50"
+              className="h-10 bg-ground border border-line-strong text-ink text-[13.5px] rounded-[11px] px-3 focus:outline-none focus:border-brand-300 disabled:opacity-50"
             />
             <button
               onClick={applyCustom}
               disabled={!from || isPending}
-              className="relative h-10 px-5 bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[13.5px] font-[550] rounded-[11px] transition-colors"
+              className="relative h-10 px-5 bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-[13.5px] font-[550] rounded-[11px] transition-colors"
             >
               <span className={isPending && loadingTarget === 'custom-apply' ? 'opacity-0' : 'opacity-100 transition-opacity'}>Apply</span>
               {isPending && loadingTarget === 'custom-apply' && (
