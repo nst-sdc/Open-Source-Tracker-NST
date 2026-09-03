@@ -40,12 +40,10 @@ function AchieverCard({
   entry,
   profile,
   student,
-  index,
 }: {
   entry: PersonEntry;
   profile: GitHubUser | null;
   student?: Student;
-  index: number;
 }) {
   const displayName = profile?.name ?? entry.name ?? entry.github;
   const handle = profile?.login ?? entry.github;
@@ -53,17 +51,6 @@ function AchieverCard({
 
   const inner = (
     <div className="group relative bg-ground border border-line rounded-2xl p-6 hover:bg-panel hover:border-gold-100 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 h-full">
-      {index < 3 && (
-        <div
-          className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-[700] tabular-nums ${
-            index === 0 ? 'bg-gold-0 text-gold-600' : index === 1 ? 'bg-panel-2 text-ink-mid' : 'bg-warning-0 text-warning-600'
-          }`}
-          aria-hidden="true"
-        >
-          {index + 1}
-        </div>
-      )}
-
       <div className="flex items-start gap-4 mb-4">
         {profile ? (
           <Image
@@ -246,8 +233,8 @@ export default async function AchieversPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {achievers.map(({ entry, profile, student }, index) => (
-              <AchieverCard key={entry.github} entry={entry} profile={profile} student={student} index={index} />
+            {achievers.map(({ entry, profile, student }) => (
+              <AchieverCard key={entry.github} entry={entry} profile={profile} student={student} />
             ))}
           </div>
         )}
