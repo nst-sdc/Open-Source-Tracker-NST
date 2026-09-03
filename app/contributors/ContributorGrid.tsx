@@ -6,6 +6,13 @@ import Image from 'next/image';
 import { StudentSummary } from '@/lib/github';
 import type { RankedSummary } from './page';
 
+// Display-only rescale: avgScore is a repo multiplier average in [0.15, 3.0]
+// (see lib/repo-score.ts MULTIPLIER_MIN/MAX) — accurate, but an odd range to
+// read at a glance. This stretches it onto a friendlier 0.5-10 for display
+// only; the underlying value, ranking math, and everything else that reads
+// avgScore is untouched. Do not use this for anything but rendering.
+const IMPACT_DISPLAY_FACTOR = 10 / 3;
+
 interface GridProps {
   /** Already carries each contributor's position on the full leaderboard for
    *  this period, so filtering the list never renumbers anyone. */
@@ -111,7 +118,7 @@ function ContributorRow({
             title="Average impact per merged PR — how significant the projects they contribute to tend to be, not how many PRs they've done."
             className="text-[9.5px] text-ink-soft tabular-nums"
           >
-            impact {summary.avgScore.toFixed(1)}
+            impact {(summary.avgScore * IMPACT_DISPLAY_FACTOR).toFixed(1)}
           </span>
         )}
       </span>
