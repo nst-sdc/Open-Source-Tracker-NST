@@ -1,5 +1,7 @@
 import { checkAdminAuth } from '@/lib/admin-auth';
 import { getAchieversKV, addAchiever, updateAchiever, deleteAchiever } from '@/lib/kv-achievers';
+import { getStudentProfile } from '@/lib/github';
+import { getStudentsKV } from '@/lib/kv-students';
 import { revalidatePath } from 'next/cache';
 
 /** GET /api/admin/achievers — list all achievers */
@@ -19,6 +21,34 @@ export async function POST(request: Request) {
   };
   if (!github?.trim()) return Response.json({ error: 'Missing github username' }, { status: 400 });
   if (!programs?.length) return Response.json({ error: 'At least one program is required' }, { status: 400 });
+
+  const username = github.trim();
+
+  // 1. The account has to actually exist. Same check the public join flow does
+  //    (app/api/join-requests) — without it a typo silently becomes a Hall of
+  //    Fame entry pointing at nobody.
+  const profile = await getStudentProfile(username);
+  if (!profile) {
+    return Response.json(
+      { error: `GitHub username @${username} not found. Make sure it is spelled correctly.` },
+      { status: 404 }
+    );
+  }
+
+  // 2. Achievers must already be tracked contributors. Enforcing it here (rather
+  //    than quietly adding them to the roster) keeps one source of truth for who
+  //    is tracked, and guarantees an achiever always has a leaderboard row for
+  //    their label to appear on — previously an achiever outside the roster was
+  //    simply invisible on /contributors, with nothing to explain why.
+  const students = await getStudentsKV();
+  const isTracked = students.some((s) => s.github.toLowerCase() === username.toLowerCase());
+  if (!isTracked) {
+    return Response.json(
+      { error: `@${username} is not in the tracker yet. Add them under Students first, then add them here.` },
+      { status: 409 }
+    );
+  }
+
   const result = await addAchiever({
     github: github.trim(),
     ...(name?.trim() ? { name: name.trim() } : {}),
@@ -29,7 +59,7 @@ export async function POST(request: Request) {
   if (!result.ok) return Response.json({ error: result.message }, { status: 409 });
   revalidatePath('/achievers');
   revalidatePath('/');
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, merged: result.merged === true });
 }
 
 /** PATCH /api/admin/achievers — update an achiever { github, ...updates } */

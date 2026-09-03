@@ -7,7 +7,7 @@
 import { kvGet, kvSet } from './kv';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import type { PersonEntry } from './data';
+import type { PersonEntry, Program } from './data';
 
 const KV_KEY = 'achievers_list';
 
@@ -29,13 +29,55 @@ export async function getAchieversKV(): Promise<PersonEntry[]> {
   return seedFromFile();
 }
 
-export async function addAchiever(entry: PersonEntry): Promise<{ ok: boolean; message?: string }> {
+/** Same program twice is a duplicate; the same program in a different year (or
+ *  for a different org) is a genuinely separate achievement and both are kept. */
+function isSameProgram(a: Program, b: Program): boolean {
+  return (
+    a.name.toLowerCase() === b.name.toLowerCase() &&
+    (a.year ?? null) === (b.year ?? null) &&
+    (a.org ?? '').toLowerCase() === (b.org ?? '').toLowerCase()
+  );
+}
+
+/**
+ * Adds an achiever, or merges new programs into one who already exists.
+ *
+ * Merging rather than rejecting is deliberate: people crack more than one
+ * program (two GSoCs and an LFX, say), and the previous behaviour — a flat
+ * "already in achievers" 409 — meant the only way to record the second one was
+ * to find them in the list and use the edit panel, which read as the feature
+ * being broken. Adding the same program twice is still a no-op.
+ */
+export async function addAchiever(entry: PersonEntry): Promise<{ ok: boolean; message?: string; merged?: boolean }> {
   const list = await getAchieversKV();
-  if (list.some((a) => a.github.toLowerCase() === entry.github.toLowerCase()))
-    return { ok: false, message: `${entry.github} is already in achievers` };
-  list.push(entry);
+  const idx = list.findIndex((a) => a.github.toLowerCase() === entry.github.toLowerCase());
+
+  if (idx === -1) {
+    list.push(entry);
+    await kvSet(KV_KEY, list);
+    return { ok: true, merged: false };
+  }
+
+  const existing = list[idx];
+  const added = entry.programs.filter((p) => !existing.programs.some((e) => isSameProgram(e, p)));
+  if (added.length === 0) {
+    return {
+      ok: false,
+      message: `${entry.github} already has ${entry.programs.length === 1 ? 'that program' : 'those programs'} recorded.`,
+    };
+  }
+
+  list[idx] = {
+    ...existing,
+    // Only fill in details that were missing — never overwrite curated data
+    // with blanks from a quick add.
+    name: existing.name ?? entry.name,
+    headline: existing.headline ?? entry.headline,
+    bookingUrl: existing.bookingUrl ?? entry.bookingUrl,
+    programs: [...existing.programs, ...added],
+  };
   await kvSet(KV_KEY, list);
-  return { ok: true };
+  return { ok: true, merged: true };
 }
 
 export async function updateAchiever(github: string, updates: Partial<PersonEntry>): Promise<{ ok: boolean }> {

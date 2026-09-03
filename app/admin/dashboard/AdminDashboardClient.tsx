@@ -1491,6 +1491,28 @@ function AchieversTab() {
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
   const [adding, setAdding] = useState(false);
+  // Programs staged for the person being added. Someone can crack more than one
+  // (two GSoCs and an LFX, say), so the add form collects a list the same way
+  // the edit panel below does, instead of forcing one-then-edit.
+  const [pendingPrograms, setPendingPrograms] = useState<AchieverEntry['programs']>([]);
+
+  function stageProgram() {
+    if (!form.programName) return;
+    const p = {
+      name: form.programName,
+      ...(form.year ? { year: parseInt(form.year) } : {}),
+      ...(form.org.trim() ? { org: form.org.trim() } : {}),
+      ...(form.url.trim() ? { url: form.url.trim() } : {}),
+    };
+    if (pendingPrograms.some((e) =>
+      e.name.toLowerCase() === p.name.toLowerCase() &&
+      (e.year ?? null) === (p.year ?? null) &&
+      (e.org ?? '').toLowerCase() === (p.org ?? '').toLowerCase()
+    )) { setError('That program is already staged.'); return; }
+    setPendingPrograms((prev) => [...prev, p]);
+    setError('');
+    setForm((f) => ({ ...f, org: '', url: '' }));
+  }
 
   async function load() {
     setLoading(true);
@@ -1502,22 +1524,38 @@ function AchieversTab() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.github.trim() || !form.programName) return;
+    if (!form.github.trim()) return;
+    // Anything typed into the program fields but not yet staged still counts —
+    // forgetting to press "Add program" shouldn't silently drop it.
+    const staged = [...pendingPrograms];
+    if (staged.length === 0) {
+      if (!form.programName) return;
+      staged.push({
+        name: form.programName,
+        ...(form.year ? { year: parseInt(form.year) } : {}),
+        ...(form.org.trim() ? { org: form.org.trim() } : {}),
+        ...(form.url.trim() ? { url: form.url.trim() } : {}),
+      });
+    }
     setAdding(true); setError(''); setSuccess('');
     const res = await fetch('/api/admin/achievers', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         github: form.github.trim(),
         ...(form.name.trim() ? { name: form.name.trim() } : {}),
-        programs: [{
-          name: form.programName,
-          ...(form.year ? { year: parseInt(form.year) } : {}),
-          ...(form.org.trim() ? { org: form.org.trim() } : {}),
-          ...(form.url.trim() ? { url: form.url.trim() } : {}),
-        }],
+        programs: staged,
       }),
     });
-    if (res.ok) { setSuccess(`@${form.github.trim()} added to Hall of Fame!`); setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' }); await load(); }
+    if (res.ok) {
+      const d = await res.json().catch(() => ({}));
+      const count = staged.length === 1 ? 'program' : `${staged.length} programs`;
+      setSuccess(d.merged
+        ? `Added ${count} to @${form.github.trim()}.`
+        : `@${form.github.trim()} added to Hall of Fame!`);
+      setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+      setPendingPrograms([]);
+      await load();
+    }
     else { const d = await res.json(); setError(d.error ?? 'Failed'); }
     setAdding(false);
   }
@@ -1585,7 +1623,7 @@ function AchieversTab() {
     <div>
       <div className="mb-6">
         <h2 className="text-ink font-[550]">Hall of Fame</h2>
-        <p className="text-ink-soft text-sm mt-0.5">Add or remove students from the achievers list. Each student can have multiple programs — add them one at a time.</p>
+        <p className="text-ink-soft text-sm mt-0.5">Add or remove students from the achievers list. Someone with more than one program can get them all at once — fill in a program, press &ldquo;Add another program&rdquo;, repeat, then submit. Adding a program to someone already listed merges it into their existing entry.</p>
       </div>
 
       <form onSubmit={handleAdd} className="bg-white border border-line rounded-2xl p-5 mb-6 space-y-3">
@@ -1606,10 +1644,31 @@ function AchieversTab() {
           <input value={form.url} onChange={(e) => setForm(f => ({ ...f, url: e.target.value }))} placeholder="Project URL (optional)"
             className="bg-white border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         </div>
-        <button type="submit" disabled={adding || !form.github.trim()}
-          className="bg-gold-400 disabled:opacity-40 text-ink font-[550] px-5 py-2 rounded-xl text-sm transition-all">
-          {adding ? 'Adding…' : '+ Add to Hall of Fame'}
-        </button>
+
+        {pendingPrograms.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {pendingPrograms.map((p, idx) => (
+              <span key={`${p.name}-${p.year}-${idx}`}
+                className="inline-flex items-center gap-1.5 bg-panel border border-line rounded-lg px-2 py-1 text-[12px] text-ink-mid">
+                {p.name}{p.year ? ` ${p.year}` : ''}{p.org ? ` · ${p.org}` : ''}
+                <button type="button" aria-label={`Remove ${p.name}`}
+                  onClick={() => setPendingPrograms(prev => prev.filter((_, i) => i !== idx))}
+                  className="text-ink-soft hover:text-error-500 leading-none">×</button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={stageProgram}
+            className="border border-line hover:border-line-strong text-ink-mid font-[550] px-3.5 py-2 rounded-xl text-sm transition-all">
+            + Add another program
+          </button>
+          <button type="submit" disabled={adding || !form.github.trim()}
+            className="bg-gold-400 disabled:opacity-40 text-ink font-[550] px-5 py-2 rounded-xl text-sm transition-all">
+            {adding ? 'Adding…' : '+ Add to Hall of Fame'}
+          </button>
+        </div>
       </form>
 
       {error && <p className="text-error-600 text-sm mb-4 bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</p>}
