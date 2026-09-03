@@ -101,13 +101,13 @@ async function main() {
   for (const { github } of students) {
     const result = await addStudent(github, '2nd year', 'SVYASA');
     if (result.ok) {
-      console.log(`  ✅ Added: ${github}`);
+      console.log(`  Added:   ${github}`);
       added++;
     } else if (result.message?.includes('already')) {
-      console.log(`  ⚪ Skip:  ${github}`);
+      console.log(`  Skip:    ${github}`);
       skipped++;
     } else {
-      console.log(`  ❌ Failed: ${github} — ${result.message}`);
+      console.log(`  Failed:  ${github} — ${result.message}`);
       failed++;
     }
   }

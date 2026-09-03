@@ -54,8 +54,13 @@ function AchieverCard({
   const inner = (
     <div className="group relative bg-ground border border-line rounded-2xl p-6 hover:bg-panel hover:border-gold-100 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 h-full">
       {index < 3 && (
-        <div className="absolute top-4 right-4 text-lg">
-          {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+        <div
+          className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-[700] tabular-nums ${
+            index === 0 ? 'bg-gold-0 text-gold-600' : index === 1 ? 'bg-panel-2 text-ink-mid' : 'bg-warning-0 text-warning-600'
+          }`}
+          aria-hidden="true"
+        >
+          {index + 1}
         </div>
       )}
 
@@ -229,7 +234,6 @@ export default async function AchieversPage() {
       <div className="max-w-6xl mx-auto px-4 pb-24">
         {achievers.length === 0 ? (
           <div className="text-center py-20">
-            <div className="text-6xl mb-4">🏆</div>
             <h2 className="text-2xl font-[650] text-ink mb-2">Coming Soon</h2>
             <p className="text-ink-soft text-sm max-w-xs mx-auto">
               Our Hall of Fame is being built. NST students who crack GSoC, LFX, Outreachy and more will be celebrated here.
@@ -269,7 +273,7 @@ export default async function AchieversPage() {
           >
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.25)]">🐧</span>
+
                 <div>
                   <h3 className="font-[650] text-ink text-base group-hover:text-ink transition-colors">Termstory</h3>
                   <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">Memory Engine</span>
@@ -308,7 +312,7 @@ export default async function AchieversPage() {
           >
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.25)]">📦</span>
+
                 <div>
                   <h3 className="font-[650] text-ink text-base group-hover:text-ink transition-colors">filedrop</h3>
                   <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">File Sharing</span>

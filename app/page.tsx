@@ -289,7 +289,6 @@ export default async function Home() {
           >
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <span className="text-2xl">🐧</span>
                 <div>
                   <h3 className="font-[650] text-ink text-sm">Termstory</h3>
                   <span className="text-[10.5px] text-ink-soft font-[550] tracking-[0.06em] uppercase">Memory engine</span>
@@ -326,7 +325,6 @@ export default async function Home() {
           >
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <span className="text-2xl">📦</span>
                 <div>
                   <h3 className="font-[650] text-ink text-sm">filedrop</h3>
                   <span className="text-[10.5px] text-ink-soft font-[550] tracking-[0.06em] uppercase">File sharing</span>

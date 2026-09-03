@@ -117,8 +117,8 @@ function PodiumCard({
           className={`rounded-full object-cover ${avatarRing} ${isFirst ? 'w-20 h-20' : 'w-16 h-16'}`}
         />
         {isFirst && (
-          <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gold-400 text-ink-on-accent rounded-full flex items-center justify-center text-xs shadow-sm" aria-hidden="true">
-            👑
+          <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gold-400 text-ink-on-accent rounded-full flex items-center justify-center text-[11px] font-[700] tabular-nums shadow-sm" aria-hidden="true">
+            1
           </span>
         )}
       </div>

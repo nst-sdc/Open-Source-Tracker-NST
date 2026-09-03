@@ -80,7 +80,9 @@ function FlagBadge({ flag }: { flag: FlaggedPR }) {
   const meta = REASON_LABELS[flag.reason];
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full border font-[500] whitespace-nowrap ${meta.bg} ${meta.color} ${meta.border}`}>
-      ⚑ {meta.label}
+      {/* flag */}
+      <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.25 1A.75.75 0 0 1 4 1.75v.104a5.7 5.7 0 0 1 1.06-.396c1.34-.34 2.406.055 3.29.383l.045.017c.94.35 1.7.62 2.61.394.31-.077.63-.24.94-.435a5.6 5.6 0 0 0 .42-.29l.01-.008A.75.75 0 0 1 13.5 2.1v6.4a.75.75 0 0 1-.28.585l-.01.007-.02.017a4.6 4.6 0 0 1-.31.22c-.2.132-.49.305-.83.39-1.34.34-2.406-.055-3.29-.383l-.045-.017c-.94-.35-1.7-.62-2.61-.394-.26.065-.53.2-.79.36a5 5 0 0 0-.315.213V14.25a.75.75 0 0 1-1.5 0V1.75A.75.75 0 0 1 3.25 1z" /></svg>
+      {meta.label}
     </span>
   );
 }
@@ -155,7 +157,7 @@ function FlagModal({ pr, onClose, onFlagged }: FlagModalProps) {
           </button>
           <button onClick={submit} disabled={loading} id="confirm-flag-btn"
             className="flex-1 py-2.5 rounded-xl bg-error-500 hover:bg-error-400 text-white font-[550] transition-all text-sm disabled:opacity-50 ">
-            {loading ? 'Flagging…' : '⚑ Flag PR'}
+            {loading ? 'Flagging…' : 'Flag PR'}
           </button>
         </div>
       </div>
@@ -199,7 +201,7 @@ function PRRow({ pr, showAuthor, onApprove, onFlag, onUnflag, onUnapprove }: PRR
           <StatusBadge pr={pr} />
           {pr.flagged && <FlagBadge flag={pr.flagged} />}
           {pr.approved && !pr.flagged && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-success-0 text-success-600 border border-success-100 whitespace-nowrap">✓ Approved</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-success-0 text-success-600 border border-success-100 whitespace-nowrap">Approved</span>
           )}
         </div>
         {pr.flagged?.note && <p className="text-ink-soft text-xs mt-1 italic">Note: {pr.flagged.note}</p>}
@@ -227,13 +229,13 @@ function PRRow({ pr, showAuthor, onApprove, onFlag, onUnflag, onUnapprove }: PRR
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onApprove(pr); }}
                 title="Looks good — approve"
                 className="text-xs px-2.5 py-1.5 rounded-lg bg-success-0 border border-success-100 text-success-600 hover:bg-success-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
-                ✓ Approve
+                Approve
               </button>
             )}
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFlag(pr); }}
               title="Flag this PR"
               className="text-xs px-2.5 py-1.5 rounded-lg bg-error-0 border border-error-100 text-error-600 hover:bg-error-500/20 transition-all opacity-60 sm:opacity-0 group-hover:opacity-100 cursor-pointer">
-              ⚑ Flag
+              Flag
             </button>
           </>
         )}
@@ -395,7 +397,6 @@ function QueueTab({ students, reviewedIds, flaggedMap, onFlag, onApprove, onUnap
       {/* Empty state */}
       {!loaded && !loading && (
         <div className="text-center py-24 text-ink-soft">
-          <div className="text-5xl mb-4">📥</div>
           <p className="text-base font-[500] text-ink-soft mb-1">Queue not loaded yet</p>
           <p className="text-sm">Click &quot;Load Queue&quot; to fetch all contributor PRs from server cache</p>
         </div>
@@ -403,8 +404,7 @@ function QueueTab({ students, reviewedIds, flaggedMap, onFlag, onApprove, onUnap
 
       {loaded && !loading && displayPRs.length === 0 && (
         <div className="text-center py-24 text-ink-soft">
-          <div className="text-5xl mb-4">🎉</div>
-          <p className="text-base font-[500] text-ink-soft mb-1">All caught up!</p>
+          <p className="text-base font-[500] text-ink-soft mb-1">All caught up</p>
           <p className="text-sm">No pending PRs to review</p>
         </div>
       )}
@@ -607,14 +607,14 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
         {/* Tabs */}
         <div className="flex flex-wrap gap-1 mb-8 bg-ground border border-line rounded-xl p-1 w-fit">
           {([
-            { id: 'queue',    label: '📥 Queue',    badge: pendingCount > 0 ? pendingCount : null },
-            { id: 'requests', label: '📨 Requests', badge: pendingReqCount && pendingReqCount > 0 ? pendingReqCount : null },
-            { id: 'browse',   label: '🔍 Browse',   badge: null },
-            { id: 'flagged',  label: '⚑ Flagged',  badge: allFlagged.length > 0 ? allFlagged.length : null },
-            { id: 'students', label: '👥 Students', badge: null },
-            { id: 'events',   label: '📅 Events',   badge: null },
-            { id: 'achievers',label: '🏆 Achievers',badge: null },
-            { id: 'ownRepos', label: '🌱 Own-Repo PRs', badge: null },
+            { id: 'queue',    label: 'Queue',    badge: pendingCount > 0 ? pendingCount : null },
+            { id: 'requests', label: 'Requests', badge: pendingReqCount && pendingReqCount > 0 ? pendingReqCount : null },
+            { id: 'browse',   label: 'Browse',   badge: null },
+            { id: 'flagged',  label: 'Flagged',  badge: allFlagged.length > 0 ? allFlagged.length : null },
+            { id: 'students', label: 'Students', badge: null },
+            { id: 'events',   label: 'Events',   badge: null },
+            { id: 'achievers',label: 'Achievers',badge: null },
+            { id: 'ownRepos', label: 'Own-Repo PRs', badge: null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
               className={`relative px-4 py-2 rounded-lg text-sm font-[500] transition-all ${
@@ -811,7 +811,6 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
             {allFlagged.length === 0 ? (
               <div className="text-center py-20 text-ink-soft">
-                <div className="text-5xl mb-3">🏳️</div>
                 <p>No flagged PRs yet</p>
               </div>
             ) : (
@@ -1031,7 +1030,10 @@ function StudentsTab() {
             placeholder="Search student by GitHub username..."
             className="w-full bg-ground border border-line rounded-xl pl-9 pr-4 py-2 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100"
           />
-          <span className="absolute left-3 top-2.5 text-ink-soft text-sm">🔎</span>
+          <svg className="absolute left-3 top-3 w-4 h-4 text-ink-soft" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+          </svg>
         </div>
 
         <select

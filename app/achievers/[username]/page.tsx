@@ -93,12 +93,12 @@ export default async function AchieverPage({ params }: { params: Promise<{ usern
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-1.5">
                   {student.year && (
                     <span className="text-xs px-2.5 py-1 rounded-full bg-violet-0 border border-violet-100 text-violet-600 font-[500]">
-                      🎓 {student.year}
+                      {student.year}
                     </span>
                   )}
                   {student.campus && (
                     <span className="text-xs px-2.5 py-1 rounded-full bg-brand-0 border border-brand-100 text-brand-600 font-[500]">
-                      📍 {student.campus}
+                      {student.campus}
                     </span>
                   )}
                 </div>
