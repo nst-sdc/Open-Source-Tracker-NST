@@ -5,9 +5,6 @@ import { useState, useEffect } from 'react';
 interface Badge {
   id: string;
   name: string;
-  emoji: string;
-  style?: string;
-  desc?: string;
 }
 
 interface Props {
@@ -87,13 +84,10 @@ export function ShareButton({
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(800, y); ctx.stroke();
       }
 
-      // 3. Header branding + crown
-      ctx.fillStyle = '#feb000';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillText('♛', 45, 55);
+      // 3. Header branding
       ctx.fillStyle = '#cebcfe';
       ctx.font = 'bold 13px sans-serif';
-      ctx.fillText('OPENSOURCE TRACKER · NST', 75, 51);
+      ctx.fillText('OPENSOURCE TRACKER · NST', 45, 51);
 
       // 4. Avatar (async load with CORS)
       let avatarLoaded = false;
@@ -174,7 +168,7 @@ export function ShareButton({
       if (badges.length > 0) {
         ctx.fillStyle = '#cebcfe';
         ctx.font = 'bold 11px sans-serif';
-        ctx.fillText('EARNED BADGES', 500, 115);
+        ctx.fillText('HIGHLIGHTS', 500, 115);
 
         badges.slice(0, 3).forEach((badge, idx) => {
           const bx = 500;
@@ -190,10 +184,9 @@ export function ShareButton({
           }
           ctx.fill();
 
-          // Emoji and Name
           ctx.fillStyle = '#ffffff';
           ctx.font = '13px sans-serif';
-          ctx.fillText(`${badge.emoji}  ${badge.name}`, bx + 15, by + 23);
+          ctx.fillText(badge.name, bx + 15, by + 23);
         });
       }
 
@@ -283,14 +276,13 @@ export function ShareButton({
                   </span>
                 </div>
                 {badges.length > 0 && (
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap justify-end gap-1 max-w-[160px]">
                     {badges.slice(0, 3).map((b) => (
                       <span
                         key={b.id}
-                        title={b.name}
-                        className="w-6 h-6 rounded-full bg-white/12 flex items-center justify-center text-xs"
+                        className="px-2 py-0.5 rounded-full bg-white/12 text-[8.5px] font-[550] text-white whitespace-nowrap"
                       >
-                        {b.emoji}
+                        {b.name}
                       </span>
                     ))}
                   </div>

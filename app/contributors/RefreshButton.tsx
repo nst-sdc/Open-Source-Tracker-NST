@@ -125,10 +125,10 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
   const isDisabled = isLoading || (cooldown && !isLoggedIn);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-2">
       {/* Last updated label */}
       {cachedAt && (
-        <span className="text-ink-soft text-xs flex items-center gap-1.5">
+        <span className="text-ink-soft text-xs flex items-center gap-1.5 whitespace-nowrap">
           <span className="w-1.5 h-1.5 rounded-full bg-line-heavy inline-block" />
           Updated {label}
         </span>
@@ -143,7 +143,7 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
         disabled={isDisabled}
         id="public-refresh-btn"
         title={isLoggedIn ? 'Refresh anytime — you are logged in' : 'Fetch latest data from GitHub'}
-        className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[10px] text-xs font-[550] border transition-colors ${
+        className={`inline-flex shrink-0 items-center gap-1.5 h-9 px-3.5 rounded-[10px] text-xs font-[550] border transition-colors ${
           isLoading
             ? 'bg-brand-0 border-brand-100 text-brand-600 cursor-wait'
             : (cooldown && !isLoggedIn)
@@ -171,14 +171,14 @@ export function RefreshButton({ cachedAt: initialCachedAt, username, period }: P
 
       {/* Logged-in unlock indicator */}
       {isLoggedIn && (
-        <span className="text-brand-600 text-[10.5px] font-[600]">∞ unlimited</span>
+        <span className="text-brand-600 text-[10.5px] font-[600] whitespace-nowrap">Unlimited refreshes</span>
       )}
 
       {/* Anon login nudge — always visible once session is confirmed not-logged-in */}
       {sessionChecked && !isLoggedIn && (
         <a
           href="/login"
-          className="inline-flex items-center gap-1 text-[11px] font-[500] text-ink-soft hover:text-brand-600 transition-colors"
+          className="inline-flex items-center gap-1 text-[11px] font-[500] text-ink-soft hover:text-brand-600 transition-colors whitespace-nowrap"
           title="Log in with GitHub for unlimited refreshes"
         >
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
