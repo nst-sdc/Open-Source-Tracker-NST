@@ -1,9 +1,12 @@
 import { getAllStudentSummaries, buildDateQuery, StudentSummary } from '@/lib/github';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
+import { getAchieversKV } from '@/lib/kv-achievers';
+import { getOwnRepoExceptions } from '@/lib/kv-own-repo-exceptions';
 import { readSummaryCache, writeSummaryCache } from '@/lib/summary-cache';
 import { FilterBar } from './FilterBar';
 import { ContributorGrid } from './ContributorGrid';
+import { OpenSourceBadge } from '@/app/components/OpenSourceBadge';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Suspense } from 'react';
@@ -57,12 +60,14 @@ function PodiumCard({
   period,
   from,
   to,
+  isOpenSource,
 }: {
   summary: StudentSummary;
   rank: 1 | 2 | 3;
   period: string;
   from?: string;
   to?: string;
+  isOpenSource?: boolean;
 }) {
   const isFirst = rank === 1;
   const isSecond = rank === 2;
@@ -121,6 +126,7 @@ function PodiumCard({
       <div className="mt-3.5 w-full min-w-0">
         <h3 className={`font-[650] text-ink truncate group-hover:text-brand-600 transition-colors ${isFirst ? 'text-[16.5px]' : 'text-[15px]'}`}>
           {summary.profile.name ?? summary.profile.login}
+          {isOpenSource && <OpenSourceBadge />}
         </h3>
         <p className="text-[12.5px] text-ink-soft truncate mt-0.5 font-[450]">@{summary.profile.login}</p>
       </div>
@@ -191,6 +197,14 @@ export default async function ContributorsPage({
   }
 
   const flaggedPRIds = await getFlaggedPRIdSet();
+  const [achievers, ownRepoExceptions] = await Promise.all([
+    getAchieversKV(),
+    getOwnRepoExceptions(),
+  ]);
+  const openSourceUsernames = new Set([
+    ...achievers.filter((entry) => entry.programs.length > 0).map((entry) => entry.github.toLowerCase()),
+    ...ownRepoExceptions.map((entry) => entry.username.toLowerCase()),
+  ]);
 
   // ── Cache-first data loading ──────────────────────────────────────────────
   const isPredefinedPeriod = ['all', '1day', 'week', 'month', '2months', '3months', '6months', 'year'].includes(period);
@@ -322,7 +336,7 @@ export default async function ContributorsPage({
               {/* 2nd Place (Left on desktop) */}
               {podium.length > 1 ? (
                 <div className="order-2 md:order-1">
-                  <PodiumCard summary={podium[1]} rank={2} period={period} from={from} to={to} />
+                  <PodiumCard summary={podium[1]} rank={2} period={period} from={from} to={to} isOpenSource={openSourceUsernames.has(podium[1].profile.login.toLowerCase())} />
                 </div>
               ) : (
                 <div className="order-2 md:order-1 hidden md:block" />
@@ -330,13 +344,13 @@ export default async function ContributorsPage({
 
               {/* 1st Place (Center) */}
               <div className="order-1 md:order-2">
-                <PodiumCard summary={podium[0]} rank={1} period={period} from={from} to={to} />
+                <PodiumCard summary={podium[0]} rank={1} period={period} from={from} to={to} isOpenSource={openSourceUsernames.has(podium[0].profile.login.toLowerCase())} />
               </div>
 
               {/* 3rd Place (Right on desktop) */}
               {podium.length > 2 ? (
                 <div className="order-3">
-                  <PodiumCard summary={podium[2]} rank={3} period={period} from={from} to={to} />
+                  <PodiumCard summary={podium[2]} rank={3} period={period} from={from} to={to} isOpenSource={openSourceUsernames.has(podium[2].profile.login.toLowerCase())} />
                 </div>
               ) : (
                 <div className="order-3 hidden md:block" />
@@ -408,6 +422,7 @@ export default async function ContributorsPage({
         periodLabel={kicker.toLowerCase()}
         from={from}
         to={to}
+        openSourceUsernames={openSourceUsernames}
       />
     </main>
   );

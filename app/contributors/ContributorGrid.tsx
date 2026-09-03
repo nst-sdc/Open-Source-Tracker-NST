@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { StudentSummary } from '@/lib/github';
+import { OpenSourceBadge } from '@/app/components/OpenSourceBadge';
 import type { RankedSummary } from './page';
 
 // Display-only rescale: avgScore is a repo multiplier average in [0.15, 3.0]
@@ -23,6 +24,7 @@ interface GridProps {
   periodLabel: string;
   from?: string;
   to?: string;
+  openSourceUsernames: Set<string>;
 }
 
 function CrownIcon({ className }: { className?: string }) {
@@ -77,12 +79,14 @@ function ContributorRow({
   period,
   from,
   to,
+  isOpenSource,
 }: {
   summary: StudentSummary;
   rank: number;
   period: string;
   from?: string;
   to?: string;
+  isOpenSource?: boolean;
 }) {
   const highlight = rank === 1 ? 'bg-gold-0/40' : '';
   return (
@@ -105,7 +109,10 @@ function ContributorRow({
           <span className="block text-[14px] font-[550] text-ink truncate group-hover:text-brand-600 transition-colors">
             {summary.profile.name ?? summary.profile.login}
           </span>
-          <span className="block text-[12px] text-ink-soft truncate">@{summary.profile.login}</span>
+          <span className="block text-[12px] text-ink-soft truncate">
+            @{summary.profile.login}
+            {isOpenSource && <OpenSourceBadge />}
+          </span>
         </span>
       </span>
 
@@ -153,6 +160,7 @@ export function ContributorGrid({
   period,
   from,
   to,
+  openSourceUsernames,
 }: GridProps) {
   const [visibleActiveCount, setVisibleActiveCount] = useState(50);
   const [visibleOtherCount, setVisibleOtherCount] = useState(50);
@@ -192,6 +200,7 @@ export function ContributorGrid({
               period={period}
               from={from}
               to={to}
+              isOpenSource={openSourceUsernames.has(summary.profile.login.toLowerCase())}
             />
           ))
         ) : (
@@ -254,6 +263,7 @@ export function ContributorGrid({
                     <span className="block text-[11.5px] text-ink-soft truncate">
                       @{summary.profile.login}
                       {summary.campus ? ` · ${summary.campus}` : ''}
+                      {openSourceUsernames.has(summary.profile.login.toLowerCase()) && <OpenSourceBadge />}
                     </span>
                   </span>
                   <svg className="w-3.5 h-3.5 text-ink-faint group-hover:text-brand-600 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
