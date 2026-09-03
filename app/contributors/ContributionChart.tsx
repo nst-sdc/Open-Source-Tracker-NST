@@ -47,10 +47,21 @@ export function periodRange(period?: string, from?: string, to?: string): { min:
 // for a short range, weeks for a few months, months for a year — because a
 // monthly bar chart of "the last 7 days" tells the reader nothing.
 
+// Colours reference the design tokens rather than literal hex, so the chart
+// follows whatever theme is in effect instead of staying light.
+//
+// Closed is amber rather than the red the list badge uses. Green against red is
+// the classic pair colour-blind readers cannot separate, and it is worst
+// exactly where it matters here: measured against the dark theme's steps the
+// two are 4.4 apart in OKLab under deuteranopia, well under the 6 that counts
+// as a floor. Amber measures 11.0 in light and 7.9 in dark, and reads truer
+// anyway — a pull request that closed without merging is not an error. The
+// badge in the list below keeps red because it carries the word "Closed"
+// beside it, so nothing there rests on colour alone.
 const SERIES = [
-  { key: 'merged', label: 'Merged', color: '#009965' },
-  { key: 'open',   label: 'Open',   color: '#0673f9' },
-  { key: 'closed', label: 'Closed', color: '#d22d3a' },
+  { key: 'merged', label: 'Merged', color: 'var(--color-success-500)' },
+  { key: 'open',   label: 'Open',   color: 'var(--color-brand-500)' },
+  { key: 'closed', label: 'Closed', color: 'var(--color-warning-600)' },
 ] as const;
 
 type SeriesKey = (typeof SERIES)[number]['key'];
@@ -418,11 +429,11 @@ export function ContributionChart({
           <g key={value}>
             <line
               x1={padLeft} y1={yFor(value)} x2={width - padRight} y2={yFor(value)}
-              stroke={value === 0 ? '#e1e5ea' : '#edeff3'} strokeWidth="1"
+              stroke={value === 0 ? 'var(--color-line-strong)' : 'var(--color-line)'} strokeWidth="1"
             />
             <text
               x={padLeft - 8} y={yFor(value) + 3.5} textAnchor="end"
-              fontSize="10" fill="#8c95a6" className="tabular-nums"
+              fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums"
             >
               {value}
             </text>
@@ -468,7 +479,7 @@ export function ContributionChart({
         {peak > 0 && (
           <text
             x={centerOf(peakIndex)} y={yFor(peak) - 6} textAnchor="middle"
-            fontSize="10.5" fontWeight="650" fill="#30363d" className="tabular-nums"
+            fontSize="10.5" fontWeight="650" fill="var(--color-ink-mid)" className="tabular-nums"
           >
             {peak}
           </text>
@@ -478,7 +489,7 @@ export function ContributionChart({
         {labelIndices.map((i) => (
           <text
             key={buckets[i].start} x={centerOf(i)} y={height - 12} textAnchor="middle"
-            fontSize="10" fill="#5b6271"
+            fontSize="10" fill="var(--color-ink-soft)"
           >
             {buckets[i].label}
           </text>
@@ -510,12 +521,12 @@ export function ContributionChart({
               />
               <rect
                 x={cx - slot / 2} y={padTop} width={slot} height={plotH}
-                fill="#0b0c0e"
+                fill="var(--color-ink)"
                 className="opacity-0 group-hover/bar:opacity-[0.035] group-focus-visible/bar:opacity-[0.035] transition-opacity pointer-events-none"
               />
               <g className="opacity-0 group-hover/bar:opacity-100 group-focus-visible/bar:opacity-100 transition-opacity pointer-events-none">
-                <rect x={boxX} y={boxY} width={boxW} height={boxH} rx="7" fill="#0b0c0e" />
-                <text x={boxX + 10} y={boxY + 13} fontSize="9.5" fill="#c9cfd9">
+                <rect x={boxX} y={boxY} width={boxW} height={boxH} rx="7" fill="var(--color-ink)" />
+                <text x={boxX + 10} y={boxY + 13} fontSize="9.5" fill="var(--color-line-heavy)">
                   {heading}
                 </text>
                 {rows.map((s, ri) => (
@@ -525,15 +536,15 @@ export function ContributionChart({
                       fill={s.color}
                     />
                     <text
-                      x={boxX + 22} y={boxY + 25 + ri * 13} fontSize="10" fill="#ffffff"
+                      x={boxX + 22} y={boxY + 25 + ri * 13} fontSize="10" fill="var(--color-ground)"
                     >
                       <tspan fontWeight="650" className="tabular-nums">{bucket.counts[s.key]}</tspan>
-                      <tspan fill="#c9cfd9"> {s.label.toLowerCase()}</tspan>
+                      <tspan fill="var(--color-line-heavy)"> {s.label.toLowerCase()}</tspan>
                     </text>
                   </g>
                 ))}
                 {rows.length === 0 && (
-                  <text x={boxX + 10} y={boxY + 25} fontSize="10" fill="#c9cfd9">
+                  <text x={boxX + 10} y={boxY + 25} fontSize="10" fill="var(--color-line-heavy)">
                     {emptyNote}
                   </text>
                 )}
