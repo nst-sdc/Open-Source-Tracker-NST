@@ -169,7 +169,7 @@ export default function RepoActivityPage() {
         {/* Title */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-violet-0 border border-violet-100 rounded-full px-4 py-1.5 text-xs font-[550] text-violet-600 mb-4">
-            🔥 Sandbox Competition Tracker
+            Sandbox Competition Tracker
           </div>
           <h1 className="text-4xl md:text-5xl font-[650] tracking-tight">
             Repository{' '}
@@ -279,13 +279,27 @@ export default function RepoActivityPage() {
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-line">
                 {[
-                  { label: 'Stars', value: repoInfo.stars.toLocaleString(), icon: '⭐️' },
-                  { label: 'Forks', value: repoInfo.forks.toLocaleString(), icon: '🍴' },
-                  { label: 'Open Issues', value: repoInfo.openIssues.toLocaleString(), icon: '🔧' },
+                  {
+                    label: 'Stars',
+                    value: repoInfo.stars.toLocaleString(),
+                    icon: <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z" />,
+                  },
+                  {
+                    label: 'Forks',
+                    value: repoInfo.forks.toLocaleString(),
+                    icon: <path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0zM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0z" />,
+                  },
+                  {
+                    label: 'Open Issues',
+                    value: repoInfo.openIssues.toLocaleString(),
+                    icon: <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0z" />,
+                  },
                 ].map((s) => (
                   <div key={s.label} className="bg-ground border border-line rounded-2xl p-4 text-center">
                     <div className="text-ink-soft text-xs mb-1 font-mono uppercase tracking-wider flex items-center justify-center gap-1">
-                      <span>{s.icon}</span>
+                      <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        {s.icon}
+                      </svg>
                       <span>{s.label}</span>
                     </div>
                     <div className="text-lg md:text-xl font-[650] text-ink tabular-nums">{s.value}</div>
@@ -340,7 +354,7 @@ export default function RepoActivityPage() {
                   const widthPercent = (score / maxActivity) * 100;
 
                   // Gold, Silver, Bronze styling
-                  const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null;
+                  const rankIcon = index < 3 ? String(index + 1) : null;
                   const rankBg =
                     index === 0
                       ? 'bg-gold-0 border-gold-100 text-gold-600'
@@ -372,7 +386,7 @@ export default function RepoActivityPage() {
                               {c.isMaintainer && (
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">
-                                    🛡️ Maintainer
+                                    Maintainer
                                   </span>
                                 </div>
                               )}
@@ -424,7 +438,6 @@ export default function RepoActivityPage() {
 
                 {sortedContributors.length === 0 && (
                   <div className="text-center py-16 bg-ground border border-line rounded-2xl text-ink-soft col-span-full">
-                    <div className="text-3xl mb-2">📭</div>
                     <p className="text-sm font-[500]">No activity found for this category</p>
                     <p className="text-xs text-ink-faint mt-1">Try toggling to &quot;All Activity&quot; or scan another repository.</p>
                   </div>
@@ -457,7 +470,6 @@ export default function RepoActivityPage() {
             {/* Modal Header */}
             <div className="p-6 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-xl">👤</span>
                 <div>
                   <h3 className="text-lg font-[650] text-ink">Contributor Details</h3>
                   <p className="text-xs text-ink-soft">@{selectedUser}&apos;s pull request history across GitHub</p>

@@ -126,8 +126,10 @@ export default function JoinRequestPage() {
         {/* Form Card */}
         <div className="bg-ground border border-line rounded-2xl p-8 shadow-card">
           <div className="flex items-center gap-3.5 mb-6">
-            <div className="w-11 h-11 rounded-xl bg-brand-0 border border-violet-100 flex items-center justify-center text-xl">
-              📥
+            <div className="w-11 h-11 rounded-xl bg-brand-0 border border-violet-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v10m0 0 4-4m-4 4-4-4M4 17v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+              </svg>
             </div>
             <div>
               <h1 className="text-xl font-[650] text-ink leading-tight">Join Leaderboard</h1>

@@ -11,7 +11,7 @@ const BASE_URL = process.env.BASE_URL || 'https://opensource-nst-tracker.vercel.
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 if (!ADMIN_SECRET) {
-  console.error('❌ ADMIN_SECRET env var is required.');
+  console.error('ADMIN_SECRET env var is required.');
   console.error('   Usage: ADMIN_SECRET=xxx node scripts/bulk-add-svyasa.mjs');
   process.exit(1);
 }
@@ -54,20 +54,20 @@ for (const github of students) {
     const data = await res.json();
 
     if (res.ok && data.ok) {
-      console.log(`  ✅ Added: ${github}`);
+      console.log(`  Added:   ${github}`);
       added++;
     } else if (data.message?.includes('already in the list')) {
-      console.log(`  ⚪ Skip:  ${github} (already exists)`);
+      console.log(`  Skip:    ${github} (already exists)`);
       skipped++;
     } else {
-      console.log(`  ❌ Failed: ${github} — ${JSON.stringify(data)}`);
+      console.log(`  Failed:  ${github} — ${JSON.stringify(data)}`);
       failed++;
     }
 
     // Small delay to avoid hammering the server
     await new Promise(r => setTimeout(r, 150));
   } catch (err) {
-    console.error(`  ❌ Error for ${github}:`, err.message);
+    console.error(`  Error for ${github}:`, err.message);
     failed++;
   }
 }

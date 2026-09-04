@@ -77,9 +77,24 @@ export function FloatingCelebration() {
                 <div className="text-ground text-[11px] font-bold truncate max-w-[100px]">{c.name}</div>
                 <div className="text-ground/70 text-[9px] font-mono mt-0.5">@{c.username}</div>
                 <div className="text-ground/60 text-[9px] mt-1 pt-1 border-t border-ink-soft/40 flex flex-col gap-0.5 whitespace-nowrap">
-                  {c.mergedCount > 0 && <span>🟢 {c.mergedCount} merged PRs</span>}
-                  {c.totalCount - c.mergedCount > 0 && <span>🔵 {c.totalCount - c.mergedCount} open PRs</span>}
-                  {c.issuesCount > 0 && <span>🟣 {c.issuesCount} issue{c.issuesCount > 1 ? 's' : ''}</span>}
+                  {c.mergedCount > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success-400 flex-shrink-0" />
+                      {c.mergedCount} merged PRs
+                    </span>
+                  )}
+                  {c.totalCount - c.mergedCount > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0" />
+                      {c.totalCount - c.mergedCount} open PRs
+                    </span>
+                  )}
+                  {c.issuesCount > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-300 flex-shrink-0" />
+                      {c.issuesCount} issue{c.issuesCount > 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-ink-soft/40" />
                 <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-ink" />

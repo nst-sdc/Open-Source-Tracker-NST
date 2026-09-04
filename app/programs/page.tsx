@@ -594,7 +594,7 @@ export default function ProgramsPage() {
             </Link>
           </div>
           <p className="text-ink-soft text-xs mt-6">
-            ⚠️ Stipends and deadlines shown are approximate — always verify on the official program site before applying.
+            Stipends and deadlines shown are approximate — always verify on the official program site before applying.
           </p>
         </section>
       </div>

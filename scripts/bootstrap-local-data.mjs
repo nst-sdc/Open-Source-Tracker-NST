@@ -25,7 +25,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const ITERATIONS = Number(process.argv[2]) || 10;
 
 if (!CRON_SECRET) {
-  console.error('❌ CRON_SECRET is not set in .env.local (pick any string for local dev — see .env.example).');
+  console.error('CRON_SECRET is not set in .env.local (pick any string for local dev — see .env.example).');
   process.exit(1);
 }
 
@@ -44,7 +44,7 @@ for (let i = 1; i <= ITERATIONS; i++) {
     });
     body = await res.json();
   } catch (err) {
-    console.log(`❌ request failed: ${err.message}`);
+    console.log(`request failed: ${err.message}`);
     console.log('   Is `npm run dev` running in another terminal?');
     process.exit(1);
   }
@@ -52,7 +52,7 @@ for (let i = 1; i <= ITERATIONS; i++) {
   const elapsed = ((Date.now() - start) / 1000).toFixed(0);
 
   if (!res.ok) {
-    console.log(`❌ HTTP ${res.status}: ${body.error || JSON.stringify(body)}`);
+    console.log(`HTTP ${res.status}: ${body.error || JSON.stringify(body)}`);
     if (res.status === 401) {
       console.log('   CRON_SECRET here must match the one in .env.local — check both.');
     }
@@ -61,7 +61,7 @@ for (let i = 1; i <= ITERATIONS; i++) {
 
   const updatedCount = body.updatedUsers?.length || 0;
   totalUpdated += updatedCount;
-  console.log(`✓ ${updatedCount} students updated in ${elapsed}s (${totalUpdated} total so far)`);
+  console.log(`${updatedCount} students updated in ${elapsed}s (${totalUpdated} total so far)`);
 
   if (updatedCount === 0) {
     emptyStreak++;
