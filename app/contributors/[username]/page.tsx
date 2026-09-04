@@ -19,6 +19,8 @@ import { getRepoCache } from '@/lib/repo-cache';
 import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION } from '@/lib/repo-score';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
+import { getBadges } from '@/lib/badges';
+import { ContributionChart, periodRange } from '../ContributionChart';
 
 async function queueBackgroundRefresh(username: string) {
   try {
@@ -49,48 +51,12 @@ function filterByPeriod<T extends { created_at: string }>(
   from?: string,
   to?: string
 ): T[] {
-  if (!period || period === 'all') return items;
-
-  const getMsAgo = (days: number) => Date.now() - days * 24 * 60 * 60 * 1000;
-
-  let minTime = 0;
-  let maxTime = Infinity;
-
-  switch (period) {
-    case '1day':
-      minTime = getMsAgo(1);
-      break;
-    case 'week':
-      minTime = getMsAgo(7);
-      break;
-    case 'month':
-      minTime = getMsAgo(30);
-      break;
-    case '2months':
-      minTime = getMsAgo(60);
-      break;
-    case '3months':
-      minTime = getMsAgo(90);
-      break;
-    case '6months':
-      minTime = getMsAgo(180);
-      break;
-    case 'year':
-      minTime = getMsAgo(365);
-      break;
-    case 'custom':
-      if (from) minTime = new Date(from).getTime();
-      if (to) {
-        const toDate = new Date(to);
-        toDate.setHours(23, 59, 59, 999);
-        maxTime = toDate.getTime();
-      }
-      break;
-  }
+  const range = periodRange(period, from, to);
+  if (!range) return items;
 
   return items.filter((item) => {
     const time = new Date(item.created_at).getTime();
-    return time >= minTime && time <= maxTime;
+    return time >= range.min && time <= range.max;
   });
 }
 
@@ -243,8 +209,9 @@ export default async function ContributorPage({
               </>
             ) : (
               <>
-                <span className="font-[600] text-ink">@{username}</span> has been queued for data sync.
-                Check back in a few minutes — the background worker will populate this profile shortly.
+                We haven&apos;t pulled <span className="font-[600] text-ink">@{username}</span>&apos;s
+                contributions from GitHub yet. It usually takes a few minutes — check back shortly
+                and the profile will be here.
               </>
             )}
           </p>
@@ -294,8 +261,7 @@ export default async function ContributorPage({
             : tab === 'open'   ? filteredPRs.filter(pr => pr.state === 'open')
             : filteredPRs;
 
-  const lifetimeMergedCount = validPRs.filter(pr => pr.pull_request?.merged_at).length;
-  const badges = getBadges(validPRs, lifetimeMergedCount);
+  const badges = getBadges(validPRs, repoCache);
 
   // Per-PR Impact: what one merged PR into this repo is worth under the #4
   // scoring (10·M^0.75), computed once per distinct repo. The leaderboard
@@ -347,8 +313,11 @@ export default async function ContributorPage({
               <div className="flex items-center gap-2.5 justify-center sm:justify-start flex-wrap">
                 <h1 className="text-[26px] font-[650] tracking-[-0.01em] text-ink">{profile.name ?? profile.login}</h1>
                 {counts.mergedPRs > 0 && counts.mergedPRs <= 5 && (
-                  <span className="text-xs font-[600] px-2.5 py-1 rounded-full bg-success-0 text-success-600">
-                    🌱 New contributor
+                  <span
+                    title="Has had between one and five pull requests accepted so far."
+                    className="text-[11.5px] font-[600] px-2.5 py-1 rounded-full bg-success-0 text-success-600 cursor-help"
+                  >
+                    New contributor
                   </span>
                 )}
               </div>
@@ -366,18 +335,17 @@ export default async function ContributorPage({
 
               {profile.bio && <p className="text-ink-mid text-sm mt-3 max-w-lg leading-relaxed">{profile.bio}</p>}
 
-              {/* Badges showcase */}
+              {/* What this contributor's merged work shows */}
               {badges.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+                <div className="flex flex-wrap gap-1.5 mt-4 justify-center sm:justify-start">
                   {badges.map((b) => (
-                    <div
+                    <span
                       key={b.id}
                       title={b.desc}
-                      className={`inline-flex items-center gap-1.5 text-[11px] font-[600] px-2.5 py-1 rounded-full cursor-help ${b.style}`}
+                      className="inline-flex items-center text-[11.5px] font-[550] text-ink-mid bg-panel-2 px-2.5 py-1 rounded-full cursor-help"
                     >
-                      <span>{b.emoji}</span>
-                      <span>{b.name}</span>
-                    </div>
+                      {b.name}
+                    </span>
                   ))}
                 </div>
               )}
@@ -424,28 +392,30 @@ export default async function ContributorPage({
           </div>
         </div>
 
-        {/* Clickable stat cards — these ARE the navigation */}
+        {/* The stat cards double as the tabs for the list further down */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
           {[
-            { tabId: 'prs',    label: 'Total PRs', value: counts.prs,       num: 'text-ink',         bar: 'bg-ink'         },
-            { tabId: 'merged', label: 'Merged',    value: counts.mergedPRs, num: 'text-success-600', bar: 'bg-success-500' },
-            { tabId: 'open',   label: 'Open',      value: counts.openPRs,   num: 'text-brand-600',   bar: 'bg-brand-500'   },
-            { tabId: 'issues', label: 'Issues',    value: counts.issues,    num: 'text-violet-600',  bar: 'bg-violet-500'  },
-          ].map(({ tabId, label, value, num, bar }) => {
+            { tabId: 'prs',    label: 'Total PRs', hint: 'Every pull request',            value: counts.prs,       num: 'text-ink',         bar: 'bg-ink'         },
+            { tabId: 'merged', label: 'Merged',    hint: 'Accepted into the project',     value: counts.mergedPRs, num: 'text-success-600', bar: 'bg-success-500' },
+            { tabId: 'open',   label: 'Open',      hint: 'Still awaiting a decision',     value: counts.openPRs,   num: 'text-brand-600',   bar: 'bg-brand-500'   },
+            { tabId: 'issues', label: 'Issues',    hint: 'Bugs and ideas reported',       value: counts.issues,    num: 'text-violet-600',  bar: 'bg-violet-500'  },
+          ].map(({ tabId, label, hint, value, num, bar }) => {
             const active = tab === tabId;
             return (
               <Link
                 key={tabId}
+                title={hint}
+                aria-current={active ? 'page' : undefined}
                 href={`/contributors/${username}?tab=${tabId}${period ? `&period=${period}` : ''}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
-                className={`rounded-2xl p-4 text-center transition-all border bg-ground ${
+                className={`relative overflow-hidden rounded-2xl px-4 pt-4 pb-3.5 text-center transition-all border bg-ground ${
                   active
-                    ? 'border-line-heavy shadow-card-hover'
-                    : 'border-line shadow-card hover:border-line-heavy'
+                    ? 'bg-ground border-line-heavy shadow-card-hover'
+                    : 'bg-ground border-line shadow-card hover:border-line-heavy'
                 }`}
               >
-                <div className={`text-2xl font-[650] tabular-nums ${num}`}>{value}</div>
-                <div className={`text-xs mt-0.5 ${active ? 'text-ink-mid font-[550]' : 'text-ink-soft'}`}>{label}</div>
-                <div className={`w-6 h-0.5 rounded-full mx-auto mt-2 ${active ? bar : 'bg-transparent'}`} />
+                <span className={`absolute inset-x-0 top-0 h-[3px] ${active ? bar : 'bg-transparent'}`} />
+                <div className={`text-[27px] leading-none font-[650] ${num}`}>{value}</div>
+                <div className={`text-xs mt-1.5 ${active ? 'text-ink-mid font-[600]' : 'text-ink-soft'}`}>{label}</div>
               </Link>
             );
           })}
@@ -461,7 +431,13 @@ export default async function ContributorPage({
               Showing activity filtered by:{' '}
               <strong className="font-[650]">
                 {period === 'custom'
-                  ? `${from} to ${to}`
+                  ? from && to
+                    ? `${from} to ${to}`
+                    : from
+                    ? `since ${from}`
+                    : to
+                    ? `up to ${to}`
+                    : 'a custom range'
                   : period === '1day'
                   ? 'last 24 hours'
                   : period === 'week'
@@ -481,9 +457,9 @@ export default async function ContributorPage({
         </div>
       )}
 
-      {/* Contribution trend chart */}
+      {/* Contribution history */}
       <div className="max-w-4xl mx-auto px-4 md:px-6 mt-4">
-        <ContributionChart prs={validPRs} />
+        <ContributionChart prs={filteredPRs} period={period} from={from} to={to} nowMs={nowMs} />
       </div>
 
       {/* Content */}
@@ -496,289 +472,3 @@ export default async function ContributorPage({
 }
 
 // ─── Helpers for Visual Chart and Badges ─────────────────────────────────────
-
-interface Badge {
-  id: string;
-  name: string;
-  emoji: string;
-  desc: string;
-  style: string;
-}
-
-function getBadges(allPRs: StudentPR[], mergedCount: number): Badge[] {
-  const list: Badge[] = [];
-
-  // 1. 🌱 First Merge
-  if (mergedCount >= 1) {
-    list.push({
-      id: 'first_merge',
-      name: 'First Merge',
-      emoji: '🌱',
-      desc: 'First collaborative pull request merged',
-      style: 'bg-success-0 text-success-600',
-    });
-  }
-
-  // 2. 🔥 Merging Machine
-  if (mergedCount >= 10) {
-    list.push({
-      id: 'merging_machine',
-      name: 'Merging Machine',
-      emoji: '🔥',
-      desc: '10+ open-source contributions merged',
-      style: 'bg-warning-0 text-warning-600',
-    });
-  }
-
-  // 3. 🐞 Bug Squasher
-  const hasBugFix = allPRs.some((pr) => {
-    const title = pr.title.toLowerCase();
-    const hasBugLabel = pr.labels.some((l) => {
-      const name = l.name.toLowerCase();
-      return name.includes('bug') || name.includes('fix');
-    });
-    return pr.pull_request?.merged_at && (title.includes('fix') || title.includes('bug') || hasBugLabel);
-  });
-  if (hasBugFix) {
-    list.push({
-      id: 'bug_squasher',
-      name: 'Bug Squasher',
-      emoji: '🐞',
-      desc: 'Squashed bugs in collaborative projects',
-      style: 'bg-error-0 text-error-600',
-    });
-  }
-
-  // 4. 📚 Documentation Hero
-  const hasDocs = allPRs.some((pr) => {
-    const title = pr.title.toLowerCase();
-    const hasDocLabel = pr.labels.some((l) => {
-      const name = l.name.toLowerCase();
-      return name.includes('doc') || name.includes('documentation') || name.includes('readme');
-    });
-    return pr.pull_request?.merged_at && (title.includes('doc') || title.includes('readme') || hasDocLabel);
-  });
-  if (hasDocs) {
-    list.push({
-      id: 'doc_hero',
-      name: 'Doc Hero',
-      emoji: '📚',
-      desc: 'Merged documentation improvements',
-      style: 'bg-brand-0 text-brand-600',
-    });
-  }
-
-  // 5. ⚡ Speed Demon (3+ merged PRs in a 7-day window)
-  const mergedPRs = allPRs.filter((pr) => pr.pull_request?.merged_at);
-  let isSpeedDemon = false;
-
-  if (mergedPRs.length >= 3) {
-    const sortedDates = mergedPRs
-      .map((pr) => new Date(pr.pull_request.merged_at!).getTime())
-      .sort((a, b) => a - b);
-
-    for (let i = 0; i <= sortedDates.length - 3; i++) {
-      const diffDays = (sortedDates[i + 2] - sortedDates[i]) / (1000 * 60 * 60 * 24);
-      if (diffDays <= 7) {
-        isSpeedDemon = true;
-        break;
-      }
-    }
-  }
-
-  if (isSpeedDemon) {
-    list.push({
-      id: 'speed_demon',
-      name: 'Speed Demon',
-      emoji: '⚡',
-      desc: 'Merged 3+ pull requests within a single week',
-      style: 'bg-gold-0 text-gold-600',
-    });
-  }
-
-  return list;
-}
-
-function getChartData(prs: StudentPR[]) {
-  const months: Array<{ label: string; year: number; month: number; count: number }> = [];
-  const now = new Date();
-
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      label: d.toLocaleDateString('en-US', { month: 'short' }),
-      year: d.getFullYear(),
-      month: d.getMonth(),
-      count: 0,
-    });
-  }
-
-  for (const pr of prs) {
-    const prDate = new Date(pr.created_at);
-    const y = prDate.getFullYear();
-    const m = prDate.getMonth();
-    const match = months.find((mo) => mo.year === y && mo.month === m);
-    if (match) {
-      match.count++;
-    }
-  }
-
-  return months;
-}
-
-function ContributionChart({ prs }: { prs: StudentPR[] }) {
-  const months = getChartData(prs);
-  const maxVal = Math.max(...months.map((m) => m.count));
-  const displayMax = maxVal === 0 ? 5 : maxVal;
-
-  const width = 500;
-  const height = 140;
-  const paddingLeft = 35;
-  const paddingRight = 15;
-  const paddingTop = 15;
-  const paddingBottom = 25;
-
-  const chartWidth = width - paddingLeft - paddingRight;
-  const chartHeight = height - paddingTop - paddingBottom;
-
-  const points = months.map((m, i) => {
-    const x = paddingLeft + (i * chartWidth) / 5;
-    const y = paddingTop + chartHeight - (m.count / displayMax) * chartHeight;
-    return { x, y, value: m.count, label: m.label };
-  });
-
-  const lineD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaD = `${lineD} L ${points[points.length - 1].x} ${paddingTop + chartHeight} L ${points[0].x} ${paddingTop + chartHeight} Z`;
-
-  return (
-    <div className="bg-ground border border-line rounded-2xl shadow-card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-ink text-sm font-[650]">Contribution trend</h2>
-        <span className="text-ink-soft text-xs">
-          PRs per month{maxVal > 0 ? ` · peak ${maxVal}` : ''}
-        </span>
-      </div>
-
-      <div className="w-full">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
-          <defs>
-            <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0673f9" stopOpacity="0.14" />
-              <stop offset="100%" stopColor="#0673f9" stopOpacity="0.01" />
-            </linearGradient>
-          </defs>
-
-          {/* Grid lines */}
-          {[0, 0.5, 1].map((ratio) => {
-            const y = paddingTop + ratio * chartHeight;
-            const labelValue = Math.round(displayMax - ratio * displayMax);
-            return (
-              <g key={ratio}>
-                <line
-                  x1={paddingLeft}
-                  y1={y}
-                  x2={width - paddingRight}
-                  y2={y}
-                  stroke="#edeff3"
-                  strokeWidth="1"
-                />
-                <text
-                  x={paddingLeft - 8}
-                  y={y + 3}
-                  textAnchor="end"
-                  className="text-[9px] font-[550]"
-                  fill="#8c95a6"
-                >
-                  {maxVal === 0 && ratio > 0 ? '' : labelValue}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Area fill */}
-          {maxVal > 0 && <path d={areaD} fill="url(#trend-area)" />}
-
-          {/* Line */}
-          {maxVal > 0 ? (
-            <path
-              d={lineD}
-              fill="none"
-              stroke="#0673f9"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : (
-            <line
-              x1={paddingLeft}
-              y1={paddingTop + chartHeight}
-              x2={width - paddingRight}
-              y2={paddingTop + chartHeight}
-              stroke="#e1e5ea"
-              strokeWidth="1.5"
-            />
-          )}
-
-          {/* Data Points */}
-          {maxVal > 0 &&
-            points.map((p, i) => (
-              <g key={i} className="group/point">
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r="6"
-                  fill="transparent"
-                  className="cursor-help"
-                />
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r="3.5"
-                  fill="#ffffff"
-                  stroke="#0673f9"
-                  strokeWidth="2"
-                  className="transition-all group-hover/point:fill-brand-500"
-                />
-                {/* Value tooltip label displayed on hover */}
-                {p.value > 0 && (
-                  <g className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none">
-                    <rect
-                      x={p.x - 14}
-                      y={p.y - 24}
-                      width="28"
-                      height="16"
-                      rx="5"
-                      fill="#0b0c0e"
-                    />
-                    <text
-                      x={p.x}
-                      y={p.y - 12.5}
-                      textAnchor="middle"
-                      className="text-[9px] font-[650]"
-                      fill="#ffffff"
-                    >
-                      {p.value}
-                    </text>
-                  </g>
-                )}
-              </g>
-            ))}
-
-          {/* X-axis Month Labels */}
-          {points.map((p, i) => (
-            <text
-              key={i}
-              x={p.x}
-              y={height - 5}
-              textAnchor="middle"
-              className="text-[9px] font-[550]"
-              fill="#5b6271"
-            >
-              {p.label}
-            </text>
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-}

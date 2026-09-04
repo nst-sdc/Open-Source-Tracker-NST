@@ -11,6 +11,9 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ShareButton } from '../../contributors/ShareButton';
 import { PRsSection, IssuesSection } from '../../contributors/[username]/ContentSections';
+import { getBadges } from '@/lib/badges';
+import { ContributionChart } from '../../contributors/ContributionChart';
+import { getRepoCache } from '@/lib/repo-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,191 +25,6 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
 type Tab = 'prs' | 'merged' | 'open' | 'issues';
 
 // ─── Badges & Chart Helpers ───────────────────────────────────────────────────
-
-interface Badge {
-  id: string;
-  name: string;
-  emoji: string;
-  desc: string;
-  style: string;
-}
-
-function getBadges(allPRs: StudentPR[], mergedCount: number): Badge[] {
-  const list: Badge[] = [];
-  if (mergedCount >= 1) {
-    list.push({
-      id: 'first_merge',
-      name: 'First Merge',
-      emoji: '🌱',
-      desc: 'First collaborative pull request merged',
-      style: 'bg-success-0 border-success-100 text-success-600 hover:bg-success-100',
-    });
-  }
-  if (mergedCount >= 10) {
-    list.push({
-      id: 'merging_machine',
-      name: 'Merging Machine',
-      emoji: '🔥',
-      desc: '10+ open-source contributions merged',
-      style: 'bg-warning-0 border-warning-200 text-warning-600 hover:bg-warning-0',
-    });
-  }
-  const hasBugFix = allPRs.some((pr) => {
-    const title = pr.title.toLowerCase();
-    const hasBugLabel = pr.labels.some((l) => {
-      const name = l.name.toLowerCase();
-      return name.includes('bug') || name.includes('fix');
-    });
-    return pr.pull_request?.merged_at && (title.includes('fix') || title.includes('bug') || hasBugLabel);
-  });
-  if (hasBugFix) {
-    list.push({
-      id: 'bug_squasher',
-      name: 'Bug Squasher',
-      emoji: '🐞',
-      desc: 'Squashed bugs in collaborative projects',
-      style: 'bg-error-0 border-error-100 text-error-600 hover:bg-error-0',
-    });
-  }
-  const hasDocs = allPRs.some((pr) => {
-    const title = pr.title.toLowerCase();
-    const hasDocLabel = pr.labels.some((l) => {
-      const name = l.name.toLowerCase();
-      return name.includes('doc') || name.includes('documentation') || name.includes('readme');
-    });
-    return pr.pull_request?.merged_at && (title.includes('doc') || title.includes('readme') || hasDocLabel);
-  });
-  if (hasDocs) {
-    list.push({
-      id: 'doc_hero',
-      name: 'Doc Hero',
-      emoji: '📚',
-      desc: 'Merged documentation improvements',
-      style: 'bg-brand-0 border-brand-100 text-brand-600 hover:bg-brand-0',
-    });
-  }
-  return list;
-}
-
-function getChartData(prs: StudentPR[]) {
-  const months: Array<{ label: string; year: number; month: number; count: number }> = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      label: d.toLocaleDateString('en-US', { month: 'short' }),
-      year: d.getFullYear(),
-      month: d.getMonth(),
-      count: 0,
-    });
-  }
-  for (const pr of prs) {
-    const prDate = new Date(pr.created_at);
-    const y = prDate.getFullYear();
-    const m = prDate.getMonth();
-    const match = months.find((mo) => mo.year === y && mo.month === m);
-    if (match) match.count++;
-  }
-  return months;
-}
-
-function ContributionChart({ prs }: { prs: StudentPR[] }) {
-  const months = getChartData(prs);
-  const maxVal = Math.max(...months.map((m) => m.count));
-  const displayMax = maxVal === 0 ? 5 : maxVal;
-
-  const width = 500;
-  const height = 140;
-  const paddingLeft = 35;
-  const paddingRight = 15;
-  const paddingTop = 15;
-  const paddingBottom = 25;
-
-  const chartWidth = width - paddingLeft - paddingRight;
-  const chartHeight = height - paddingTop - paddingBottom;
-
-  const points = months.map((m, i) => {
-    const x = paddingLeft + (i * chartWidth) / 5;
-    const y = paddingTop + chartHeight - (m.count / displayMax) * chartHeight;
-    return { x, y, value: m.count, label: m.label };
-  });
-
-  const lineD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaD = `${lineD} L ${points[points.length - 1].x} ${paddingTop + chartHeight} L ${points[0].x} ${paddingTop + chartHeight} Z`;
-
-  return (
-    <div className="bg-ground border border-line rounded-2xl p-5 relative overflow-hidden">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-ink-mid text-xs font-[550] uppercase tracking-wider">Contribution Trend (PRs / Month)</h2>
-        {maxVal > 0 && (
-          <span className="text-violet-600 text-xs font-[500]">
-            Peak: {maxVal} PR{maxVal > 1 ? 's' : ''}/mo
-          </span>
-        )}
-      </div>
-
-      <div className="w-full">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
-          <defs>
-            <linearGradient id="area-glow" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.01" />
-            </linearGradient>
-            <linearGradient id="line-glow" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#c084fc" />
-              <stop offset="50%" stopColor="#818cf8" />
-              <stop offset="100%" stopColor="#60a5fa" />
-            </linearGradient>
-          </defs>
-
-          {/* Grid lines */}
-          {[0, 0.5, 1].map((ratio) => {
-            const y = paddingTop + ratio * chartHeight;
-            const labelValue = Math.round(displayMax - ratio * displayMax);
-            return (
-              <g key={ratio}>
-                <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} className="stroke-white/[0.05] stroke-1" strokeDasharray="4 4" />
-                <text x={paddingLeft - 8} y={y + 3} textAnchor="end" className="text-[9px] fill-white/20 font-mono font-[500]">{maxVal === 0 && ratio > 0 ? '' : labelValue}</text>
-              </g>
-            );
-          })}
-
-          {/* Area fill */}
-          {maxVal > 0 && <path d={areaD} fill="url(#area-glow)" />}
-
-          {/* Glowing Line */}
-          {maxVal > 0 ? (
-            <path d={lineD} fill="none" stroke="url(#line-glow)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          ) : (
-            <line x1={paddingLeft} y1={paddingTop + chartHeight} x2={width - paddingRight} y2={paddingTop + chartHeight} className="stroke-white/10 stroke-[1.5px]" />
-          )}
-
-          {/* Data Points */}
-          {maxVal > 0 &&
-            points.map((p, i) => (
-              <g key={i} className="group/point">
-                <circle cx={p.x} cy={p.y} r="6" className="fill-purple-500/0 stroke-purple-500/0 cursor-help" />
-                <circle cx={p.x} cy={p.y} r="3.5" className="fill-[#030712] stroke-purple-400 stroke-2 transition-all group-hover/point:r-5 group-hover/point:fill-purple-400" />
-                {p.value > 0 && (
-                  <g className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none">
-                    <rect x={p.x - 14} y={p.y - 22} width="28" height="15" rx="4" className="fill-[#141424] stroke-white/10 stroke-[0.5px]" />
-                    <text x={p.x} y={p.y - 12} textAnchor="middle" className="text-[9px] font-[650] fill-white/80 font-mono">{p.value}</text>
-                  </g>
-                )}
-              </g>
-            ))}
-
-          {/* X-axis labels */}
-          {points.map((p, i) => (
-            <text key={i} x={p.x} y={height - 5} textAnchor="middle" className="text-[9px] fill-white/30 font-[500]">{p.label}</text>
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default async function CheckWorkUserPage({
   params,
@@ -251,7 +69,12 @@ export default async function CheckWorkUserPage({
     return (
       <main className="min-h-screen bg-panel flex flex-col items-center justify-center text-center px-4 py-12">
         <div className="bg-ground border border-line rounded-2xl p-8 max-w-md shadow-card">
-          <div className="text-4xl mb-4">⏳</div>
+          <div className="w-14 h-14 rounded-xl bg-warning-0 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path strokeLinecap="round" d="M12 7v5l3 2" />
+            </svg>
+          </div>
           <h1 className="text-xl font-[650] text-ink mb-3">GitHub API Rate Limit Hit</h1>
           <p className="text-ink-soft text-sm leading-relaxed mb-6">
             The public GitHub API search rate limit has been hit. Please sign in with your GitHub account to authenticate your requests and get your personal high rate limits (5,000 requests/hour).
@@ -284,7 +107,12 @@ export default async function CheckWorkUserPage({
     return (
       <main className="min-h-screen bg-panel flex flex-col items-center justify-center text-center px-4 py-12">
         <div className="bg-ground border border-line rounded-2xl p-8 max-w-md">
-          <div className="text-4xl mb-4">🔍</div>
+          <div className="w-14 h-14 rounded-xl bg-panel-2 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-6 h-6 text-ink-soft" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+            </svg>
+          </div>
           <h1 className="text-xl font-[650] text-ink mb-3">GitHub User Not Found</h1>
           <p className="text-ink-soft text-sm leading-relaxed mb-6">
             We couldn&apos;t find GitHub username <span className="text-violet-600 font-[550]">@{username}</span>. Make sure the username is spelled correctly.
@@ -311,7 +139,7 @@ export default async function CheckWorkUserPage({
             : tab === 'open'   ? allPRs.filter(pr => pr.state === 'open')
             : allPRs;
 
-  const badges = getBadges(allPRs, counts.mergedPRs);
+  const badges = getBadges(allPRs, await getRepoCache());
 
   return (
     <main className="min-h-screen bg-panel">
@@ -364,23 +192,43 @@ export default async function CheckWorkUserPage({
               <p className="text-ink-soft text-sm mt-0.5">@{profile.login}</p>
               {profile.bio && <p className="text-ink-mid mt-3 max-w-lg leading-relaxed">{profile.bio}</p>}
 
-              {/* Badges showcase */}
+              {/* What this contributor's merged work shows */}
               {badges.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+                <div className="flex flex-wrap gap-1.5 mt-4 justify-center sm:justify-start">
                   {badges.map((b) => (
-                    <div key={b.id} title={b.desc} className={`inline-flex items-center gap-1.5 text-[10px] font-[550] px-2.5 py-1 rounded-lg border transition-all cursor-help ${b.style}`}>
-                      <span>{b.emoji}</span>
-                      <span>{b.name}</span>
-                    </div>
+                    <span
+                      key={b.id}
+                      title={b.desc}
+                      className="inline-flex items-center text-[11.5px] font-[550] text-ink-mid bg-panel-2 px-2.5 py-1 rounded-full cursor-help"
+                    >
+                      {b.name}
+                    </span>
                   ))}
                 </div>
               )}
 
               <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start text-sm text-ink-soft">
-                {profile.company && <span className="flex items-center gap-1.5">🏢 {profile.company}</span>}
-                {profile.location && <span className="flex items-center gap-1.5">📍 {profile.location}</span>}
+                {profile.company && (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M1.75 16A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0h8.5C11.216 0 12 .784 12 1.75v5.5a.75.75 0 0 1-1.5 0v-5.5a.25.25 0 0 0-.25-.25h-8.5a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h3.75a.75.75 0 0 1 0 1.5H1.75z" />
+                    </svg>
+                    {profile.company}
+                  </span>
+                )}
+                {profile.location && (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M8 0a5 5 0 0 0-5 5c0 2.76 2.5 4.9 5 8 2.5-3.1 5-5.24 5-8a5 5 0 0 0-5-5zm0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
+                    </svg>
+                    {profile.location}
+                  </span>
+                )}
                 <a href={profile.html_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-ink-mid transition-colors">
-                  🔗 GitHub Profile
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                  </svg>
+                  GitHub profile
                 </a>
               </div>
 
@@ -428,7 +276,10 @@ export default async function CheckWorkUserPage({
 
       {/* Contribution Trend Chart */}
       <div className="max-w-4xl mx-auto px-4 mb-6">
-        <ContributionChart prs={allPRs} />
+        {/* This is a server component: it renders once per request, so "now"
+            is request time and is stable for the life of the render. */}
+        {/* eslint-disable-next-line react-hooks/purity */}
+        <ContributionChart prs={allPRs} nowMs={Date.now()} />
       </div>
 
       {/* Lists of contributions */}

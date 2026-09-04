@@ -34,10 +34,10 @@ function PRBadge({ pr }: { pr: StudentPR }) {
 function ImpactBadge({ weight }: { weight: number }) {
   return (
     <span
-      title="Impact: what a merged PR into this project is worth on the leaderboard (repo quality score) — repeat PRs into the same repo count for progressively less"
-      className="inline-flex items-center gap-1 bg-gold-0 text-gold-600 px-2 py-0.5 rounded-full text-[10.5px] font-[600] whitespace-nowrap"
+      title="Impact score: how much a merged pull request into this project is worth on the leaderboard. It is higher for projects with more real activity, and repeat pull requests into the same project count for progressively less."
+      className="inline-flex items-center gap-1 bg-panel-2 text-ink-mid px-2 py-0.5 rounded-full text-[10.5px] font-[600] whitespace-nowrap cursor-help"
     >
-      ⚡ {weight.toFixed(1)}
+      Impact <span className="tabular-nums text-ink">{weight.toFixed(1)}</span>
     </span>
   );
 }
@@ -146,10 +146,11 @@ function RepoHeader({ repo, count }: { repo: string; count: number }) {
   );
 }
 
-function Empty({ text }: { text: string }) {
+function Empty({ title, text }: { title: string; text: string }) {
   return (
-    <div className="text-center py-14 bg-ground border border-line rounded-2xl shadow-card">
-      <p className="text-ink-soft text-sm">{text}</p>
+    <div className="text-center py-14 px-6 bg-ground border border-line rounded-2xl shadow-card">
+      <p className="text-ink text-sm font-[600]">{title}</p>
+      <p className="text-ink-soft text-[13px] leading-relaxed mt-1.5 max-w-sm mx-auto">{text}</p>
     </div>
   );
 }
@@ -171,7 +172,12 @@ export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWe
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (prs.length === 0)
-    return <Empty text="No collaborative pull requests found." />;
+    return (
+      <Empty
+        title="Nothing here yet"
+        text="A pull request is a proposed change to someone else's project. None of this contributor's pull requests match the current view — try a different tab, or clear the date filter."
+      />
+    );
 
   const fullCounts = groupByRepo(prs);
   const visibleByRepo = groupByRepo(prs.slice(0, visibleCount));
@@ -227,7 +233,12 @@ export function IssuesSection({ issues }: { issues: StudentIssue[] }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (issues.length === 0)
-    return <Empty text="No issues found in other repositories." />;
+    return (
+      <Empty
+        title="No issues yet"
+        text="An issue is a report of a bug or an idea raised on someone else's project. This contributor hasn't opened any that match the current view."
+      />
+    );
 
   const fullCounts = groupByRepo(issues);
   const visibleByRepo = groupByRepo(issues.slice(0, visibleCount));
