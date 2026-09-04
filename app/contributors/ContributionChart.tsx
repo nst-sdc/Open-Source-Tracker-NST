@@ -316,7 +316,7 @@ export function ContributionChart({
 
   if (totals.all === 0) {
     return (
-      <div className="bg-white border border-line rounded-2xl shadow-card p-5">
+      <div className="bg-ground border border-line rounded-2xl shadow-card p-5">
         {header}
         <p className="text-ink-soft text-[13px] leading-relaxed mt-3">
           No pull requests were opened in this period. A pull request is a proposed change
@@ -396,7 +396,7 @@ export function ContributionChart({
   const partialBucket = buckets.find((b) => b.partial && b.total > 0);
 
   return (
-    <div className="bg-white border border-line rounded-2xl shadow-card p-5">
+    <div className="bg-ground border border-line rounded-2xl shadow-card p-5">
       {header}
 
       {/* Legend — identity never rests on colour alone */}
