@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/preview-fixtures.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "bootstrap-data": "node scripts/bootstrap-local-data.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "make-preview-fixtures": "node scripts/make-preview-fixtures.mjs"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

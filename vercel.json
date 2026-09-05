@@ -1,8 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/refresh/incremental",
-      "schedule": "0 2 * * *"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }

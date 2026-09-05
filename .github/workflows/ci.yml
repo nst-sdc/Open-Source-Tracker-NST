@@ -1,0 +1,41 @@
+name: CI
+
+# Typecheck, unit tests and a production build on every pull request, so a
+# branch that does not compile is caught before anyone opens its preview or
+# reviews it by hand.
+#
+# Deliberately needs no secrets: the build runs with no KV credentials, which
+# lib/kv.ts handles by falling back to disk. That keeps this workflow working
+# for pull requests opened from forks, where secrets are withheld.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch makes the previous run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build

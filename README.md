@@ -69,6 +69,27 @@ This repeatedly calls the same `/api/refresh/incremental` endpoint the productio
 
 This writes to your own local disk-fallback storage (or your own Upstash database, if you've set one up) — it never touches production data, and no shared credentials are involved anywhere in this. Each local checkout needs its own run: `.env.local` and the populated data it produces are both gitignored, so switching branches in a fresh clone (e.g. to review someone else's PR) means starting from empty again in that checkout.
 
+### Pull request previews
+
+Every pull request gets a live preview URL. Previews run with **no credentials at all** — no Upstash token, no GitHub token, no admin password — because `lib/kv.ts` falls back to reading `data/kv/` off disk whenever `KV_REST_API_URL`/`KV_REST_API_TOKEN` are absent. `scripts/preview-fixtures.mjs` stages the committed fixture in `data/preview-fixtures/` into that directory during a preview build, so the leaderboard, Hall of Fame and profiles all render with realistic data.
+
+That is deliberate, and it is what makes previews work for pull requests opened from forks, where Vercel withholds environment variables by design. It also means a preview can never read or write production data, and two pull requests always show the same underlying numbers, so their screenshots are comparable.
+
+What previews **cannot** show, because there is no GitHub token: anything depending on live API calls — the refresh cycle, rate-limit handling, or the 1,000-result search ceiling. Test those locally with `npm run bootstrap-data` as above.
+
+The fixture is a small, deliberately trimmed slice — every achiever, the strongest contributors, and a few students with no activity. Regenerate it only when it goes stale:
+
+```bash
+npm run bootstrap-data          # populate data/kv/ with real data first
+npm run make-preview-fixtures
+```
+
+To check a preview build locally, force the staging step:
+
+```bash
+PREVIEW_FIXTURES=1 npm run build && npm start
+```
+
 ## Environment variables reference
 
 | Variable | Needed locally? | What it's for |
