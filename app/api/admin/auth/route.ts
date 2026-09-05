@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'admin123';
 const COOKIE_NAME = 'admin_session';
 const COOKIE_VALUE = 'authenticated';
 
@@ -8,7 +7,21 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const { password } = body as { password?: string };
 
-  if (!password || password !== ADMIN_PASSWORD) {
+  // Fail closed when ADMIN_PASSWORD is unset. This used to fall back to a
+  // hardcoded 'admin123', so any deployment missing the variable — a pull
+  // request preview, a fresh environment, a secret that silently failed to
+  // mount — served a reachable admin panel behind a password anyone reading
+  // this file already knew.
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!expected) {
+    console.error('[admin] ADMIN_PASSWORD is not set — refusing all admin logins.');
+    return Response.json(
+      { error: 'Admin access is not configured on this deployment.' },
+      { status: 503 }
+    );
+  }
+
+  if (!password || password !== expected) {
     return Response.json({ error: 'Invalid password' }, { status: 401 });
   }
 
