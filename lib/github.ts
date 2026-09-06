@@ -406,7 +406,17 @@ function deadRepoEntry(): import('./repo-cache').RepoCacheEntry {
     isFork: false, isArchived: true, ownerLogin: '',
     createdAt: new Date(0).toISOString(), pushedAt: new Date(0).toISOString(),
   };
-  return { schemaVersion: REPO_SCHEMA_VERSION, stars: 0, forks: 0, valid: false, signals: emptySignals };
+  return {
+    schemaVersion: REPO_SCHEMA_VERSION,
+    stars: 0,
+    forks: 0,
+    valid: false,
+    signals: emptySignals,
+    // Stamped like any other write, so a repo that went private (or was
+    // renamed) is reconsidered on the next re-check rather than being written
+    // off for good.
+    checkedAt: new Date().toISOString(),
+  };
 }
 
 export async function validateNewRepos(
@@ -439,13 +449,19 @@ export async function validateNewRepos(
   // schemaVersion), which the next authenticated refresh upgrades.
   if (!hasAuth) {
     for (const repoFullName of uniqueRepos) {
-      // Legacy entries exist already for schema-stale repos — don't re-fetch
-      // those over REST, we'd learn nothing the entry doesn't already know.
+      // Anything already cached is left alone on this path. A REST lookup
+      // returns only stars and forks, so re-writing an existing entry would
+      // downgrade a full signal set to a legacy one — worse than the slightly
+      // stale entry it replaces. Entries queued here because they aged out are
+      // simply skipped until a run with a token can refresh them properly.
       if (repoCacheMap[repoFullName]) continue;
       try {
         const res = await fetch(`https://api.github.com/repos/${repoFullName}`, { headers });
         if (res.ok) {
           const data = await res.json();
+          // Deliberately unstamped: this writes a legacy-shaped entry with no
+          // schemaVersion and no signals, which isEntryStale already treats as
+          // stale on every pass. A checkedAt here would be dead weight.
           repoCacheMap[repoFullName] = {
             stars: data.stargazers_count || 0,
             forks: data.forks_count || 0,
@@ -559,6 +575,7 @@ export async function validateNewRepos(
           valid: previous?.manualOverride ? previous.valid : isRepoValid(signals),
           manualOverride: previous?.manualOverride,
           signals,
+          checkedAt: new Date().toISOString(),
         };
         updated = true;
       });
