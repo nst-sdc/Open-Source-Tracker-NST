@@ -1,10 +1,15 @@
 import { getAllStudentSummaries, buildDateQuery } from '@/lib/github';
 import { readSummaryCache, writeSummaryCache } from '@/lib/summary-cache';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
+import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  // A stampede on a stale cache triggers a full multi-student GitHub refresh.
+  const limited = await checkRateLimit(`rl:weekly:${getClientIp(request)}`, 20, 60);
+  if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
+
   try {
     // Attempt to load from the 'week' summary cache
     let cache = await readSummaryCache('week');

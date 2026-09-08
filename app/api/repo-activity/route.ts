@@ -1,4 +1,5 @@
 import { getGitHubHeaders } from '@/lib/github';
+import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
 
 interface RepoInfo {
   fullName: string;
@@ -26,6 +27,10 @@ function getFilterDate(period: string): Date {
 }
 
 export async function GET(request: Request) {
+  // Uncached hits fan out to several GitHub REST calls per repo.
+  const limited = await checkRateLimit(`rl:repo-activity:${getClientIp(request)}`, 30, 60);
+  if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
+
   const { searchParams } = new URL(request.url);
   const repo = searchParams.get('repo');
   const period = searchParams.get('period') || '1day';

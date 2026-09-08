@@ -1,8 +1,14 @@
 import { getStudentProfile } from '@/lib/github';
 import { getStudentsKV } from '@/lib/kv-students';
 import { addJoinRequest, getJoinRequestsKV } from '@/lib/kv-join-requests';
+import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
+  // Eligibility checks hit the GitHub API per call — brake scanners before
+  // they can burn the shared Search quota (LLM10 / issue #45).
+  const limited = await checkRateLimit(`rl:join-check:${getClientIp(request)}`, 30, 60);
+  if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
+
   try {
     const { searchParams } = new URL(request.url);
     const username = searchParams.get('username')?.trim();
@@ -61,6 +67,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Queue writes are the spam vector — tight limit, legitimate users submit once.
+  const limited = await checkRateLimit(`rl:join-submit:${getClientIp(request)}`, 5, 60);
+  if (!limited.allowed) {
+    return rateLimitedResponse(limited.retryAfter, 'Too many join requests. Please try again later.');
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
     const { github, year, campus } = body as {

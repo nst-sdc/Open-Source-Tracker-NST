@@ -1,4 +1,5 @@
 import { getGitHubHeaders } from '@/lib/github';
+import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
 
 function getFilterDate(period: string): Date {
   const now = new Date();
@@ -17,6 +18,10 @@ const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes cache for user stats
 
 export async function GET(request: Request) {
+  // Each uncached hit spends a GitHub Search call from the shared quota.
+  const limited = await checkRateLimit(`rl:user-activity:${getClientIp(request)}`, 30, 60);
+  if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
+
   const { searchParams } = new URL(request.url);
   const username = searchParams.get('username');
   const period = searchParams.get('period') || '1day';
