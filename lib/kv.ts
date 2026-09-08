@@ -109,6 +109,25 @@ export async function kvGet<T>(key: string): Promise<T | null> {
   return readDiskKV<T>(key);
 }
 
+/** Deletes a key from Redis (or the disk fallback). Returns true if deleted or absent. */
+export async function kvDel(key: string): Promise<boolean> {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+
+  if (url && token) {
+    const { ok } = await executeKVCommand(['DEL', key]);
+    if (!ok) return false;
+  }
+
+  try {
+    const file = getDiskFile(key);
+    if (existsSync(file)) unlinkSync(file);
+  } catch {
+    return false;
+  }
+  return true;
+}
+
 /** Returns true if the value was actually persisted to Redis (or disk fallback). */
 export async function kvSet<T>(key: string, value: T, ttlSeconds?: number): Promise<boolean> {
   const url = process.env.KV_REST_API_URL;

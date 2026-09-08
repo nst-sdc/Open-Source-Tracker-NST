@@ -75,6 +75,16 @@ export async function GET(request: Request) {
           pool[userData.login] = accessToken;
           await kvSet(poolKey, pool);
           console.log(`Added token for user ${userData.login} to token pool.`);
+          // Non-sensitive handle so /api/auth/logout can evict this user's
+          // pool entry without an extra GitHub call. The token itself stays
+          // in the httpOnly cookie only.
+          cookieStore.set('github_username', userData.login, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 30 * 24 * 60 * 60, // 30 days
+          });
         }
       }
     } catch (poolError) {
