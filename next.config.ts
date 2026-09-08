@@ -17,6 +17,37 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Security headers (issue #47). CSP keeps 'unsafe-inline' for scripts and
+  // styles because the theme boot script in app/layout.tsx and Next.js's own
+  // runtime chunks are inline — the policy still buys frame-ancestors,
+  // object-src, and base-uri lockdown plus clickjacking/MIME protections.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://api.github.com https://github.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "frame-ancestors 'none'",
+            ].join('; '),
+          },
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

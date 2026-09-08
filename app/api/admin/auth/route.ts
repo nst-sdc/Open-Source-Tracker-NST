@@ -6,6 +6,7 @@ import {
   revokeAdminSession,
 } from '@/lib/admin-auth';
 import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
+import { logEvent } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,10 +42,12 @@ export async function POST(request: Request) {
   }
 
   if (!password || password !== expected) {
+    await logEvent('admin-login', 'admin.login.failed', `ip=${getClientIp(request)}`);
     return Response.json({ error: 'Invalid password' }, { status: 401 });
   }
 
   const session = await createAdminSession();
+  await logEvent('admin-login', 'admin.login.success', `ip=${getClientIp(request)}`);
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_COOKIE_NAME, session.id, {
     httpOnly: true,
