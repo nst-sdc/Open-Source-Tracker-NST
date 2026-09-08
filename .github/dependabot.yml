@@ -1,0 +1,61 @@
+# Dependency updates.
+#
+# Left at its defaults Dependabot opens one pull request per package per week,
+# which on this repo would mean a dozen at a time competing with the students'
+# own PRs. A queue nobody reads is the same as no updates at all, so the
+# settings below are about keeping the volume reviewable:
+#
+#   - minor and patch bumps are grouped into a single pull request, because they
+#     are read and merged as one decision anyway
+#   - majors are deliberately left ungrouped, so each arrives on its own and can
+#     be tested properly — TypeScript and ESLint majors in particular are real
+#     migrations, not a version bump
+#   - open pull requests are capped, so a quiet week upstream cannot flood the
+#     queue
+#
+# CI (.github/workflows/ci.yml) runs typecheck, unit tests and a production
+# build on every pull request, so a grouped bump that breaks the app fails
+# before anyone has to look at it.
+
+version: 2
+
+updates:
+  # ── Application dependencies (package.json) ────────────────────────────────
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      # One pull request a week for the routine bumps. Anything major falls
+      # outside this group and gets its own.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # ── Workflow actions (.github/workflows/*.yml) ─────────────────────────────
+  # These pin major tags (actions/checkout@v4, docker/build-push-action@v6 and
+  # so on) and otherwise go stale silently until a workflow breaks. There are
+  # only a handful and they move together, so one grouped pull request is
+  # enough.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns:
+          - "*"
