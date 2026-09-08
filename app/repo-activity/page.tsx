@@ -489,7 +489,7 @@ export default function RepoActivityPage() {
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin overscroll-contain">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin overscroll-contain" data-lenis-prevent>
               {loadingUser && (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <svg className="w-8 h-8 text-brand-500 animate-spin" fill="none" viewBox="0 0 24 24">

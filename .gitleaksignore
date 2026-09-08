@@ -1,0 +1,14 @@
+# Fingerprints gitleaks should not fail on, one per line, each justified.
+#
+# Format: <commit>:<file>:<rule>:<line>
+#
+# Both entries below are cached GitHub PR descriptions written by students,
+# committed back when data/kv/ was still tracked (it is gitignored now, so no
+# further profile caches can be added). Each is a `curl` example pasted into a
+# pull request body, which the curl-auth-* rules match on the flag name alone.
+# The captured text is a Content-Type header and a list of CLI tools — there is
+# no credential in either, and both predate this branch.
+#
+# Verified with: gitleaks git --redact  (v8.24.3)
+0dfa790164cec5a9db40ab85164bac80b8ac3957:data/kv/profile_cache_rajatrsrivastav.json:curl-auth-header:887
+0dfa790164cec5a9db40ab85164bac80b8ac3957:data/kv/profile_cache_bitflicker64.json:curl-auth-user:9403

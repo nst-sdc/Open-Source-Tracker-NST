@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './ThemeToggle';
+import { KAIRI_PATH, KAIRI_SHORT_NAME } from '@/lib/kairi';
 
 // "Join Tracker" is elevated to the nav's primary action button; every other
 // destination stays a plain link.
@@ -15,11 +16,17 @@ const LINKS = [
   { href: '/programs',     label: 'Programs'     },
   { href: '/achievers',    label: 'Hall of Fame' },
   { href: '/get-started',  label: 'Get Started'  },
-  { href: '/check-work',   label: 'Check My Work'},
+  // "Check My Work" shortened to "My Work": the desktop row is already at
+  // capacity (see the breakpoint comment below) and Kairi makes nine links.
+  { href: '/check-work',   label: 'My Work'      },
+  { href: KAIRI_PATH,      label: KAIRI_SHORT_NAME },
 ];
 
 interface Session {
   authenticated: boolean;
+  /** Set when the server could not reach GitHub to check. Not the same as
+   *  "signed out" — keep whatever session state we already had. */
+  unknown?: boolean;
   user?: {
     username: string;
     name: string;
@@ -67,7 +74,11 @@ export function Nav() {
       try {
         const res = await fetch('/api/auth/session');
         if (res.ok) {
-          const data = await res.json();
+          const data: Session = await res.json();
+          // A GitHub outage must not look like a sign-out. This runs on every
+          // route change, so treating `unknown` as signed-out would flicker
+          // the whole site to logged-out during any blip.
+          if (data.unknown) return;
           setSession(data);
         }
       } catch (err) {
@@ -109,7 +120,9 @@ export function Nav() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
             <LogoMark />
-            <span className="text-[15px] font-[650] tracking-[-0.01em] text-ink group-hover:text-brand-600 transition-colors whitespace-nowrap">
+            {/* Below 400px the wordmark plus the signed-in actions overflow
+                the viewport; the mark alone still identifies the site. */}
+            <span className="hidden min-[400px]:inline text-[15px] font-[650] tracking-[-0.01em] text-ink group-hover:text-brand-600 transition-colors whitespace-nowrap">
               Opensource Tracker
             </span>
             <span className="text-[10px] font-[650] text-brand-600 bg-brand-0 rounded-md px-1.5 py-0.5 tracking-[0.04em] hidden sm:inline">
@@ -123,10 +136,14 @@ export function Nav() {
               overflow across BOTH ends, so the "H" of Home was being cut off
               the left edge with no scrollbar to hint at it. `safe` falls back
               to start-alignment the moment the row stops fitting.
-              The row then only appears from 1440px, which is where all eight
+              The row then only appears from 1440px, which is where the
               links fit beside the logo and the actions even when a signed-in
               user's avatar and handle widen the right-hand group. Below that
-              the hamburger carries the same links. */}
+              the hamburger carries the same links -- and the hamburger's own
+              breakpoint MUST match this one. It used to hide itself at the
+              `lg` breakpoint (1024px), which left every viewport between
+              1024px and 1439px with no navigation at all: no link row, and
+              no hamburger either. */}
           <div className="hidden min-[1440px]:flex items-center gap-0.5 overflow-x-auto scrollbar-none flex-1 min-w-0 [justify-content:safe_center] mx-2">
             {LINKS.map(({ href, label }) => {
               const active = href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
@@ -232,7 +249,7 @@ export function Nav() {
             <button
               onClick={() => setOpen((o) => !o)}
               aria-label="Toggle menu"
-              className="lg:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg border border-line-strong hover:bg-panel transition-colors"
+              className="min-[1440px]:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg border border-line-strong hover:bg-panel transition-colors"
             >
               <span className={`block h-[1.5px] w-4 bg-ink-mid transition-all duration-200 ${open ? 'rotate-45 translate-y-[7px]' : ''}`} />
               <span className={`block h-[1.5px] w-4 bg-ink-mid transition-all duration-200 ${open ? 'opacity-0' : ''}`} />
@@ -244,11 +261,11 @@ export function Nav() {
 
       {/* Mobile slide-out menu */}
       {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40 min-[1440px]:hidden">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-ink/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
           {/* Panel */}
-          <div className="absolute top-[60px] left-0 right-0 bg-ground border-b border-line shadow-pop max-h-[calc(100vh-60px)] overflow-y-auto">
+          <div className="absolute top-[60px] left-0 right-0 bg-ground border-b border-line shadow-pop max-h-[calc(100vh-60px)] overflow-y-auto overscroll-contain" data-lenis-prevent>
             <div className="flex flex-col py-2 px-2">
               {LINKS.map(({ href, label }) => {
                 const active = href === '/' ? path === '/' : path === href || path.startsWith(href + '/');

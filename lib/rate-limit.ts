@@ -36,27 +36,32 @@ interface WindowState {
 export async function checkRateLimit(
   key: string,
   limit: number,
-  windowSeconds: number
+  windowSeconds: number,
+  /** Units to charge for this hit. One agent run can cost several provider
+   *  calls, so it must be able to reserve them all in a single KV op rather
+   *  than pretending to be one request. */
+  cost: number = 1
 ): Promise<RateLimitResult> {
   const now = Date.now();
+  const charge = Math.max(1, Math.floor(cost));
   const state = (await kvGet<WindowState>(key)) ?? { count: 0, resetAt: now + windowSeconds * 1000 };
 
   // Stale window — start a fresh one.
   if (now >= state.resetAt) {
-    const fresh: WindowState = { count: 1, resetAt: now + windowSeconds * 1000 };
+    const fresh: WindowState = { count: charge, resetAt: now + windowSeconds * 1000 };
     await kvSet(key, fresh, windowSeconds + 5);
-    return { allowed: true, remaining: Math.max(0, limit - 1), retryAfter: 0 };
+    return { allowed: true, remaining: Math.max(0, limit - charge), retryAfter: 0 };
   }
 
-  if (state.count >= limit) {
+  if (state.count + charge > limit) {
     return {
       allowed: false,
-      remaining: 0,
+      remaining: Math.max(0, limit - state.count),
       retryAfter: Math.max(1, Math.ceil((state.resetAt - now) / 1000)),
     };
   }
 
-  const next: WindowState = { count: state.count + 1, resetAt: state.resetAt };
+  const next: WindowState = { count: state.count + charge, resetAt: state.resetAt };
   const ttl = Math.max(1, Math.ceil((state.resetAt - now) / 1000) + 5);
   await kvSet(key, next, ttl);
   return { allowed: true, remaining: limit - next.count, retryAfter: 0 };

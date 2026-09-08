@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getPublicOrigin } from '@/lib/request-origin';
+import {
+  OAUTH_STATE_COOKIE,
+  OAUTH_STATE_TTL_SECONDS,
+  createOAuthState,
+  encodeOAuthState,
+} from '@/lib/oauth-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +20,12 @@ export async function GET(request: Request) {
     );
   }
 
+  // Where to land after signing in. Sanitized to a same-site path, so this
+  // can never be turned into an open redirect.
+  const requestedNext = new URL(request.url).searchParams.get('next');
+  const state = createOAuthState(requestedNext);
+  const cookieStore = await cookies();
+
   // If Client ID is mock/ADMIN, bypass the OAuth flow and log in using local GITHUB_TOKEN (Local Dev ONLY)
   if (clientId === 'ADMIN' && process.env.GITHUB_TOKEN) {
     if (process.env.NODE_ENV === 'production') {
@@ -22,7 +34,6 @@ export async function GET(request: Request) {
         { status: 500 }
       );
     }
-    const cookieStore = await cookies();
     cookieStore.set('github_oauth_token', process.env.GITHUB_TOKEN, {
       httpOnly: true,
       secure: false,
@@ -30,12 +41,27 @@ export async function GET(request: Request) {
       path: '/',
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
-    return NextResponse.redirect(new URL('/', getPublicOrigin(request)));
+    // The dev shortcut honours `next` too, so the signed-in flow can be
+    // tested locally exactly as a student experiences it.
+    return NextResponse.redirect(new URL(state.next, getPublicOrigin(request)));
   }
 
-  // Generate GitHub login URL
-  const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=read:user`;
+  // The nonce is what makes a forced callback fail: without a matching
+  // cookie, an attacker cannot make a victim's browser complete a sign-in
+  // with the attacker's code (which would plant the attacker's token in the
+  // victim's cookie, and then in the shared refresh pool).
+  const encodedState = encodeOAuthState(state);
+  cookieStore.set(OAUTH_STATE_COOKIE, encodedState, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: OAUTH_STATE_TTL_SECONDS,
+  });
+
+  const githubUrl =
+    `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}` +
+    `&scope=read:user&state=${encodeURIComponent(encodedState)}`;
 
   return NextResponse.redirect(githubUrl);
 }
-

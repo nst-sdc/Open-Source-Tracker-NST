@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getPublicOrigin } from '@/lib/request-origin';
+import { OAUTH_STATE_COOKIE, decodeOAuthState, nonceMatches } from '@/lib/oauth-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,26 @@ export async function GET(request: Request) {
   if (!code) {
     return NextResponse.json({ error: 'OAuth code parameter is missing.' }, { status: 400 });
   }
+
+  // CSRF: the state GitHub echoes back must match the one we minted and put
+  // in an httpOnly cookie. Without this an attacker can drive a victim's
+  // browser through this callback with their own `code`, planting the
+  // attacker's token in the victim's cookie -- and, below, in the shared
+  // refresh pool. Checked before the code is exchanged, so a forged callback
+  // costs nothing.
+  const cookieStore = await cookies();
+  const presented = decodeOAuthState(searchParams.get('state'));
+  const expected = decodeOAuthState(cookieStore.get(OAUTH_STATE_COOKIE)?.value);
+  cookieStore.delete(OAUTH_STATE_COOKIE); // single use, match or not
+
+  if (!presented || !expected || !nonceMatches(presented.nonce, expected.nonce)) {
+    console.warn('[oauth] rejected a callback with a missing or mismatched state');
+    return NextResponse.json(
+      { error: 'This sign-in link is invalid or expired. Please start again from the site.' },
+      { status: 400 },
+    );
+  }
+  const returnTo = expected.next;
 
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
@@ -47,7 +68,6 @@ export async function GET(request: Request) {
     }
 
     // Save token in cookie
-    const cookieStore = await cookies();
     cookieStore.set('github_oauth_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -75,24 +95,20 @@ export async function GET(request: Request) {
           pool[userData.login] = accessToken;
           await kvSet(poolKey, pool);
           console.log(`Added token for user ${userData.login} to token pool.`);
-          // Non-sensitive handle so /api/auth/logout can evict this user's
-          // pool entry without an extra GitHub call. The token itself stays
-          // in the httpOnly cookie only.
-          cookieStore.set('github_username', userData.login, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 30 * 24 * 60 * 60, // 30 days
-          });
+          // Deliberately NO `github_username` cookie. It used to be written
+          // here as a convenience handle, and became an impersonation
+          // vector: anything that read it believed a client-supplied name.
+          // Identity is resolved from the token by lib/session.ts, and
+          // logout evicts the pool entry by token value instead.
         }
       }
     } catch (poolError) {
       console.error('Failed to add token to token pool:', poolError);
     }
 
-    // Redirect to home/dashboard page
-    return NextResponse.redirect(new URL('/', getPublicOrigin(request)));
+    // Back to wherever the student started. Already sanitized to a
+    // same-site path by lib/oauth-state.ts.
+    return NextResponse.redirect(new URL(returnTo, getPublicOrigin(request)));
   } catch (error) {
     console.error('GitHub OAuth callback exchange error:', error);
     return NextResponse.json({ error: 'An error occurred during code exchange.' }, { status: 500 });

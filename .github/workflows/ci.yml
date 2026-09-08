@@ -40,11 +40,38 @@ jobs:
       - name: Production build
         run: npm run build
 
-  # Secret scanning needs no credentials, so it runs on fork PRs too.
+  # Secret scanning over the full history.
+  #
+  # This runs the gitleaks BINARY rather than gitleaks/gitleaks-action, and
+  # that is deliberate. The action is license-gated: on an organisation
+  # account it refuses to run at all with "missing gitleaks license", and on
+  # a personal account it additionally needs a GITHUB_TOKEN for pull
+  # requests. Between the two, this job had never once completed a scan on a
+  # pull request in this repository -- it failed before reading any code, so
+  # a green tick here meant nothing. The scanner itself is MIT-licensed and
+  # free, needs no token and no secrets, and so also works on pull requests
+  # from forks.
+  #
+  # Findings that are known false positives live in .gitleaksignore, keyed by
+  # exact fingerprint so a new finding in the same file still fails.
   gitleaks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+
+      - name: Install gitleaks
+        env:
+          # Pinned rather than "latest" so a rule change upstream cannot fail
+          # an unrelated pull request without anyone choosing to take it.
+          GITLEAKS_VERSION: 8.24.3
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan git history for secrets
+        run: gitleaks git --redact --no-banner --exit-code 1

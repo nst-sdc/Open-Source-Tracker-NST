@@ -364,3 +364,213 @@ html.lenis, html.lenis body {
     animation: none;
   }
 }
+
+/* ── Assistant widget motion (transform/opacity only; honors reduced motion) ── */
+
+/* Panel entrance from the launcher corner. Close is a plain unmount. */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: none; }
+}
+
+@utility panel-enter {
+  transform-origin: bottom right;
+  animation: panel-in 0.18s cubic-bezier(0, 0, 0.2, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* New chat bubbles rise in as they mount */
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@utility bubble-enter {
+  animation: bubble-in 0.15s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Tool-trail chips fade in under agent replies */
+@keyframes chip-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@utility chip-enter {
+  animation: chip-in 0.2s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Typing indicator — three bouncing dots, staggered via inline animation-delay */
+@keyframes dot-bounce {
+  0%, 60%, 100% { opacity: 0.4; transform: none; }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+@utility typing-dot {
+  animation: dot-bounce 0.9s ease-in-out infinite both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* ── Kairi console ────────────────────────────────────────────── */
+
+/* Caret at the end of an answer while it is still being written */
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@utility kairi-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--color-brand-500);
+  animation: caret-blink 1s steps(2, start) infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Spinner ring beside a tool that is still running */
+@keyframes kairi-spin {
+  to { transform: rotate(360deg); }
+}
+
+@utility kairi-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid var(--color-line-heavy);
+  border-top-color: var(--color-brand-500);
+  animation: kairi-spin 0.8s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    border-top-color: var(--color-line-heavy);
+  }
+}
+
+/* Answer cards rise in as they mount */
+@keyframes article-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@utility article-enter {
+  animation: article-in 0.22s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+
+/* ── Scrollbars ───────────────────────────────────────────────────────────
+ * `scrollbar-thin` and `scrollbar-none` were used in four places but defined
+ * nowhere — Tailwind v4 ships no scrollbar utilities and this project has no
+ * plugin, so both were silently doing nothing.
+ *
+ * Two panes sit side by side on /kairi and they should not read as one
+ * surface: the chat list is a secondary index and gets a hairline, the
+ * transcript is the reading surface and gets a heavier bar with a reserved
+ * gutter so text does not reflow when the bar appears.
+ *
+ * THE STANDARD PROPERTIES COME FIRST, AND ::-webkit-scrollbar IS ONLY A
+ * FALLBACK. Styling ::-webkit-scrollbar in Safari opts the element out of
+ * macOS overlay scrollbars and gives it a permanent legacy bar instead,
+ * which looks broken next to every other app on the system. `scrollbar-width`
+ * and `scrollbar-color` express the same intent while leaving the platform's
+ * own scrollbar behaviour intact, and are supported by Chrome 121+ and
+ * Safari 18.2+. The @supports guard means the webkit rules only reach the
+ * older engines that have no other way to be styled.
+ */
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+/* The chat list and the assistant panel: a hairline. */
+@utility scroll-rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+
+  @supports not (scrollbar-width: thin) {
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--color-line-strong);
+      border-radius: 9999px;
+    }
+    &:hover::-webkit-scrollbar-thumb {
+      background-color: var(--color-line-heavy);
+    }
+  }
+}
+
+/* Alias kept for the admin and repo-activity panes that already ask for it. */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+
+  @supports not (scrollbar-width: thin) {
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--color-line-strong);
+      border-radius: 9999px;
+    }
+  }
+}
+
+/* The transcript: the same mechanism, a heavier thumb and a stable gutter. */
+@utility scroll-page {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: var(--color-line-heavy) transparent;
+
+  @supports not (scrollbar-width: auto) {
+    &::-webkit-scrollbar {
+      width: 12px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--color-line-heavy);
+      background-clip: content-box;
+      border: 3px solid transparent;
+      border-radius: 9999px;
+    }
+    &:hover::-webkit-scrollbar-thumb {
+      background-color: var(--color-ink-faint);
+    }
+  }
+}

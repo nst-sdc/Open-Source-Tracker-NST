@@ -21,7 +21,18 @@ const nextConfig: NextConfig = {
   // styles because the theme boot script in app/layout.tsx and Next.js's own
   // runtime chunks are inline — the policy still buys frame-ancestors,
   // object-src, and base-uri lockdown plus clickjacking/MIME protections.
+  //
+  // 'unsafe-eval' is added in development ONLY. React's dev build uses
+  // eval() to rebuild component stacks, and with it blocked every page
+  // logged "eval() is not supported in this environment": a permanent
+  // "1 Issue" badge, and — because the dev overlay counts it as a runtime
+  // error — a full page reload on every hot update instead of a refresh.
+  // Production builds never call eval, so the production policy is unchanged.
   async headers() {
+    const scriptSrc =
+      process.env.NODE_ENV === 'development'
+        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+        : "script-src 'self' 'unsafe-inline'";
     return [
       {
         source: '/:path*',
@@ -30,7 +41,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",

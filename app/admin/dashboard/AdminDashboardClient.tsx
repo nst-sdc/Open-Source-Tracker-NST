@@ -698,7 +698,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                   {isDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-                      <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-ground border border-line-strong rounded-xl shadow-2xl z-20 scrollbar-thin">
+                      <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto overscroll-contain bg-ground border border-line-strong rounded-xl shadow-2xl z-20 scrollbar-thin" data-lenis-prevent>
                         {students.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
                           students
                             .filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -1908,7 +1908,7 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
           {historyRequests.length > 0 && (
             <div className="space-y-3 pt-4 border-t border-line">
               <h3 className="text-ink-mid text-xs font-[550] uppercase tracking-wider">Processed History</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
+              <div className="space-y-2 max-h-96 overflow-y-auto overscroll-contain scrollbar-thin" data-lenis-prevent>
                 {historyRequests.map((r) => (
                   <div key={r.github} className="flex items-center justify-between gap-4 bg-ground border border-line rounded-xl px-4 py-2 text-ink-soft">
                     <div className="flex items-center gap-3">
