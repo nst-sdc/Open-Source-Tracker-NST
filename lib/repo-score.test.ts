@@ -19,6 +19,7 @@ import {
   MULTIPLIER_MAX,
   CURATED_ORG_FLOOR,
   PER_REPO_DECAY,
+  MIN_STARS,
 } from './repo-score';
 
 /** Fixed "now" so tests don't drift as the fixtures age. */
@@ -175,6 +176,18 @@ describe('validity gate', () => {
   it('a small honest project with a release survives the gate', () => {
     const small = repo({ stars: 30, forks: 4, watchers: 2, releases: 3, mergedPRCount: 40 });
     expect(isRepoValid(small)).toBe(true);
+  });
+
+  it('excludes anything under the star minimum, whatever else it has', () => {
+    // The cases reported on issue #4: personal repos a contributor's friends
+    // own, which cleared the audience test on a single fork and no stars.
+    expect(isRepoValid(repo({ stars: 0, forks: 1, watchers: 1, mergedPRCount: 1 }))).toBe(false);
+    expect(isRepoValid(repo({ stars: 0, forks: 2, watchers: 1, mergedPRCount: 1 }))).toBe(false);
+    // Releases do not buy a way past the star floor either.
+    expect(isRepoValid(repo({ stars: 0, releases: 7, mergedPRCount: 13 }))).toBe(false);
+    // Exactly at the floor is allowed; one below is not.
+    expect(isRepoValid(repo({ stars: MIN_STARS, forks: 1, watchers: 3, releases: 2 }))).toBe(true);
+    expect(isRepoValid(repo({ stars: MIN_STARS - 1, forks: 1, watchers: 3, releases: 2 }))).toBe(false);
   });
 });
 

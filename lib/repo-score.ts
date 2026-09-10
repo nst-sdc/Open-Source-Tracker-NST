@@ -279,17 +279,29 @@ export function aggregateMergedPRScore<T>(
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
- * Validity — replaces the old `stars >= 5` gate
+ * Validity — the coarse gate deciding whether a repo counts at all
  * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Minimum stars for a repo's PRs to count towards anyone's score.
+ *
+ *  This is the single knob for how much small-repo noise the tracker allows
+ *  in; raise it to tighten. It deliberately sits *alongside* the audience test
+ *  rather than replacing it, because on its own a star threshold is weak in
+ *  both directions: a repo farmed by its own participants can carry hundreds
+ *  of stars and clear any realistic value, while a young project that is
+ *  genuinely good may not have five yet. */
+export const MIN_STARS = 5;
 
 export const VALIDITY_MIN_AUDIENCE = 0.15;
 
 /** A repo's PRs are excluded from the tracker entirely when this is false.
- *  Archived repos and forks are out; so is anything with effectively no
- *  audience AND no releases — the signature of a pure farm target. This is a
- *  coarse gate; the multiplier does the fine-grained pricing above it. */
+ *  Archived repos and forks are out, as is anything under the star minimum;
+ *  so is anything with effectively no audience AND no releases — the signature
+ *  of a pure farm target. This is a coarse gate; the multiplier does the
+ *  fine-grained pricing above it. */
 export function isRepoValid(s: RepoSignals): boolean {
   if (s.isArchived || s.isFork) return false;
+  if (s.stars < MIN_STARS) return false;
   if (audienceRatio(s) < VALIDITY_MIN_AUDIENCE && s.releases === 0) return false;
   return true;
 }

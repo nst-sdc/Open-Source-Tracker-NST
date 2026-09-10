@@ -196,8 +196,8 @@ export default function DocumentationPage() {
             <H2 id="spam">Spam & data integrity</H2>
             <P>
               Before a repo&apos;s PRs count toward anything, the repo has to clear a validity gate:
-              not archived, not itself a fork, and not (audience ratio &lt; 0.15 with zero releases) — the signature
-              of a pure farm target. Repos that fail are marked invalid in{' '}
+              at least <Code>5</Code> stars, not archived, not itself a fork, and not (audience ratio &lt; 0.15 with
+              zero releases) — the signature of a pure farm target. Repos that fail are marked invalid in{' '}
               <Code>repo_cache_map</Code> and every PR into them is stripped out before it&apos;s ever displayed or
               scored — not just deprioritized.
             </P>
@@ -306,9 +306,10 @@ export default function DocumentationPage() {
                 bug — see &quot;Staying fresh&quot; above.
               </li>
               <li className="text-[15px] text-ink-mid leading-[1.7]">
-                <strong className="text-ink">The repo validity gate is a single, low bar.</strong> <Code>stars ≥ 5</Code>{' '}
-                is easy to clear deliberately (e.g. by a small group starring each other&apos;s repos), and is the
-                same underlying weakness as the ranking formula.
+                <strong className="text-ink">The star minimum is a low bar on its own.</strong>{' '}
+                <Code>stars ≥ 5</Code> is easy to clear deliberately (e.g. by a small group starring each
+                other&apos;s repos). It is a cheap first filter, not the real check — the audience ratio and the
+                multiplier do that work — but a determined group can still clear both.
               </li>
             </ul>
           </section>
