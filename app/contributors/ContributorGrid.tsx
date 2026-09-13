@@ -68,8 +68,23 @@ function RankCell({ rank }: { rank: number }) {
   return <span className="text-[14px] font-[650] text-ink-soft tabular-nums pl-2">{rank}</span>;
 }
 
+// One grid, three layouts, because nine columns cannot fit on a phone:
+//
+//   below md   rank | name | rating with the merged count under it
+//   md to lg   campus and year drop out; the numeric columns get fixed widths
+//              so the name takes whatever room is left
+//   lg and up  the full nine columns
+//
+// Every row is its own grid, so the tracks are fixed widths rather than `auto`.
+// An auto track would size to that row's own content, and the columns would
+// stop lining up from one row to the next.
+//
+// The phone layout previously had five tracks for four visible cells: the last
+// 44px was reserved for the chevron, which is hidden below md. That empty track
+// plus its gap was almost exactly the width the name column needed, so on a
+// 375px screen names rendered 1px wide and on 320px not at all.
 const ROW_GRID =
-  'grid grid-cols-[64px_minmax(0,1fr)_80px_72px_44px] md:grid-cols-[76px_minmax(0,280px)_1fr_1fr_1fr_1fr_1fr_1fr_36px] gap-3 items-center';
+  'grid grid-cols-[48px_minmax(0,1fr)_76px] md:grid-cols-[64px_minmax(0,1fr)_84px_72px_56px_56px_28px] lg:grid-cols-[76px_minmax(0,280px)_1fr_1fr_1fr_1fr_1fr_1fr_36px] gap-3 items-center';
 
 function ContributorRow({
   summary,
@@ -88,18 +103,18 @@ function ContributorRow({
   return (
     <Link
       href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
-      className={`${ROW_GRID} px-4 md:px-5 py-3 border-t border-panel hover:bg-panel/60 transition-colors group ${highlight}`}
+      className={`${ROW_GRID} px-3 md:px-5 py-3 border-t border-panel hover:bg-panel/60 transition-colors group ${highlight}`}
     >
       <span><RankCell rank={rank} /></span>
 
-      <span className="flex items-center gap-3 min-w-0">
+      <span className="flex items-center gap-2.5 md:gap-3 min-w-0">
         <Image
           src={summary.profile.avatar_url}
           alt=""
           width={38}
           height={38}
           unoptimized
-          className="w-[38px] h-[38px] rounded-full border border-line object-cover shrink-0"
+          className="w-8 h-8 md:w-[38px] md:h-[38px] rounded-full border border-line object-cover shrink-0"
         />
         <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-[550] text-ink truncate group-hover:text-brand-600 transition-colors">
@@ -113,24 +128,30 @@ function ContributorRow({
         <span title="Ranking score for this contributor" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums">
           {summary.scoreMergedPRs.toFixed(1)}
         </span>
+        {/* Phones have no separate merged column, so the count sits under the
+            rating rather than disappearing. */}
+        <span title="Merged pull requests" className="md:hidden flex items-center gap-1">
+          <MergeIcon className="w-3 h-3 text-success-600 shrink-0" />
+          <span className="text-[12.5px] font-[650] text-success-600 tabular-nums">{summary.mergedPRs}</span>
+        </span>
         {summary.avgScore !== undefined && (
           <span
             title="Average impact per merged PR — how significant the projects they contribute to tend to be, not how many PRs they've done."
-            className="text-[9.5px] text-ink-soft tabular-nums"
+            className="hidden md:block text-[9.5px] text-ink-soft tabular-nums"
           >
             impact {(summary.avgScore * IMPACT_DISPLAY_FACTOR).toFixed(1)}
           </span>
         )}
       </span>
 
-      <span className="hidden md:block text-[13px] text-ink-mid truncate">
+      <span className="hidden lg:block text-[13px] text-ink-mid truncate">
         {summary.campus ?? <span className="text-ink-faint">—</span>}
       </span>
-      <span className="hidden md:block text-[13px] text-ink-mid truncate">
+      <span className="hidden lg:block text-[13px] text-ink-mid truncate">
         {summary.year ?? <span className="text-ink-faint">—</span>}
       </span>
 
-      <span className="flex items-center gap-1.5 justify-end">
+      <span className="hidden md:flex items-center gap-1.5 justify-end">
         <MergeIcon className="w-3.5 h-3.5 text-success-600 shrink-0" />
         <span className="text-[14.5px] font-[650] text-success-600 tabular-nums">{summary.mergedPRs}</span>
       </span>
@@ -171,13 +192,17 @@ export function ContributorGrid({
     <div className="max-w-6xl mx-auto px-4 md:px-6 pb-20 mt-6 space-y-10">
       {/* Ranked leaderboard table */}
       <div className="bg-ground border border-line rounded-2xl shadow-card overflow-hidden">
-        <div className={`${ROW_GRID} px-4 md:px-5 py-3.5 bg-panel`}>
+        <div className={`${ROW_GRID} px-3 md:px-5 py-3.5 bg-panel`}>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">RANK</span>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">NAME</span>
-          <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em] text-right">RATING</span>
-          <span className="hidden md:block text-[11px] font-[650] text-ink-soft tracking-[0.08em]">CAMPUS</span>
-          <span className="hidden md:block text-[11px] font-[650] text-ink-soft tracking-[0.08em]">YEAR</span>
-          <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em] text-right">MERGED</span>
+          {/* Stacked on phones to match the cell underneath it. */}
+          <span className="flex flex-col items-end leading-tight text-[11px] font-[650] text-ink-soft tracking-[0.08em]">
+            <span>RATING</span>
+            <span className="md:hidden">MERGED</span>
+          </span>
+          <span className="hidden lg:block text-[11px] font-[650] text-ink-soft tracking-[0.08em]">CAMPUS</span>
+          <span className="hidden lg:block text-[11px] font-[650] text-ink-soft tracking-[0.08em]">YEAR</span>
+          <span className="hidden md:block text-[11px] font-[650] text-ink-soft tracking-[0.08em] text-right">MERGED</span>
           <span className="hidden md:block text-[11px] font-[650] text-ink-soft tracking-[0.08em] text-right">OPEN</span>
           <span className="hidden md:block text-[11px] font-[650] text-ink-soft tracking-[0.08em] text-right">ISSUES</span>
           <span className="hidden md:block" />
