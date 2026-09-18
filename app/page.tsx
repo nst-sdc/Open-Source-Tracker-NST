@@ -52,7 +52,7 @@ function RankChip({ rank }: { rank: number }) {
 export default async function Home() {
   const events = await getEventsKV();
   const achievers = await getAchieversKV();
-  const cache = await readSummaryCache();
+  const cache = await readSummaryCache("week");
 
   // Stats from achievers
   const programSet = new Set(achievers.flatMap((a) => a.programs.map((p) => p.name)));
@@ -65,9 +65,8 @@ export default async function Home() {
   const totalMerged = cache?.summaries.reduce((s, c) => s + c.mergedPRs, 0) ?? 0;
   const totalPRs = cache?.summaries.reduce((s, c) => s + c.totalPRs, 0) ?? 0;
 
-  // Top contributors (top 5 from cache for the leaderboard preview card)
+  // Top contributors in this week(top 5 from cache for the leaderboard preview card)
   const topContributors = cache?.summaries.slice(0, 5) ?? [];
-
   return (
     <main className="min-h-screen bg-ground">
       {/* Announcement banner */}
@@ -133,7 +132,7 @@ export default async function Home() {
         {topContributors.length > 0 && (
           <div className="w-full lg:w-[380px] shrink-0 bg-ground border border-line rounded-2xl shadow-card px-5 pt-4 pb-2">
             <div className="flex items-center justify-between pb-1.5">
-              <h2 className="text-[15px] font-[650] text-ink">Top contributors</h2>
+              <h2 className="text-[15px] font-[650] text-ink"> This Week's Top Contributors</h2>
               <span className="inline-flex items-center gap-1.5 text-[10.5px] font-[650] tracking-[0.05em] text-success-600 bg-success-0 rounded-full px-2.5 py-1">
                 <span className="live-dot w-1.5 h-1.5 rounded-full bg-success-400" />
                 LIVE
