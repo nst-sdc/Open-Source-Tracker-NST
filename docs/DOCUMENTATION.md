@@ -219,7 +219,6 @@ OpenSource_NST_Tracker/
 │       └── summary_cache_*.json  # Leaderboard snapshots
 │
 ├── next.config.ts                # Next.js config (image domains)
-├── vercel.json                   # Cron job config (daily at 2 AM)
 ├── package.json                  # Dependencies
 ├── .env.local                    # Environment variables (secrets)
 └── docs/
@@ -706,16 +705,15 @@ Set it to the folder that contains your `app/` directory and `package.json`.
 
 ### Cron Job
 
-Defined in `vercel.json`:
-```json
-{
-  "crons": [{
-    "path": "/api/refresh",
-    "schedule": "0 2 * * *"
-  }]
-}
+Defined in `k8s/05-refresh-cronjob.yaml`, running in the cluster:
+
+```yaml
+schedule: "*/15 * * * *"
 ```
-This calls `POST /api/refresh` daily at 2:00 AM UTC.
+
+A CronJob calls `POST /api/refresh/incremental` against the in-cluster Service
+every 15 minutes. There is deliberately no Vercel cron: two schedulers sharing
+one GitHub token would compete for the same rate limit.
 
 ---
 

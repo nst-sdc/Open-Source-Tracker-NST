@@ -4,12 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/preview-fixtures.mjs && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "bootstrap-data": "node scripts/bootstrap-local-data.mjs",
     "test": "vitest run",
-    "make-preview-fixtures": "node scripts/make-preview-fixtures.mjs",
     "agent": "node scripts/run-agent-rs.mjs"
   },
   "dependencies": {
