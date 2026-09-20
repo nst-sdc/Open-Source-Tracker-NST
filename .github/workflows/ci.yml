@@ -24,7 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history so the lint step can diff against the base branch.
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -37,10 +36,6 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
-      # Lints only the files a pull request touches. The codebase still has
-      # existing lint errors, so linting everything would fail every PR;
-      # this keeps new and edited code clean without blocking on old debt.
-      # Once `npm run lint` passes on the whole repo, replace this with it.
       - name: Lint changed files
         if: github.event_name == 'pull_request'
         env:
