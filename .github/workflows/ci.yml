@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -33,6 +35,18 @@ jobs:
 
       - name: Typecheck
         run: npx tsc --noEmit
+
+      - name: Lint changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=$(git diff --name-only --diff-filter=d "$BASE_SHA"...HEAD -- '*.js' '*.jsx' '*.mjs' '*.ts' '*.tsx' '*.mts')
+          if [ -z "$files" ]; then
+            echo "No JS/TS files changed; skipping lint."
+          else
+            echo "$files" | xargs npx eslint
+          fi
 
       - name: Unit tests
         run: npm test
