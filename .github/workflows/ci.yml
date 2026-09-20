@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the lint step can diff against the base branch.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -33,6 +36,22 @@ jobs:
 
       - name: Typecheck
         run: npx tsc --noEmit
+
+      # Lints only the files a pull request touches. The codebase still has
+      # existing lint errors, so linting everything would fail every PR;
+      # this keeps new and edited code clean without blocking on old debt.
+      # Once `npm run lint` passes on the whole repo, replace this with it.
+      - name: Lint changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=$(git diff --name-only --diff-filter=d "$BASE_SHA"...HEAD -- '*.js' '*.jsx' '*.mjs' '*.ts' '*.tsx' '*.mts')
+          if [ -z "$files" ]; then
+            echo "No JS/TS files changed; skipping lint."
+          else
+            echo "$files" | xargs npx eslint
+          fi
 
       - name: Unit tests
         run: npm test
