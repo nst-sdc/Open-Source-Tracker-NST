@@ -169,7 +169,7 @@ export default function RepoActivityPage() {
         {/* Title */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-violet-0 border border-violet-100 rounded-full px-4 py-1.5 text-xs font-[550] text-violet-600 mb-4">
-            Sandbox Competition Tracker
+            Contributor Insights
           </div>
           <h1 className="text-4xl md:text-5xl font-[650] tracking-tight">
             Repository{' '}
@@ -178,7 +178,7 @@ export default function RepoActivityPage() {
             </span>
           </h1>
           <p className="text-ink-soft text-sm mt-3 max-w-lg mx-auto leading-relaxed">
-            Enter any public GitHub repository link to inspect contributors, active pull requests, issues, and see the competition.
+            Enter any public GitHub repository link to inspect contributors, active pull requests, issues, and see who is contributing.
           </p>
         </div>
 
@@ -310,7 +310,7 @@ export default function RepoActivityPage() {
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-[650] text-ink">Contributor Competition</h2>
+                  <h2 className="text-lg font-[650] text-ink">Top Contributors</h2>
                   <p className="text-ink-soft text-xs mt-0.5">Rankings based on active contributions in the selected period.</p>
                 </div>
 
@@ -456,7 +456,7 @@ export default function RepoActivityPage() {
             </svg>
             <p className="text-base font-[550] text-ink-soft mb-1">No repository scanned yet</p>
             <p className="text-sm leading-relaxed max-w-sm mx-auto">
-              Paste a repository link above to view contributor competition rankings, recent PRs, and issues.
+              Paste a repository link above to view top contributors, recent PRs, and issues.
             </p>
           </div>
         )}
