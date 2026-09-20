@@ -10,7 +10,7 @@ You'll need:
 
 - **A Rancher account** on `rancher.nstsdc.org`. If you don't have this yet, that's the actual first step — ask in the SDC cluster access channel. The cluster's own docs (`nst-sdc/nst-cluster-docs`, `guide/access.md`) cover how this is granted.
 - **A GitHub account** with permission to push to this repo (or your own fork of it).
-- **Docker**, only if you want to test the build locally first (recommended, and covered in the local setup section of the [README](../README.md) — do that before touching the cluster at all).
+- **Docker**, only if you want to test the build locally first (recommended, and covered in the local setup section of [CONTRIBUTING.md](../CONTRIBUTING.md) — do that before touching the cluster at all).
 - Five to ten minutes for a one-time [Upstash](https://upstash.com) signup (free tier) — this repo's database, separate from production.
 
 You do **not** need SSH access, a downloaded kubeconfig, or `kubectl` installed on your own machine. Rancher's web UI has a browser-based terminal already authenticated as you — that's what every command below uses. You also do **not** need any of the production secrets from the Vercel deployment — every credential below is either something you generate yourself or a free account you create yourself.
@@ -27,7 +27,7 @@ This deployment must use its **own** Redis instance, never the production one �
 
 ## 2. Register a GitHub OAuth App (optional but recommended)
 
-This powers the "Sign in with GitHub" button. Skippable at first — the app runs fine without it (see the README's local dev shortcuts) — but you'll want it for a real deployment eventually.
+This powers the "Sign in with GitHub" button. Skippable at first — the app runs fine without it (see the local dev shortcuts in CONTRIBUTING.md) — but you'll want it for a real deployment eventually.
 
 1. [github.com/settings/developers](https://github.com/settings/developers) → **New OAuth App**.
 2. Homepage URL: `https://oss-tracker.nstsdc.org`
