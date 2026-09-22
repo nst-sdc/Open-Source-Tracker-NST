@@ -1,8 +1,18 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { getStudentsKV, removeStudent } from './kv-students';
-import { getExceptionRepoSetForUser, getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from './kv-own-repo-exceptions';
-import { getRepoCache, saveRepoCache, isEntryStale, MIN_PRS_FOR_AVG_SCORE } from './repo-cache';
+import { readFileSync } from "fs";
+import { join } from "path";
+import { getStudentsKV, removeStudent } from "./kv-students";
+import {
+  getExceptionRepoSetForUser,
+  getOwnRepoExceptions,
+  buildOwnRepoExceptionMap,
+  EMPTY_REPO_SET,
+} from "./kv-own-repo-exceptions";
+import {
+  getRepoCache,
+  saveRepoCache,
+  isEntryStale,
+  MIN_PRS_FOR_AVG_SCORE,
+} from "./repo-cache";
 import {
   RepoSignals,
   REPO_SCHEMA_VERSION,
@@ -11,11 +21,15 @@ import {
   NEUTRAL_MULTIPLIER,
   aggregateMergedPRScore,
   isRepoValid,
-} from './repo-score';
-import { readProfileCache, writeProfileCache, type ProfileCacheEntry } from './profile-cache';
-import { execSync } from 'child_process';
-import { cookies } from 'next/headers';
-import { kvGet, kvSet } from './kv';
+} from "./repo-score";
+import {
+  readProfileCache,
+  writeProfileCache,
+  type ProfileCacheEntry,
+} from "./profile-cache";
+import { execSync } from "child_process";
+import { cookies } from "next/headers";
+import { kvGet, kvSet } from "./kv";
 
 let cachedToken: string | undefined = process.env.GITHUB_TOKEN;
 let checkedGhCli = false;
@@ -25,9 +39,12 @@ export function getGitHubToken(): string | undefined {
   if (checkedGhCli) return undefined;
   checkedGhCli = true;
   try {
-    const token = execSync('gh auth token', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    if (token && token.startsWith('gh')) {
-      console.log('Successfully loaded GitHub token from GitHub CLI.');
+    const token = execSync("gh auth token", {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (token && token.startsWith("gh")) {
+      console.log("Successfully loaded GitHub token from GitHub CLI.");
       cachedToken = token;
       return token;
     }
@@ -37,12 +54,14 @@ export function getGitHubToken(): string | undefined {
   return undefined;
 }
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || (typeof window === 'undefined' ? getGitHubToken() : undefined);
+const GITHUB_TOKEN =
+  process.env.GITHUB_TOKEN ||
+  (typeof window === "undefined" ? getGitHubToken() : undefined);
 
 export class GitHubRateLimitError extends Error {
-  constructor(message = 'GitHub API rate limit exceeded') {
+  constructor(message = "GitHub API rate limit exceeded") {
     super(message);
-    this.name = 'GitHubRateLimitError';
+    this.name = "GitHubRateLimitError";
   }
 }
 
@@ -50,21 +69,23 @@ export class GitHubRateLimitError extends Error {
  * parallel refresh worker) is rejected as unauthorized — distinct from a
  * cookie-session token being invalid, so callers can evict it from the pool. */
 export class InvalidTokenError extends Error {
-  constructor(message = 'GitHub token is invalid or revoked') {
+  constructor(message = "GitHub token is invalid or revoked") {
     super(message);
-    this.name = 'InvalidTokenError';
+    this.name = "InvalidTokenError";
   }
 }
 
 let memoryTokenPool: string[] | null = null;
 let lastPoolFetch = 0;
 
-export async function getGitHubHeaders(explicitToken?: string): Promise<HeadersInit> {
+export async function getGitHubHeaders(
+  explicitToken?: string,
+): Promise<HeadersInit> {
   // An explicit token (e.g. one worker's assigned slice of the token pool
   // during a parallelized batch refresh) always wins over cookie/pool lookup.
   if (explicitToken) {
     return {
-      Accept: 'application/vnd.github.v3+json',
+      Accept: "application/vnd.github.v3+json",
       Authorization: `Bearer ${explicitToken}`,
     };
   }
@@ -72,7 +93,7 @@ export async function getGitHubHeaders(explicitToken?: string): Promise<HeadersI
   let token: string | undefined = undefined;
   try {
     const cookieStore = await cookies();
-    token = cookieStore.get('github_oauth_token')?.value;
+    token = cookieStore.get("github_oauth_token")?.value;
   } catch {
     // cookies() can throw when evaluated outside of request contexts (e.g. static rendering)
   }
@@ -82,7 +103,7 @@ export async function getGitHubHeaders(explicitToken?: string): Promise<HeadersI
     const now = Date.now();
     if (!memoryTokenPool || now - lastPoolFetch > 60000) {
       try {
-        const pool = await kvGet<Record<string, string>>('github_token_pool');
+        const pool = await kvGet<Record<string, string>>("github_token_pool");
         if (pool) {
           memoryTokenPool = Object.values(pool);
         } else {
@@ -93,9 +114,10 @@ export async function getGitHubHeaders(explicitToken?: string): Promise<HeadersI
         memoryTokenPool = memoryTokenPool || [];
       }
     }
-    
+
     if (memoryTokenPool && memoryTokenPool.length > 0) {
-      token = memoryTokenPool[Math.floor(Math.random() * memoryTokenPool.length)];
+      token =
+        memoryTokenPool[Math.floor(Math.random() * memoryTokenPool.length)];
     }
   }
 
@@ -104,12 +126,12 @@ export async function getGitHubHeaders(explicitToken?: string): Promise<HeadersI
   }
 
   return {
-    Accept: 'application/vnd.github.v3+json',
+    Accept: "application/vnd.github.v3+json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
-const TOKEN_POOL_KEY = 'github_token_pool';
+const TOKEN_POOL_KEY = "github_token_pool";
 
 /**
  * Returns every distinct token available to spread refresh work across:
@@ -129,7 +151,7 @@ export async function getAvailableTokens(): Promise<string[]> {
       }
     }
   } catch (err) {
-    console.error('Failed to read github_token_pool:', err);
+    console.error("Failed to read github_token_pool:", err);
   }
   return [...tokens];
 }
@@ -145,9 +167,9 @@ export async function removePoolToken(token: string): Promise<void> {
     const entries = Object.entries(pool).filter(([, v]) => v !== token);
     if (entries.length === Object.keys(pool).length) return; // wasn't in the pool
     await kvSet(TOKEN_POOL_KEY, Object.fromEntries(entries));
-    console.warn('Evicted invalid/revoked token from github_token_pool.');
+    console.warn("Evicted invalid/revoked token from github_token_pool.");
   } catch (err) {
-    console.error('Failed to evict token from github_token_pool:', err);
+    console.error("Failed to evict token from github_token_pool:", err);
   }
 }
 
@@ -156,12 +178,12 @@ async function githubSearch<T>(
   page = 1,
   perPage = 100,
   retryWithSystemToken = true,
-  token?: string
+  token?: string,
 ): Promise<{ total_count: number; items: T[] } | null> {
   let headers = await getGitHubHeaders(token);
   let res = await fetch(
     `https://api.github.com/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=${perPage}&page=${page}`,
-    { headers, next: { revalidate: 3600 } }
+    { headers, next: { revalidate: 3600 } },
   );
   if (!res.ok) {
     if (res.status === 401 && token) {
@@ -171,14 +193,16 @@ async function githubSearch<T>(
       throw new InvalidTokenError();
     }
     if (res.status === 401 && retryWithSystemToken && GITHUB_TOKEN) {
-      console.warn('OAuth token in cookie was unauthorized. Retrying with system GITHUB_TOKEN...');
+      console.warn(
+        "OAuth token in cookie was unauthorized. Retrying with system GITHUB_TOKEN...",
+      );
       headers = {
-        Accept: 'application/vnd.github.v3+json',
+        Accept: "application/vnd.github.v3+json",
         Authorization: `Bearer ${GITHUB_TOKEN}`,
       };
       res = await fetch(
         `https://api.github.com/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=${perPage}&page=${page}`,
-        { headers, next: { revalidate: 3600 } }
+        { headers, next: { revalidate: 3600 } },
       );
       if (res.ok) {
         return res.json();
@@ -194,11 +218,11 @@ async function githubSearch<T>(
 
 async function githubSearchAll<T>(
   q: string,
-  token?: string
+  token?: string,
 ): Promise<{ total_count: number; items: T[] } | null> {
   const allItems: T[] = [];
   let page = 1;
-  const maxPages = (token || GITHUB_TOKEN) ? 10 : 3;
+  const maxPages = token || GITHUB_TOKEN ? 10 : 3;
   let totalCount = 0;
 
   while (page <= maxPages) {
@@ -212,19 +236,20 @@ async function githubSearchAll<T>(
     if (allItems.length >= data.total_count || data.items.length < 100) break;
     page++;
     if (page <= maxPages) {
-      await new Promise((r) => setTimeout(r, (token || GITHUB_TOKEN) ? 200 : 1000));
+      await new Promise((r) =>
+        setTimeout(r, token || GITHUB_TOKEN ? 200 : 1000),
+      );
     }
   }
 
   return { total_count: totalCount, items: allItems };
 }
 
-
 export interface StudentPR {
   id: number;
   number: number;
   title: string;
-  state: 'open' | 'closed';
+  state: "open" | "closed";
   html_url: string;
   repository_url: string;
   created_at: string;
@@ -261,11 +286,12 @@ export interface GitHubUser {
 
 export interface Student {
   github: string;
-  year?: '1st year' | '2nd year' | '3rd year' | '4th year';
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA';
+  year?: "1st year" | "2nd year" | "3rd year" | "4th year";
+  campus?: "Rishihood" | "ADYPU" | "SVYASA";
 }
 
 export interface StudentSummary {
+  organizations: string[];
   profile: GitHubUser;
   totalPRs: number;
   mergedPRs: number;
@@ -290,14 +316,18 @@ export interface StudentSummary {
    * mega-repo PR read as a perfect score. */
   avgScore?: number;
   issuesCount: number;
-  year?: '1st year' | '2nd year' | '3rd year' | '4th year';
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA';
+  year?: "1st year" | "2nd year" | "3rd year" | "4th year";
+  campus?: "Rishihood" | "ADYPU" | "SVYASA";
   cachedAt?: string;
 }
 
 // getStudents() has been replaced with getStudentsKV() from './kv-students'
 
-export async function getStudentProfile(username: string, retryWithSystemToken = true, token?: string): Promise<GitHubUser | null> {
+export async function getStudentProfile(
+  username: string,
+  retryWithSystemToken = true,
+  token?: string,
+): Promise<GitHubUser | null> {
   let headers = await getGitHubHeaders(token);
   let res = await fetch(`https://api.github.com/users/${username}`, {
     headers,
@@ -308,9 +338,11 @@ export async function getStudentProfile(username: string, retryWithSystemToken =
       throw new InvalidTokenError();
     }
     if (res.status === 401 && retryWithSystemToken && GITHUB_TOKEN) {
-      console.warn('OAuth token in cookie was unauthorized. Retrying with system GITHUB_TOKEN...');
+      console.warn(
+        "OAuth token in cookie was unauthorized. Retrying with system GITHUB_TOKEN...",
+      );
       headers = {
-        Accept: 'application/vnd.github.v3+json',
+        Accept: "application/vnd.github.v3+json",
         Authorization: `Bearer ${GITHUB_TOKEN}`,
       };
       res = await fetch(`https://api.github.com/users/${username}`, {
@@ -325,7 +357,9 @@ export async function getStudentProfile(username: string, retryWithSystemToken =
     if (res.status === 403 || res.status === 429) {
       throw new GitHubRateLimitError();
     }
-    throw new Error(`GitHub API returned status ${res.status}: ${res.statusText}`);
+    throw new Error(
+      `GitHub API returned status ${res.status}: ${res.statusText}`,
+    );
   }
   return res.json();
 }
@@ -372,7 +406,9 @@ interface GraphQLRepoNode {
   owner: { login: string };
   mergedPRs: { totalCount: number };
   closedIssues: { totalCount: number };
-  defaultBranchRef: { target: { history: { totalCount: number } } | null } | null;
+  defaultBranchRef: {
+    target: { history: { totalCount: number } } | null;
+  } | null;
 }
 
 function signalsFromNode(node: GraphQLRepoNode): RepoSignals {
@@ -390,7 +426,7 @@ function signalsFromNode(node: GraphQLRepoNode): RepoSignals {
     licenseSpdxId: node.licenseInfo?.spdxId ?? null,
     isFork: node.isFork ?? false,
     isArchived: node.isArchived ?? false,
-    ownerLogin: node.owner?.login ?? '',
+    ownerLogin: node.owner?.login ?? "",
     createdAt: node.createdAt,
     pushedAt: node.pushedAt,
   };
@@ -398,13 +434,24 @@ function signalsFromNode(node: GraphQLRepoNode): RepoSignals {
 
 /** Entry for a repo that 404s / went private: complete (so it is not retried
  * every refresh) but permanently invalid. */
-function deadRepoEntry(): import('./repo-cache').RepoCacheEntry {
+function deadRepoEntry(): import("./repo-cache").RepoCacheEntry {
   const emptySignals: RepoSignals = {
-    stars: 0, forks: 0, watchers: 0, releases: 0, contributors: 0,
-    commitsLastYear: 0, mergedPRCount: 0, closedIssueCount: 0,
-    languageCount: 0, topics: [], licenseSpdxId: null,
-    isFork: false, isArchived: true, ownerLogin: '',
-    createdAt: new Date(0).toISOString(), pushedAt: new Date(0).toISOString(),
+    stars: 0,
+    forks: 0,
+    watchers: 0,
+    releases: 0,
+    contributors: 0,
+    commitsLastYear: 0,
+    mergedPRCount: 0,
+    closedIssueCount: 0,
+    languageCount: 0,
+    topics: [],
+    licenseSpdxId: null,
+    isFork: false,
+    isArchived: true,
+    ownerLogin: "",
+    createdAt: new Date(0).toISOString(),
+    pushedAt: new Date(0).toISOString(),
   };
   return {
     schemaVersion: REPO_SCHEMA_VERSION,
@@ -421,9 +468,9 @@ function deadRepoEntry(): import('./repo-cache').RepoCacheEntry {
 
 export async function validateNewRepos(
   prs: StudentPR[],
-  repoCacheMap: import('./repo-cache').RepoCacheMap,
-  token?: string
-): Promise<{ updated: boolean, map: import('./repo-cache').RepoCacheMap }> {
+  repoCacheMap: import("./repo-cache").RepoCacheMap,
+  token?: string,
+): Promise<{ updated: boolean; map: import("./repo-cache").RepoCacheMap }> {
   let updated = false;
 
   // Collect repos needing a fetch: never seen, or written by an older schema.
@@ -433,7 +480,10 @@ export async function validateNewRepos(
   const uniqueRepos = new Set<string>();
   for (const pr of prs) {
     if (!pr.repository_url) continue;
-    const repoFullName = pr.repository_url.replace('https://api.github.com/repos/', '');
+    const repoFullName = pr.repository_url.replace(
+      "https://api.github.com/repos/",
+      "",
+    );
     if (isEntryStale(repoCacheMap[repoFullName])) {
       uniqueRepos.add(repoFullName);
     }
@@ -456,7 +506,10 @@ export async function validateNewRepos(
       // simply skipped until a run with a token can refresh them properly.
       if (repoCacheMap[repoFullName]) continue;
       try {
-        const res = await fetch(`https://api.github.com/repos/${repoFullName}`, { headers });
+        const res = await fetch(
+          `https://api.github.com/repos/${repoFullName}`,
+          { headers },
+        );
         if (res.ok) {
           const data = await res.json();
           // Deliberately unstamped: this writes a legacy-shaped entry with no
@@ -492,41 +545,51 @@ export async function validateNewRepos(
   for (let i = 0; i < repoList.length; i += CHUNK) {
     const chunk = repoList.slice(i, i + CHUNK);
     const aliases = chunk.map((full, idx) => {
-      const [owner, ...rest] = full.split('/');
-      const name = rest.join('/');
+      const [owner, ...rest] = full.split("/");
+      const name = rest.join("/");
       return `r${idx}: repository(owner: ${JSON.stringify(owner)}, name: ${JSON.stringify(name)}) { ...RepoFields }`;
     });
-    const query = `query RepoSignals($since: GitTimestamp!) {\n${aliases.join('\n')}\n}\nfragment RepoFields on Repository {${REPO_SIGNALS_QUERY_FIELDS}}`;
+    const query = `query RepoSignals($since: GitTimestamp!) {\n${aliases.join("\n")}\n}\nfragment RepoFields on Repository {${REPO_SIGNALS_QUERY_FIELDS}}`;
 
     try {
-      const res = await fetch('https://api.github.com/graphql', {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
+      const res = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({ query, variables: { since } }),
       });
 
       if (res.status === 401) {
-        console.warn('GraphQL repo validation: token unauthorized. Stopping batch.');
+        console.warn(
+          "GraphQL repo validation: token unauthorized. Stopping batch.",
+        );
         break;
       }
       if (res.status === 403 || res.status === 429) {
-        const remaining = res.headers.get('x-ratelimit-remaining');
-        if (remaining === '0') {
-          console.warn('GraphQL rate limit exhausted validating repos. Stopping batch.');
+        const remaining = res.headers.get("x-ratelimit-remaining");
+        if (remaining === "0") {
+          console.warn(
+            "GraphQL rate limit exhausted validating repos. Stopping batch.",
+          );
           break;
         }
         if (backoffRetries >= MAX_BACKOFF_RETRIES) {
-          console.warn('Secondary rate limit persisting during repo validation. Stopping batch; remaining repos retry next refresh.');
+          console.warn(
+            "Secondary rate limit persisting during repo validation. Stopping batch; remaining repos retry next refresh.",
+          );
           break;
         }
         backoffRetries++;
-        console.warn('Secondary rate limit during repo validation. Backing off and retrying chunk.');
+        console.warn(
+          "Secondary rate limit during repo validation. Backing off and retrying chunk.",
+        );
         await new Promise((r) => setTimeout(r, 3000));
         i -= CHUNK; // retry this chunk once backoff elapses
         continue;
       }
       if (!res.ok) {
-        console.error(`GraphQL repo validation failed with ${res.status}; skipping chunk.`);
+        console.error(
+          `GraphQL repo validation failed with ${res.status}; skipping chunk.`,
+        );
         continue;
       }
 
@@ -536,7 +599,10 @@ export async function validateNewRepos(
       // gone, not that the query failed.
       const data: Record<string, GraphQLRepoNode | null> = body.data ?? {};
       if (!body.data && Array.isArray(body.errors)) {
-        console.error('GraphQL repo validation returned only errors; skipping chunk:', body.errors[0]?.message);
+        console.error(
+          "GraphQL repo validation returned only errors; skipping chunk:",
+          body.errors[0]?.message,
+        );
         continue;
       }
 
@@ -547,8 +613,10 @@ export async function validateNewRepos(
       const errorTypeByAlias = new Map<string, string>();
       if (Array.isArray(body.errors)) {
         for (const err of body.errors) {
-          const alias = Array.isArray(err.path) ? String(err.path[0]) : undefined;
-          if (alias) errorTypeByAlias.set(alias, String(err.type ?? 'UNKNOWN'));
+          const alias = Array.isArray(err.path)
+            ? String(err.path[0])
+            : undefined;
+          if (alias) errorTypeByAlias.set(alias, String(err.type ?? "UNKNOWN"));
         }
       }
 
@@ -557,11 +625,16 @@ export async function validateNewRepos(
         const previous = repoCacheMap[repoFullName];
         if (!node) {
           const errType = errorTypeByAlias.get(`r${idx}`);
-          if (errType === 'NOT_FOUND' || errType === 'FORBIDDEN') {
-            repoCacheMap[repoFullName] = { ...deadRepoEntry(), manualOverride: previous?.manualOverride };
+          if (errType === "NOT_FOUND" || errType === "FORBIDDEN") {
+            repoCacheMap[repoFullName] = {
+              ...deadRepoEntry(),
+              manualOverride: previous?.manualOverride,
+            };
             updated = true;
           } else {
-            console.warn(`Repo ${repoFullName} returned transient GraphQL error (${errType ?? 'no error entry'}); will retry next refresh.`);
+            console.warn(
+              `Repo ${repoFullName} returned transient GraphQL error (${errType ?? "no error entry"}); will retry next refresh.`,
+            );
           }
           return;
         }
@@ -572,7 +645,9 @@ export async function validateNewRepos(
           forks: signals.forks,
           // A manual override pins the admin's validity decision across
           // refreshes; the signals still update underneath it.
-          valid: previous?.manualOverride ? previous.valid : isRepoValid(signals),
+          valid: previous?.manualOverride
+            ? previous.valid
+            : isRepoValid(signals),
           manualOverride: previous?.manualOverride,
           signals,
           checkedAt: new Date().toISOString(),
@@ -580,23 +655,22 @@ export async function validateNewRepos(
         updated = true;
       });
     } catch (err) {
-      console.error('GraphQL repo validation chunk failed:', err);
+      console.error("GraphQL repo validation chunk failed:", err);
     }
 
     // Pacing between chunks so a long backlog doesn't trip abuse detection.
-    if (i + CHUNK < repoList.length) await new Promise((r) => setTimeout(r, 500));
+    if (i + CHUNK < repoList.length)
+      await new Promise((r) => setTimeout(r, 500));
   }
 
   return { updated, map: repoCacheMap };
 }
 
-
-
 export interface StudentIssue {
   id: number;
   number: number;
   title: string;
-  state: 'open' | 'closed';
+  state: "open" | "closed";
   html_url: string;
   repository_url: string;
   created_at: string;
@@ -607,27 +681,36 @@ export interface StudentIssue {
 }
 
 // PRs authored by username in repos NOT owned by username (excludes own repos & forks)
-function searchPRs(username: string, extra = '', page = 1, perPage = 100, token?: string) {
+function searchPRs(
+  username: string,
+  extra = "",
+  page = 1,
+  perPage = 100,
+  token?: string,
+) {
   return githubSearch<StudentPR>(
-    `is:pr author:${username} -user:${username}${extra ? ' ' + extra : ''}`,
+    `is:pr author:${username} -user:${username}${extra ? " " + extra : ""}`,
     page,
     perPage,
     true,
-    token
+    token,
   );
 }
 
-export async function getStudentIssues(username: string, token?: string): Promise<StudentIssue[] | null> {
+export async function getStudentIssues(
+  username: string,
+  token?: string,
+): Promise<StudentIssue[] | null> {
   const all: StudentIssue[] = [];
   let page = 1;
-  const maxPages = (token || GITHUB_TOKEN) ? 10 : 3;
+  const maxPages = token || GITHUB_TOKEN ? 10 : 3;
   while (page <= maxPages) {
     const data = await githubSearch<StudentIssue>(
       `is:issue author:${username} -user:${username}`,
       page,
       100,
       true,
-      token
+      token,
     );
     if (!data) return null;
     all.push(...data.items);
@@ -637,14 +720,16 @@ export async function getStudentIssues(username: string, token?: string): Promis
   return all;
 }
 
-export async function getStudentReviews(username: string): Promise<StudentPR[]> {
+export async function getStudentReviews(
+  username: string,
+): Promise<StudentPR[]> {
   const all: StudentPR[] = [];
   let page = 1;
   const maxPages = GITHUB_TOKEN ? 10 : 3;
   while (page <= maxPages) {
     const data = await githubSearch<StudentPR>(
       `is:pr reviewed-by:${username} -user:${username} -author:${username}`,
-      page
+      page,
     );
     if (!data) break;
     all.push(...data.items);
@@ -654,14 +739,16 @@ export async function getStudentReviews(username: string): Promise<StudentPR[]> 
   return all;
 }
 
-
-export async function getStudentPRs(username: string, token?: string): Promise<StudentPR[] | null> {
+export async function getStudentPRs(
+  username: string,
+  token?: string,
+): Promise<StudentPR[] | null> {
   const allPRs: StudentPR[] = [];
   let page = 1;
-  const maxPages = (token || GITHUB_TOKEN) ? 10 : 3;
+  const maxPages = token || GITHUB_TOKEN ? 10 : 3;
 
   while (page <= maxPages) {
-    const data = await searchPRs(username, '', page, 100, token);
+    const data = await searchPRs(username, "", page, 100, token);
     if (!data) return null;
     allPRs.push(...data.items);
     if (allPRs.length >= data.total_count || data.items.length < 100) break;
@@ -674,7 +761,11 @@ export async function getStudentPRs(username: string, token?: string): Promise<S
   // to remember to ask for them separately.
   const exceptionRepos = await getExceptionRepoSetForUser(username);
   if (exceptionRepos.size > 0) {
-    const ownRepoPRs = await getOwnRepoExceptionPRs(username, exceptionRepos, token);
+    const ownRepoPRs = await getOwnRepoExceptionPRs(
+      username,
+      exceptionRepos,
+      token,
+    );
     allPRs.push(...ownRepoPRs);
   }
 
@@ -690,10 +781,14 @@ export async function getStudentPRs(username: string, token?: string): Promise<S
  * small, socially-connected student community, so admin review is the only
  * check used here.
  */
-async function getOwnRepoExceptionPRs(username: string, allowedRepos: Set<string>, token?: string): Promise<StudentPR[]> {
+async function getOwnRepoExceptionPRs(
+  username: string,
+  allowedRepos: Set<string>,
+  token?: string,
+): Promise<StudentPR[]> {
   const allPRs: StudentPR[] = [];
   let page = 1;
-  const maxPages = (token || GITHUB_TOKEN) ? 10 : 3;
+  const maxPages = token || GITHUB_TOKEN ? 10 : 3;
 
   while (page <= maxPages) {
     const data = await githubSearch<StudentPR>(
@@ -701,7 +796,7 @@ async function getOwnRepoExceptionPRs(username: string, allowedRepos: Set<string
       page,
       100,
       true,
-      token
+      token,
     );
     if (!data) break;
     allPRs.push(...data.items);
@@ -709,7 +804,11 @@ async function getOwnRepoExceptionPRs(username: string, allowedRepos: Set<string
     page++;
   }
 
-  return allPRs.filter((pr) => pr.repository_url && allowedRepos.has(repoFromUrl(pr.repository_url).toLowerCase()));
+  return allPRs.filter(
+    (pr) =>
+      pr.repository_url &&
+      allowedRepos.has(repoFromUrl(pr.repository_url).toLowerCase()),
+  );
 }
 
 /** Resolves a repo full name to its scoring multiplier for one student.
@@ -724,7 +823,7 @@ async function getOwnRepoExceptionPRs(username: string, allowedRepos: Set<string
  *  - no entry at all: neutral 1.0.
  */
 function makeRepoMultiplierResolver(
-  cacheMap: import('./repo-cache').RepoCacheMap,
+  cacheMap: import("./repo-cache").RepoCacheMap,
   studentLogin: string,
   ownRepoExceptions: Set<string>,
   nowMs: number,
@@ -735,7 +834,7 @@ function makeRepoMultiplierResolver(
     if (!entry) return NEUTRAL_MULTIPLIER;
     if (entry.signals && entry.schemaVersion === REPO_SCHEMA_VERSION) {
       const selfOwned =
-        repoFullName.split('/')[0]?.toLowerCase() === login &&
+        repoFullName.split("/")[0]?.toLowerCase() === login &&
         !ownRepoExceptions.has(repoFullName.toLowerCase());
       return repoMultiplier(entry.signals, nowMs, { selfOwned });
     }
@@ -747,8 +846,8 @@ export function getSummaryFromCache(
   cached: ProfileCacheEntry,
   dateQuery: string,
   flaggedPRIds: Set<string>,
-  repoCacheMap: import('./repo-cache').RepoCacheMap = {},
-  ownRepoExceptions: Set<string> = new Set()
+  repoCacheMap: import("./repo-cache").RepoCacheMap = {},
+  ownRepoExceptions: Set<string> = new Set(),
 ): StudentSummary {
   let prs = cached.prs || [];
   let issues = cached.issues || [];
@@ -761,7 +860,7 @@ export function getSummaryFromCache(
   // star count shouldn't silently undo the approval.
   prs = prs.filter((pr) => {
     if (!pr.repository_url) return true;
-    const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
+    const repo = pr.repository_url.replace("https://api.github.com/repos/", "");
     const key = `${repo}#${pr.number}`;
     if (flaggedPRIds.has(key)) return false;
     if (ownRepoExceptions.has(repo.toLowerCase())) return true;
@@ -797,17 +896,41 @@ export function getSummaryFromCache(
   const totalPRs = prs.length;
   const mergedPRList = prs.filter((pr) => pr.pull_request?.merged_at);
   const mergedPRs = mergedPRList.length;
-  const openPRs = prs.filter((pr) => pr.state === 'open').length;
-  const closedPRs = prs.filter((pr) => pr.state === 'closed' && !pr.pull_request?.merged_at).length;
+
+  // Derive organizations only from *merged* PRs — the filter requirement is
+  // "contributed to this org's repo via a merged PR", not merely opened a PR.
+  const organizations = [
+    ...new Set(
+      mergedPRList
+        .map((pr) => {
+          if (!pr.repository_url) return null;
+          const repo = repoFromUrl(pr.repository_url);
+          return repo.split("/")[0];
+        })
+        .filter((org): org is string => Boolean(org)),
+    ),
+  ];
+  const openPRs = prs.filter((pr) => pr.state === "open").length;
+  const closedPRs = prs.filter(
+    (pr) => pr.state === "closed" && !pr.pull_request?.merged_at,
+  ).length;
 
   // #4 scoring: each merged PR earns 10·M^0.75 where M is the repo's quality
   // multiplier, repeat PRs into the same repo decay by 1/(1+0.3(k−1)), and no
   // single repo may carry more than 40% of the total. Junk is already
   // stripped out of `prs` above; see lib/repo-score.ts for the whole model.
-  const repoMultiplierFor = makeRepoMultiplierResolver(repoCacheMap, cached.profile.login, ownRepoExceptions, Date.now());
+  const repoMultiplierFor = makeRepoMultiplierResolver(
+    repoCacheMap,
+    cached.profile.login,
+    ownRepoExceptions,
+    Date.now(),
+  );
   const totalWeightedScore = aggregateMergedPRScore(
     mergedPRList,
-    (pr) => (pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null),
+    (pr) =>
+      pr.repository_url
+        ? pr.repository_url.replace("https://api.github.com/repos/", "")
+        : null,
     repoMultiplierFor,
   );
 
@@ -819,12 +942,15 @@ export function getSummaryFromCache(
   // pure *quality* signal — crushing a genuine, sustained contributor's
   // impact number for the same reason their score growth slows down, which
   // is exactly the wrong answer for "how good are the projects they pick".
-  const avgScore = mergedPRs >= MIN_PRS_FOR_AVG_SCORE
-    ? mergedPRList.reduce((sum, pr) => {
-        const repo = pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null;
-        return sum + (repo ? repoMultiplierFor(repo) : NEUTRAL_MULTIPLIER);
-      }, 0) / mergedPRs
-    : undefined;
+  const avgScore =
+    mergedPRs >= MIN_PRS_FOR_AVG_SCORE
+      ? mergedPRList.reduce((sum, pr) => {
+          const repo = pr.repository_url
+            ? pr.repository_url.replace("https://api.github.com/repos/", "")
+            : null;
+          return sum + (repo ? repoMultiplierFor(repo) : NEUTRAL_MULTIPLIER);
+        }, 0) / mergedPRs
+      : undefined;
 
   return {
     profile: cached.profile,
@@ -835,14 +961,15 @@ export function getSummaryFromCache(
     scoreMergedPRs: totalWeightedScore,
     avgScore,
     issuesCount: issues.length,
+    organizations,
     cachedAt: cached.cachedAt,
   };
 }
 
 export async function getAllStudentSummaries(
-  dateQuery = '',
+  dateQuery = "",
   flaggedPRIds: Set<string> = new Set(),
-  forceLive = false
+  forceLive = false,
 ): Promise<StudentSummary[]> {
   const students = await getStudentsKV();
   if (students.length === 0) return [];
@@ -853,7 +980,9 @@ export async function getAllStudentSummaries(
   // expected to stay small (a handful of admin-approved repos), so this is a
   // single cheap KV read shared across every student's summary computation
   // below, rather than one read per student.
-  const ownRepoExceptionMap = buildOwnRepoExceptionMap(await getOwnRepoExceptions());
+  const ownRepoExceptionMap = buildOwnRepoExceptionMap(
+    await getOwnRepoExceptions(),
+  );
 
   // ── Phase 1: Resolve from individual profile caches (zero API calls) ──
   if (!forceLive) {
@@ -864,7 +993,10 @@ export async function getAllStudentSummaries(
     // zero-PR placeholders. Reading in small concurrent batches, with one retry
     // per failed read, keeps this reliable instead of load-dependent.
     const READ_BATCH_SIZE = 50;
-    const cachedResults: Array<{ student: Student; cached: ProfileCacheEntry | null }> = [];
+    const cachedResults: Array<{
+      student: Student;
+      cached: ProfileCacheEntry | null;
+    }> = [];
 
     for (let i = 0; i < students.length; i += READ_BATCH_SIZE) {
       const batch = students.slice(i, i + READ_BATCH_SIZE);
@@ -876,25 +1008,37 @@ export async function getAllStudentSummaries(
               return { student, cached };
             } catch (err) {
               if (attempt === 1) {
-                console.error(`Failed to read profile cache for ${student.github} after retry:`, err);
+                console.error(
+                  `Failed to read profile cache for ${student.github} after retry:`,
+                  err,
+                );
               }
             }
           }
           return { student, cached: null };
-        })
+        }),
       );
       cachedResults.push(...batchResults);
     }
 
     for (const { student, cached } of cachedResults) {
       if (cached) {
-        const ownRepoExceptions = ownRepoExceptionMap.get(student.github.toLowerCase()) ?? EMPTY_REPO_SET;
-        const summary = getSummaryFromCache(cached, dateQuery, flaggedPRIds, repoCache, ownRepoExceptions);
+        const ownRepoExceptions =
+          ownRepoExceptionMap.get(student.github.toLowerCase()) ??
+          EMPTY_REPO_SET;
+        const summary = getSummaryFromCache(
+          cached,
+          dateQuery,
+          flaggedPRIds,
+          repoCache,
+          ownRepoExceptions,
+        );
         summary.year = student.year;
         summary.campus = student.campus;
         summaries.push(summary);
       } else {
         const placeholder: StudentSummary = {
+          organizations: [],
           profile: {
             login: student.github,
             name: student.github,
@@ -940,8 +1084,8 @@ export async function getAllStudentSummaries(
   for (let i = 0; i < studentsToFetch.length; i++) {
     const username = studentsToFetch[i].github;
     const lowerName = username.toLowerCase();
-    const prQuery = `is:pr author:${username} -user:${username}${dateQuery ? ' ' + dateQuery : ''}`;
-    const issueQuery = `is:issue author:${username} -user:${username}${dateQuery ? ' ' + dateQuery : ''}`;
+    const prQuery = `is:pr author:${username} -user:${username}${dateQuery ? " " + dateQuery : ""}`;
+    const issueQuery = `is:issue author:${username} -user:${username}${dateQuery ? " " + dateQuery : ""}`;
 
     const fetchOnce = () =>
       Promise.allSettled([
@@ -950,28 +1094,44 @@ export async function getAllStudentSummaries(
       ]);
 
     let results = await fetchOnce();
-    let prFulfilled = results[0].status === 'fulfilled' && results[0].value !== null;
-    let issueFulfilled = results[1].status === 'fulfilled' && results[1].value !== null;
+    let prFulfilled =
+      results[0].status === "fulfilled" && results[0].value !== null;
+    let issueFulfilled =
+      results[1].status === "fulfilled" && results[1].value !== null;
     const wasRateLimited =
-      (results[0].status === 'rejected' && results[0].reason instanceof GitHubRateLimitError) ||
-      (results[1].status === 'rejected' && results[1].reason instanceof GitHubRateLimitError);
+      (results[0].status === "rejected" &&
+        results[0].reason instanceof GitHubRateLimitError) ||
+      (results[1].status === "rejected" &&
+        results[1].reason instanceof GitHubRateLimitError);
 
     if ((!prFulfilled || !issueFulfilled) && wasRateLimited) {
-      console.log(`Rate limit fetching ${username}, waiting 65s and retrying...`);
+      console.log(
+        `Rate limit fetching ${username}, waiting 65s and retrying...`,
+      );
       await new Promise((r) => setTimeout(r, 65_000));
       results = await fetchOnce();
-      prFulfilled = results[0].status === 'fulfilled' && results[0].value !== null;
-      issueFulfilled = results[1].status === 'fulfilled' && results[1].value !== null;
+      prFulfilled =
+        results[0].status === "fulfilled" && results[0].value !== null;
+      issueFulfilled =
+        results[1].status === "fulfilled" && results[1].value !== null;
     }
 
     const success = prFulfilled && issueFulfilled;
     successfulFetches.set(lowerName, success);
     if (success) {
-      studentPRMap.set(lowerName, (results[0] as PromiseFulfilledResult<any>).value.items);
-      studentIssueMap.set(lowerName, (results[1] as PromiseFulfilledResult<any>).value.items);
+      studentPRMap.set(
+        lowerName,
+        (results[0] as PromiseFulfilledResult<any>).value.items,
+      );
+      studentIssueMap.set(
+        lowerName,
+        (results[1] as PromiseFulfilledResult<any>).value.items,
+      );
     } else {
-      if (results[0].status === 'rejected') console.error(`PR fetch failed for ${username}:`, results[0].reason);
-      if (results[1].status === 'rejected') console.error(`Issue fetch failed for ${username}:`, results[1].reason);
+      if (results[0].status === "rejected")
+        console.error(`PR fetch failed for ${username}:`, results[0].reason);
+      if (results[1].status === "rejected")
+        console.error(`Issue fetch failed for ${username}:`, results[1].reason);
     }
 
     if (i < studentsToFetch.length - 1) {
@@ -987,8 +1147,15 @@ export async function getAllStudentSummaries(
 
     if (!isSuccess && cached) {
       // Fallback to stale cache if this student's fetch failed
-      const ownRepoExceptions = ownRepoExceptionMap.get(lowerName) ?? EMPTY_REPO_SET;
-      const summary = getSummaryFromCache(cached, dateQuery, flaggedPRIds, repoCache, ownRepoExceptions);
+      const ownRepoExceptions =
+        ownRepoExceptionMap.get(lowerName) ?? EMPTY_REPO_SET;
+      const summary = getSummaryFromCache(
+        cached,
+        dateQuery,
+        flaggedPRIds,
+        repoCache,
+        ownRepoExceptions,
+      );
       summary.year = student.year;
       summary.campus = student.campus;
       summaries.push(summary);
@@ -1032,7 +1199,10 @@ export async function getAllStudentSummaries(
     // so future custom date queries can compute locally from cache
     if (!dateQuery && isSuccess) {
       writeProfileCache(student.github, profile, prs, issues).catch((err) =>
-        console.error(`Failed to write profile cache for ${student.github}:`, err)
+        console.error(
+          `Failed to write profile cache for ${student.github}:`,
+          err,
+        ),
       );
     }
 
@@ -1041,7 +1211,10 @@ export async function getAllStudentSummaries(
     // full raw history, but nothing junk should count toward what's shown.
     const validPRs = prs.filter((pr) => {
       if (!pr.repository_url) return true;
-      const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
+      const repo = pr.repository_url.replace(
+        "https://api.github.com/repos/",
+        "",
+      );
       const key = `${repo}#${pr.number}`;
       if (flaggedPRIds.has(key)) return false;
       const repoEntry = repoCache[repo];
@@ -1052,26 +1225,56 @@ export async function getAllStudentSummaries(
     const totalPRs = validPRs.length;
     const mergedPRList = validPRs.filter((pr) => pr.pull_request?.merged_at);
     const mergedPRs = mergedPRList.length;
-    const openPRs = validPRs.filter((pr) => pr.state === 'open').length;
-    const closedPRs = validPRs.filter((pr) => pr.state === 'closed' && !pr.pull_request?.merged_at).length;
+    const openPRs = validPRs.filter((pr) => pr.state === "open").length;
+    const closedPRs = validPRs.filter(
+      (pr) => pr.state === "closed" && !pr.pull_request?.merged_at,
+    ).length;
+
+    // Derive organizations only from *merged* PRs — the filter requirement is
+    // "contributed to this org's repo via a merged PR", not merely opened a PR.
+    const organizations = [
+      ...new Set(
+        mergedPRList
+          .map((pr) => {
+            if (!pr.repository_url) return null;
+            const repo = repoFromUrl(pr.repository_url);
+            return repo.split("/")[0];
+          })
+          .filter((org): org is string => Boolean(org)),
+      ),
+    ];
 
     // Same #4 scoring as getSummaryFromCache, through the same resolver.
-    const liveOwnRepoExceptions = ownRepoExceptionMap.get(lowerName) ?? EMPTY_REPO_SET;
-    const liveRepoMultiplierFor = makeRepoMultiplierResolver(repoCache, student.github, liveOwnRepoExceptions, Date.now());
+    const liveOwnRepoExceptions =
+      ownRepoExceptionMap.get(lowerName) ?? EMPTY_REPO_SET;
+    const liveRepoMultiplierFor = makeRepoMultiplierResolver(
+      repoCache,
+      student.github,
+      liveOwnRepoExceptions,
+      Date.now(),
+    );
     const liveWeightedScore = aggregateMergedPRScore(
       mergedPRList,
-      (pr) => (pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null),
+      (pr) =>
+        pr.repository_url
+          ? pr.repository_url.replace("https://api.github.com/repos/", "")
+          : null,
       liveRepoMultiplierFor,
     );
     // Plain mean of each merged PR's own repo multiplier — see the doc
     // comment on the equivalent computation in getSummaryFromCache for why
     // this is deliberately not liveWeightedScore / mergedPRs.
-    const liveAvgScore = mergedPRs >= MIN_PRS_FOR_AVG_SCORE
-      ? mergedPRList.reduce((sum, pr) => {
-          const repo = pr.repository_url ? pr.repository_url.replace('https://api.github.com/repos/', '') : null;
-          return sum + (repo ? liveRepoMultiplierFor(repo) : NEUTRAL_MULTIPLIER);
-        }, 0) / mergedPRs
-      : undefined;
+    const liveAvgScore =
+      mergedPRs >= MIN_PRS_FOR_AVG_SCORE
+        ? mergedPRList.reduce((sum, pr) => {
+            const repo = pr.repository_url
+              ? pr.repository_url.replace("https://api.github.com/repos/", "")
+              : null;
+            return (
+              sum + (repo ? liveRepoMultiplierFor(repo) : NEUTRAL_MULTIPLIER)
+            );
+          }, 0) / mergedPRs
+        : undefined;
 
     summaries.push({
       profile,
@@ -1082,6 +1285,7 @@ export async function getAllStudentSummaries(
       scoreMergedPRs: liveWeightedScore,
       avgScore: liveAvgScore,
       issuesCount: issues.length,
+      organizations,
       year: student.year,
       campus: student.campus,
     });
@@ -1092,41 +1296,58 @@ export async function getAllStudentSummaries(
 }
 
 export function repoFromUrl(repoUrl: string): string {
-  return repoUrl.replace('https://api.github.com/repos/', '');
+  return repoUrl.replace("https://api.github.com/repos/", "");
 }
 
-export function buildDateQuery(period: string, from?: string, to?: string): string {
-  const toISO = (d: Date) => d.toISOString().split('T')[0];
+export function buildDateQuery(
+  period: string,
+  from?: string,
+  to?: string,
+): string {
+  const toISO = (d: Date) => d.toISOString().split("T")[0];
   const ago = (days: number) => toISO(new Date(Date.now() - days * 86_400_000));
   switch (period) {
-    case '1day':    return `created:>${ago(1)}`;
-    case 'week':    return `created:>${ago(7)}`;
-    case 'month':   return `created:>${ago(30)}`;
-    case '2months': return `created:>${ago(60)}`;
-    case '3months': return `created:>${ago(90)}`;
-    case '6months': return `created:>${ago(180)}`;
-    case 'year':    return `created:>${ago(365)}`;
-    case 'custom':
-      if (from && to)  return `created:${from}..${to}`;
-      if (from)        return `created:>${from}`;
-      return '';
-    default: return '';
+    case "1day":
+      return `created:>${ago(1)}`;
+    case "week":
+      return `created:>${ago(7)}`;
+    case "month":
+      return `created:>${ago(30)}`;
+    case "2months":
+      return `created:>${ago(60)}`;
+    case "3months":
+      return `created:>${ago(90)}`;
+    case "6months":
+      return `created:>${ago(180)}`;
+    case "year":
+      return `created:>${ago(365)}`;
+    case "custom":
+      if (from && to) return `created:${from}..${to}`;
+      if (from) return `created:>${from}`;
+      return "";
+    default:
+      return "";
   }
 }
 
 export class NotFoundError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'NotFoundError';
+    this.name = "NotFoundError";
   }
 }
 
-export async function refreshStudentCache(username: string, token?: string): Promise<void> {
+export async function refreshStudentCache(
+  username: string,
+  token?: string,
+): Promise<void> {
   console.log(`Refreshing cache for user: ${username}`);
   const profile = await getStudentProfile(username, true, token);
 
   if (!profile) {
-    console.warn(`Profile not found (404) for user: ${username}. It will be removed from tracking.`);
+    console.warn(
+      `Profile not found (404) for user: ${username}. It will be removed from tracking.`,
+    );
     throw new NotFoundError(`Profile not found for user: ${username}`);
   }
 
@@ -1158,7 +1379,9 @@ export async function refreshStudentCache(username: string, token?: string): Pro
 // sharing the same tokens.
 const SEARCH_CALLS_PER_STUDENT = 2;
 const SAFE_SEARCH_PER_MIN = 25;
-const PACING_MS_PER_STUDENT = Math.ceil(60_000 / (SAFE_SEARCH_PER_MIN / SEARCH_CALLS_PER_STUDENT));
+const PACING_MS_PER_STUDENT = Math.ceil(
+  60_000 / (SAFE_SEARCH_PER_MIN / SEARCH_CALLS_PER_STUDENT),
+);
 
 // How many candidates to select per token — deliberately generous. The real
 // safety mechanism is TICK_DEADLINE_MS below, not this number: actual
@@ -1186,7 +1409,7 @@ const MAX_TOTAL_BATCH = 400;
 // returns before the tunnel's own timeout fires.
 const TICK_DEADLINE_MS = Number(process.env.TICK_DEADLINE_MS) || 150_000;
 
-export const FAIL_STATE_KEY = 'refresh_fail_state';
+export const FAIL_STATE_KEY = "refresh_fail_state";
 // Tracks, per username, the last time a fetch was *attempted* for a student
 // who has never once had a successful fetch (no real cachedAt yet). Without
 // this, a student whose fetch keeps failing (private/restricted profile,
@@ -1208,16 +1431,23 @@ export type FailState = Record<string, string>; // username (lower) -> lastAttem
  * still bounded by TICK_DEADLINE_MS, not this number.
  */
 function computeAutoBatchSize(tokenCount: number): number {
-  return Math.max(1, Math.min(MAX_TOTAL_BATCH, tokenCount * PER_TOKEN_CANDIDATE_POOL));
+  return Math.max(
+    1,
+    Math.min(MAX_TOTAL_BATCH, tokenCount * PER_TOKEN_CANDIDATE_POOL),
+  );
 }
 
-export async function updateStaleProfiles(batchSize?: number): Promise<{ updated: string[]; attempted: string[] }> {
+export async function updateStaleProfiles(
+  batchSize?: number,
+): Promise<{ updated: string[]; attempted: string[] }> {
   const students = await getStudentsKV();
   if (students.length === 0) return { updated: [], attempted: [] };
 
   const tokens = await getAvailableTokens();
   const effectiveBatchSize = batchSize ?? computeAutoBatchSize(tokens.length);
-  console.log(`[Incremental Refresh] ${tokens.length} token(s) available, batch size ${effectiveBatchSize}`);
+  console.log(
+    `[Incremental Refresh] ${tokens.length} token(s) available, batch size ${effectiveBatchSize}`,
+  );
 
   /** Minimum age before a profile is considered stale and eligible for background refresh */
   const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -1226,7 +1456,7 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
   // 1. Read refresh queue from KV (manually triggered high-priority refreshes)
   let queue: string[] = [];
   try {
-    queue = await kvGet<string[]>('refresh_queue') || [];
+    queue = (await kvGet<string[]>("refresh_queue")) || [];
   } catch {
     queue = [];
   }
@@ -1240,8 +1470,12 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
   }
   let failStateChanged = false;
 
-  const studentUsernamesSet = new Set(students.map(s => s.github.toLowerCase()));
-  const validQueue = queue.filter(username => studentUsernamesSet.has(username.toLowerCase()));
+  const studentUsernamesSet = new Set(
+    students.map((s) => s.github.toLowerCase()),
+  );
+  const validQueue = queue.filter((username) =>
+    studentUsernamesSet.has(username.toLowerCase()),
+  );
 
   // 2. Select targets
   const targetsUsernames: string[] = [];
@@ -1253,12 +1487,14 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
   // 3. Fill remaining slots using cache age data from the main summaries cache (single KV read)
   if (targetsUsernames.length < effectiveBatchSize) {
     const remainingCount = effectiveBatchSize - targetsUsernames.length;
-    const excludedSet = new Set(targetsUsernames.map(u => u.toLowerCase()));
+    const excludedSet = new Set(targetsUsernames.map((u) => u.toLowerCase()));
 
     // Try to load cached summaries to read cache timestamps without querying 1900+ keys
     const cacheMap = new Map<string, string>(); // username (lower) -> cachedAt ISO string
     try {
-      const summaryCache = await kvGet<{ summaries: StudentSummary[] }>('summary_cache:all');
+      const summaryCache = await kvGet<{ summaries: StudentSummary[] }>(
+        "summary_cache:all",
+      );
       if (summaryCache && Array.isArray(summaryCache.summaries)) {
         for (const s of summaryCache.summaries) {
           if (s.profile?.login && s.cachedAt) {
@@ -1267,7 +1503,10 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
         }
       }
     } catch (err) {
-      console.warn('[Incremental Refresh] Could not load summary cache to determine age:', err);
+      console.warn(
+        "[Incremental Refresh] Could not load summary cache to determine age:",
+        err,
+      );
     }
 
     // Classify students who are not already excluded
@@ -1295,7 +1534,10 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
       if (lastAttemptStr) {
         const lastAttemptTime = new Date(lastAttemptStr).getTime();
         if (now - lastAttemptTime >= STALE_THRESHOLD_MS) {
-          staleCached.push({ username: student.github, cachedAtTime: lastAttemptTime });
+          staleCached.push({
+            username: student.github,
+            cachedAtTime: lastAttemptTime,
+          });
         }
       } else {
         neverCached.push(student.github);
@@ -1305,18 +1547,22 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
     // Prioritize never-cached targets first
     const neverCachedTargets = neverCached.slice(0, remainingCount);
     targetsUsernames.push(...neverCachedTargets);
-    neverCachedTargets.forEach(u => excludedSet.add(u.toLowerCase()));
+    neverCachedTargets.forEach((u) => excludedSet.add(u.toLowerCase()));
 
     // Fill the remaining slots with stale profiles (oldest first)
     if (targetsUsernames.length < effectiveBatchSize) {
       const stillRemaining = effectiveBatchSize - targetsUsernames.length;
       staleCached.sort((a, b) => a.cachedAtTime - b.cachedAtTime);
-      const staleTargets = staleCached.slice(0, stillRemaining).map(s => s.username);
+      const staleTargets = staleCached
+        .slice(0, stillRemaining)
+        .map((s) => s.username);
       targetsUsernames.push(...staleTargets);
     }
 
     if (targetsUsernames.length === 0) {
-      console.log('[Incremental Refresh] All profiles are fresh (< 24hrs). Skipping batch refresh.');
+      console.log(
+        "[Incremental Refresh] All profiles are fresh (< 24hrs). Skipping batch refresh.",
+      );
       return { updated: [], attempted: [] };
     }
   }
@@ -1329,7 +1575,8 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
   // Guard against the (unlikely) case of zero available tokens — fall back to
   // a single worker with no explicit token, which still works via
   // getGitHubHeaders()'s existing cookie/pool/system fallback chain.
-  const workerTokens: Array<string | undefined> = tokens.length > 0 ? tokens : [undefined];
+  const workerTokens: Array<string | undefined> =
+    tokens.length > 0 ? tokens : [undefined];
   const groups: string[][] = workerTokens.map(() => []);
   targetsUsernames.forEach((username, i) => {
     groups[i % workerTokens.length].push(username);
@@ -1342,7 +1589,9 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
       const token = workerTokens[groupIndex];
       for (const username of group) {
         if (Date.now() - tickStart > TICK_DEADLINE_MS) {
-          console.log(`Worker ${groupIndex} hit the tick deadline — stopping; remaining students stay stale for the next tick.`);
+          console.log(
+            `Worker ${groupIndex} hit the tick deadline — stopping; remaining students stay stale for the next tick.`,
+          );
           break;
         }
         const lower = username.toLowerCase();
@@ -1354,8 +1603,10 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
             failStateChanged = true;
           }
         } catch (err: any) {
-          if (err instanceof NotFoundError || err.name === 'NotFoundError') {
-            console.error(`Removing invalid GitHub ID from tracking: ${username}`);
+          if (err instanceof NotFoundError || err.name === "NotFoundError") {
+            console.error(
+              `Removing invalid GitHub ID from tracking: ${username}`,
+            );
             await removeStudent(username);
             // We consider it "updated" so it gets removed from the refresh queue
             updatedUsernames.push(username);
@@ -1372,7 +1623,9 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
             // the worker here would mean stopping the entire tick over what
             // might be one transient rejection.
             if (token) {
-              console.warn(`Token for worker ${groupIndex} was rejected on ${username} — evicting from the pool.`);
+              console.warn(
+                `Token for worker ${groupIndex} was rejected on ${username} — evicting from the pool.`,
+              );
               await removePoolToken(token);
             }
           } else {
@@ -1390,17 +1643,22 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
         // distinct token, so groups don't compete for the same rate-limit budget.
         await new Promise((r) => setTimeout(r, PACING_MS_PER_STUDENT));
       }
-    })
+    }),
   );
 
   // 5. Update the queue in KV by removing the successfully processed users
   if (validQueue.length > 0) {
-    const processedSet = new Set(updatedUsernames.map(u => u.toLowerCase()));
-    const remainingQueue = validQueue.filter(username => !processedSet.has(username.toLowerCase()));
+    const processedSet = new Set(updatedUsernames.map((u) => u.toLowerCase()));
+    const remainingQueue = validQueue.filter(
+      (username) => !processedSet.has(username.toLowerCase()),
+    );
     try {
-      await kvSet('refresh_queue', remainingQueue);
+      await kvSet("refresh_queue", remainingQueue);
     } catch (err) {
-      console.error('Failed to update refresh_queue KV after stale processing:', err);
+      console.error(
+        "Failed to update refresh_queue KV after stale processing:",
+        err,
+      );
     }
   }
 
@@ -1408,7 +1666,10 @@ export async function updateStaleProfiles(batchSize?: number): Promise<{ updated
     try {
       await kvSet(FAIL_STATE_KEY, failState);
     } catch (err) {
-      console.error('Failed to update refresh_fail_state KV after stale processing:', err);
+      console.error(
+        "Failed to update refresh_fail_state KV after stale processing:",
+        err,
+      );
     }
   }
 
