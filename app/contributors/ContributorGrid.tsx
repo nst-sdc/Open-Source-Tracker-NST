@@ -23,6 +23,10 @@ interface GridProps {
   periodLabel: string;
   from?: string;
   to?: string;
+  orgContext?: {
+    name: string;
+    login: string;
+  };
 }
 
 function CrownIcon({ className }: { className?: string }) {
@@ -68,21 +72,6 @@ function RankCell({ rank }: { rank: number }) {
   return <span className="text-[14px] font-[650] text-ink-soft tabular-nums pl-2">{rank}</span>;
 }
 
-// One grid, three layouts, because nine columns cannot fit on a phone:
-//
-//   below md   rank | name | rating with the merged count under it
-//   md to lg   campus and year drop out; the numeric columns get fixed widths
-//              so the name takes whatever room is left
-//   lg and up  the full nine columns
-//
-// Every row is its own grid, so the tracks are fixed widths rather than `auto`.
-// An auto track would size to that row's own content, and the columns would
-// stop lining up from one row to the next.
-//
-// The phone layout previously had five tracks for four visible cells: the last
-// 44px was reserved for the chevron, which is hidden below md. That empty track
-// plus its gap was almost exactly the width the name column needed, so on a
-// 375px screen names rendered 1px wide and on 320px not at all.
 const ROW_GRID =
   'grid grid-cols-[48px_minmax(0,1fr)_76px] md:grid-cols-[64px_minmax(0,1fr)_84px_72px_56px_56px_28px] lg:grid-cols-[76px_minmax(0,280px)_1fr_1fr_1fr_1fr_1fr_1fr_36px] gap-3 items-center';
 
@@ -128,8 +117,6 @@ function ContributorRow({
         <span title="Ranking score for this contributor" className="text-[11px] font-[650] text-gold-600 bg-gold-0 rounded-md px-1.5 py-0.5 tabular-nums">
           {summary.scoreMergedPRs.toFixed(1)}
         </span>
-        {/* Phones have no separate merged column, so the count sits under the
-            rating rather than disappearing. */}
         <span title="Merged pull requests" className="md:hidden flex items-center gap-1">
           <MergeIcon className="w-3 h-3 text-success-600 shrink-0" />
           <span className="text-[12.5px] font-[650] text-success-600 tabular-nums">{summary.mergedPRs}</span>
@@ -174,12 +161,13 @@ export function ContributorGrid({
   period,
   from,
   to,
+  orgContext,
 }: GridProps) {
   const [visibleActiveCount, setVisibleActiveCount] = useState(50);
   const [visibleOtherCount, setVisibleOtherCount] = useState(50);
 
-  // Outside "all time", an empty result for someone means "nothing in this
-  // window", not "has never contributed" — so the heading has to say which.
+  const isOrgView = Boolean(orgContext);
+
   const otherStudentsHeading =
     period === 'all'
       ? 'Registered, not contributing yet'
@@ -195,7 +183,6 @@ export function ContributorGrid({
         <div className={`${ROW_GRID} px-3 md:px-5 py-3.5 bg-panel`}>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">RANK</span>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">NAME</span>
-          {/* Stacked on phones to match the cell underneath it. */}
           <span className="flex flex-col items-end leading-tight text-[11px] font-[650] text-ink-soft tracking-[0.08em]">
             <span>RATING</span>
             <span className="md:hidden">MERGED</span>
@@ -226,8 +213,16 @@ export function ContributorGrid({
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
             </span>
-            <p className="text-ink text-sm font-[550]">No contributors match these filters</p>
-            <p className="text-ink-soft text-[13px]">Try a wider time period, or clear the search.</p>
+            <p className="text-ink text-sm font-[550]">
+              {isOrgView
+                ? `No contributors with merged PRs in ${orgContext?.name || orgContext?.login} found`
+                : 'No contributors match these filters'}
+            </p>
+            <p className="text-ink-soft text-[13px]">
+              {isOrgView
+                ? 'Only contributors with merged PRs to this organization are displayed.'
+                : 'Try a wider time period, or clear the search.'}
+            </p>
           </div>
         )}
 
@@ -246,64 +241,66 @@ export function ContributorGrid({
         )}
       </div>
 
-      {/* Other registered members */}
-      <div>
-        <div className="flex items-center gap-2.5 mb-4">
-          <h2 className="text-[15px] font-[650] text-ink">{otherStudentsHeading}</h2>
-          <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
-            {otherStudents.length}
-          </span>
-        </div>
+      {/* Other registered members (only shown in global leaderboard mode) */}
+      {!isOrgView && (
+        <div>
+          <div className="flex items-center gap-2.5 mb-4">
+            <h2 className="text-[15px] font-[650] text-ink">{otherStudentsHeading}</h2>
+            <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
+              {otherStudents.length}
+            </span>
+          </div>
 
-        {otherPage.length > 0 ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {otherPage.map((summary) => (
-                <Link
-                  key={summary.profile.login}
-                  href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
-                  className="flex items-center gap-3 bg-ground border border-line rounded-xl px-4 py-3 card-hover group"
-                >
-                  <Image
-                    src={summary.profile.avatar_url}
-                    alt=""
-                    width={34}
-                    height={34}
-                    unoptimized
-                    className="w-[34px] h-[34px] rounded-full border border-line object-cover shrink-0"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-[550] text-ink truncate group-hover:text-brand-600 transition-colors">
-                      {summary.profile.name ?? summary.profile.login}
+          {otherPage.length > 0 ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {otherPage.map((summary) => (
+                  <Link
+                    key={summary.profile.login}
+                    href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}`}
+                    className="flex items-center gap-3 bg-ground border border-line rounded-xl px-4 py-3 card-hover group"
+                  >
+                    <Image
+                      src={summary.profile.avatar_url}
+                      alt=""
+                      width={34}
+                      height={34}
+                      unoptimized
+                      className="w-[34px] h-[34px] rounded-full border border-line object-cover shrink-0"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] font-[550] text-ink truncate group-hover:text-brand-600 transition-colors">
+                        {summary.profile.name ?? summary.profile.login}
+                      </span>
+                      <span className="block text-[11.5px] text-ink-soft truncate">
+                        @{summary.profile.login}
+                        {summary.campus ? ` · ${summary.campus}` : ''}
+                      </span>
                     </span>
-                    <span className="block text-[11.5px] text-ink-soft truncate">
-                      @{summary.profile.login}
-                      {summary.campus ? ` · ${summary.campus}` : ''}
-                    </span>
-                  </span>
-                  <svg className="w-3.5 h-3.5 text-ink-faint group-hover:text-brand-600 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-                  </svg>
-                </Link>
-              ))}
-            </div>
-            {otherStudents.length > visibleOtherCount && (
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setVisibleOtherCount((c) => c + 50)}
-                  className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
-                >
-                  Load more members
-                </button>
+                    <svg className="w-3.5 h-3.5 text-ink-faint group-hover:text-brand-600 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                    </svg>
+                  </Link>
+                ))}
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-ink-soft text-sm bg-ground border border-line rounded-2xl">
-            No other registered members match the filters.
-          </div>
-        )}
-      </div>
+              {otherStudents.length > visibleOtherCount && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setVisibleOtherCount((c) => c + 50)}
+                    className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
+                  >
+                    Load more members
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-ink-soft text-sm bg-ground border border-line rounded-2xl">
+              No other registered members match the filters.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

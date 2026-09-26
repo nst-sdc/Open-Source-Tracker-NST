@@ -1,13 +1,22 @@
 import {
   getAllStudentSummaries,
   buildDateQuery,
+  repoFromUrl,
   StudentSummary,
 } from "@/lib/github";
 import { getStudentsKV } from "@/lib/kv-students";
 import { getFlaggedPRIdSet } from "@/lib/flagged";
 import { readSummaryCache, writeSummaryCache } from "@/lib/summary-cache";
 import { readProfileCache } from "@/lib/profile-cache";
-import { getOrgFilterOptions, getOrgCache, OrgFilterOption } from "@/lib/org-cache";
+import { getRepoCache } from "@/lib/repo-cache";
+import {
+  aggregateMergedPRScore,
+  repoMultiplier,
+  legacyMultiplier,
+  NEUTRAL_MULTIPLIER,
+  REPO_SCHEMA_VERSION,
+} from "@/lib/repo-score";
+import { resolveOrganization, OrgCacheEntry } from "@/lib/org-cache";
 import { FilterBar } from "./FilterBar";
 import { ContributorGrid } from "./ContributorGrid";
 import Link from "next/link";
@@ -21,47 +30,6 @@ export const metadata = {
   title: "Contributors — Opensource Tracker",
   description: "Student open source contributions",
 };
-
-async function backfillOrganizationsFromProfileCache(
-  summaries: StudentSummary[],
-): Promise<StudentSummary[]> {
-  // Preserve cached ranking/score values exactly; only fill missing org metadata
-  // for pre-org cache entries so filtering can work.
-  if (summaries.every((s) => Array.isArray(s.organizations))) return summaries;
-  const orgCache = await getOrgCache();
-
-  return Promise.all(
-    summaries.map(async (summary) => {
-      if (Array.isArray(summary.organizations)) return summary;
-
-      try {
-        const cached = await readProfileCache(summary.profile.login);
-        // Use only *merged* PRs — the filter requirement is "contributed to
-        // this org's repo via a merged PR", not merely opened a PR.
-        const organizations = [
-          ...new Set(
-            (cached?.prs ?? [])
-              .filter((pr) => Boolean(pr.pull_request?.merged_at))
-              .map((pr) => {
-                if (!pr.repository_url) return null;
-                return pr.repository_url
-                  .replace("https://api.github.com/repos/", "")
-                  .split("/")[0];
-              })
-              .filter((org): org is string => {
-                if (!org) return false;
-                const meta = orgCache[org];
-                return !meta || meta.isOrganization;
-              }),
-          ),
-        ];
-        return { ...summary, organizations };
-      } catch {
-        return { ...summary, organizations: [] };
-      }
-    }),
-  );
-}
 
 /** A summary plus its position on the full leaderboard for the selected
  *  period. Carried through filtering so the number never depends on what is
@@ -79,6 +47,17 @@ const PERIOD_KICKERS: Record<string, string> = {
   year: "LAST YEAR",
   custom: "CUSTOM RANGE",
 };
+
+function getCacheAgeMs(cachedAt: string): number {
+  return Date.now() - new Date(cachedAt).getTime();
+}
+
+function getMinutesAgo(cachedAt: string): number {
+  return Math.max(
+    0,
+    Math.round((Date.now() - new Date(cachedAt).getTime()) / 60000),
+  );
+}
 
 function CrownIcon({ className }: { className?: string }) {
   return (
@@ -142,13 +121,8 @@ function PodiumCard({
     </span>
   );
 
-  // Tailwind v4 compiles -translate-y-* to the standalone `translate` property,
-  // not `transform` — the card's transition list must name `translate` or the
-  // lift snaps instantly instead of easing.
   const cardStyle = isFirst
-    ? // Hover offsets are per-card because the winner already rests 8px higher on
-      // md+; a shared -translate-y-1 would move it *down* on hover.
-      "bg-gradient-to-b from-gold-0/70 via-ground to-ground border-2 border-gold-400/70 shadow-pop md:-translate-y-2 relative hover:-translate-y-1 md:hover:-translate-y-3"
+    ? "bg-gradient-to-b from-gold-0/70 via-ground to-ground border-2 border-gold-400/70 shadow-pop md:-translate-y-2 relative hover:-translate-y-1 md:hover:-translate-y-3"
     : isSecond
       ? "bg-gradient-to-b from-panel-2/90 via-ground to-ground border border-line-strong hover:border-line-heavy shadow-card hover:-translate-y-1"
       : "bg-gradient-to-b from-warning-0/80 via-ground to-ground border border-warning-200 hover:border-warning-400 shadow-card hover:-translate-y-1";
@@ -244,9 +218,9 @@ export default async function ContributorsPage({
     from?: string;
     to?: string;
     search?: string;
+    org?: string;
     year?: string;
     campus?: string;
-    organization?: string;
   }>;
 }) {
   const {
@@ -254,9 +228,9 @@ export default async function ContributorsPage({
     from,
     to,
     search = "",
+    org = "",
     year = "",
     campus = "",
-    organization = "",
   } = await searchParams;
   const dateQuery = buildDateQuery(period, from, to);
   const students = await getStudentsKV();
@@ -299,6 +273,7 @@ export default async function ContributorsPage({
   }
 
   const flaggedPRIds = await getFlaggedPRIdSet();
+  const repoCache = await getRepoCache();
 
   // ── Cache-first data loading ──────────────────────────────────────────────
   const isPredefinedPeriod = [
@@ -319,11 +294,9 @@ export default async function ContributorsPage({
   if (isPredefinedPeriod) {
     const cache = await readSummaryCache(period);
     if (cache && cache.cachedAt !== "1970-01-01T00:00:00.000Z") {
-      const ageMs = Date.now() - new Date(cache.cachedAt).getTime();
+      const ageMs = getCacheAgeMs(cache.cachedAt);
       if (!isTimeWindowed || ageMs < MAX_WINDOW_CACHE_AGE_MS) {
-        allSummaries = await backfillOrganizationsFromProfileCache(
-          cache.summaries,
-        );
+        allSummaries = cache.summaries;
         cachedAt = cache.cachedAt;
       }
     }
@@ -344,9 +317,7 @@ export default async function ContributorsPage({
           console.warn(
             `Falling back to stale summary cache for ${period} (cached at ${staleCache.cachedAt})`,
           );
-          allSummaries = await backfillOrganizationsFromProfileCache(
-            staleCache.summaries,
-          );
+          allSummaries = staleCache.summaries;
           cachedAt = staleCache.cachedAt;
         }
       }
@@ -360,66 +331,209 @@ export default async function ContributorsPage({
     );
   }
 
-  const organizations: OrgFilterOption[] =
-    await getOrgFilterOptions(allSummaries);
-
   const hasActivity = (s: StudentSummary) =>
     s.totalPRs > 0 || (s.issuesCount ?? 0) > 0;
 
-  // Rank is assigned over the whole leaderboard for the selected period, before
-  // any search/year/campus filter is applied. Searching for one person must not
-  // move them to #1 — the filters narrow what is listed, never what it means.
-  // Because allSummaries is fetched with this period's dateQuery, the numbers
-  // are already specific to the selected window.
+  // Global immutable leaderboard for the selected period
   const rankedLeaderboard: RankedSummary[] = allSummaries
     .filter(hasActivity)
     .map((summary, i) => ({ ...summary, rank: i + 1 }));
 
-  const matchesFilters = (s: StudentSummary) => {
-    if (search) {
-      const q = search.toLowerCase();
-      const matchesText =
-        s.profile.login.toLowerCase().includes(q) ||
-        (s.profile.name ?? "").toLowerCase().includes(q) ||
-        (s.year ?? "").toLowerCase().includes(q) ||
-        (s.campus ?? "").toLowerCase().includes(q);
-      if (!matchesText) return false;
-    }
-    if (year && s.year !== year) return false;
-    if (campus && s.campus !== campus) return false;
-    if (
-      organization &&
-      !s.organizations.some(
-        (org) => org.toLowerCase() === organization.toLowerCase(),
-      )
-    )
-      return false;
-    return true;
-  };
+  // ── Organization Search Mode Activation ─────────────────────────────────
+  // Organization mode is activated when an organization is explicitly selected (via org parameter).
+  const cleanOrg = org.trim().replace(/^@/, "");
+  let matchedOrg: OrgCacheEntry | null = null;
+  if (cleanOrg) {
+    matchedOrg = await resolveOrganization(cleanOrg);
+  }
 
-  const summaries = allSummaries.filter(matchesFilters);
-  const totalPRs = summaries.reduce((s, c) => s + c.totalPRs, 0);
-  const totalMerged = summaries.reduce((s, c) => s + c.mergedPRs, 0);
+  const isOrgSearch = Boolean(matchedOrg && matchedOrg.isOrganization);
 
-  const realContributors = rankedLeaderboard.filter(matchesFilters);
-  const otherStudents = summaries.filter((s) => !hasActivity(s));
+  let realContributors: RankedSummary[] = [];
+  let otherStudents: StudentSummary[] = [];
+  let totalPRs = 0;
+  let totalMerged = 0;
 
-  // The podium always shows the global top 3 regardless of the organisation
-  // filter. Organisation is purely a table-row visibility toggle — it does not
-  // change who holds rank #1/#2/#3 globally, so it must not hide the podium.
-  // Only search/year/campus filters (which narrow who is "competing in this
-  // query") should collapse the podium, because showing rank-47 on a podium
-  // would be confusing.
-  const podiumHidden = Boolean(search || year || campus);
-  const podium = podiumHidden ? [] : rankedLeaderboard.slice(0, 3);
+  if (isOrgSearch && matchedOrg) {
+    // ── Organization Search Mode ───────────────────────────────────────────
+    const targetOrgLogin = matchedOrg.login.toLowerCase();
+    const orgSummaries: StudentSummary[] = [];
+
+    // Check student profile caches to discover all contributions to this org's public repos
+    await Promise.all(
+      allSummaries.map(async (studentSummary) => {
+        try {
+          const cached = await readProfileCache(studentSummary.profile.login);
+          if (!cached || !cached.prs || cached.prs.length === 0) return;
+
+          let prs = cached.prs;
+          let issues = cached.issues || [];
+
+          // Match any repository belonging to the organization
+          prs = prs.filter((pr) => {
+            if (!pr.repository_url) return false;
+            const repo = repoFromUrl(pr.repository_url);
+            return repo.split("/")[0]?.toLowerCase() === targetOrgLogin;
+          });
+
+          if (prs.length === 0) return;
+
+          // Strip flagged / invalid contributions
+          prs = prs.filter((pr) => {
+            const repo = repoFromUrl(pr.repository_url);
+            const key = `${repo}#${pr.number}`;
+            if (flaggedPRIds.has(key)) return false;
+            const repoEntry = repoCache[repo];
+            if (repoEntry && repoEntry.valid === false) return false;
+            return true;
+          });
+
+          // Filter by dateQuery if active
+          if (dateQuery) {
+            const gtMatch = dateQuery.match(/created:>([0-9-]{10})/);
+            const rangeMatch = dateQuery.match(
+              /created:([0-9-]{10})\.\.([0-9-]{10})/,
+            );
+            if (gtMatch) {
+              const minDate = new Date(gtMatch[1]);
+              prs = prs.filter((pr) => new Date(pr.created_at) > minDate);
+              issues = issues.filter((is) => new Date(is.created_at) > minDate);
+            } else if (rangeMatch) {
+              const minDate = new Date(rangeMatch[1]);
+              const maxDate = new Date(rangeMatch[2]);
+              minDate.setHours(0, 0, 0, 0);
+              maxDate.setHours(23, 59, 59, 999);
+              prs = prs.filter((pr) => {
+                const d = new Date(pr.created_at);
+                return d >= minDate && d <= maxDate;
+              });
+              issues = issues.filter((is) => {
+                const d = new Date(is.created_at);
+                return d >= minDate && d <= maxDate;
+              });
+            }
+          }
+
+          // Requirement 5: Only count merged PR contributions
+          const mergedPRList = prs.filter((pr) =>
+            Boolean(pr.pull_request?.merged_at),
+          );
+          if (mergedPRList.length === 0) return;
+
+          // Filter by year & campus if selected
+          if (year && studentSummary.year !== year) return;
+          if (campus && studentSummary.campus !== campus) return;
+
+          const studentTotalPRs = prs.length;
+          const studentMergedPRs = mergedPRList.length;
+          const openPRs = prs.filter((pr) => pr.state === "open").length;
+          const closedPRs = prs.filter(
+            (pr) => pr.state === "closed" && !pr.pull_request?.merged_at,
+          ).length;
+
+          const orgIssues = issues.filter((is) => {
+            if (!is.repository_url) return false;
+            return (
+              repoFromUrl(is.repository_url).split("/")[0]?.toLowerCase() ===
+              targetOrgLogin
+            );
+          });
+
+          // Organization-specific score using existing repo-quality multiplier and aggregateMergedPRScore
+          const repoMultiplierFor = (repoFullName: string) => {
+            const entry = repoCache[repoFullName];
+            if (!entry) return NEUTRAL_MULTIPLIER;
+            if (entry.signals && entry.schemaVersion === REPO_SCHEMA_VERSION) {
+              return repoMultiplier(entry.signals, Date.now(), {
+                selfOwned: false,
+              });
+            }
+            return legacyMultiplier(entry.stars);
+          };
+
+          const orgScore = aggregateMergedPRScore(
+            mergedPRList,
+            (pr) => (pr.repository_url ? repoFromUrl(pr.repository_url) : null),
+            repoMultiplierFor,
+          );
+
+          orgSummaries.push({
+            profile: studentSummary.profile,
+            totalPRs: studentTotalPRs,
+            mergedPRs: studentMergedPRs,
+            openPRs,
+            closedPRs,
+            scoreMergedPRs: orgScore,
+            issuesCount: orgIssues.length,
+            year: studentSummary.year,
+            campus: studentSummary.campus,
+            organizations: [matchedOrg.login],
+          });
+        } catch (err) {
+          console.error(
+            `Error processing org contributions for ${studentSummary.profile.login}:`,
+            err,
+          );
+        }
+      }),
+    );
+
+    // Requirement 6: Rank contributors using organization-specific contributions
+    // 1. Number of merged PRs in organization — descending
+    // 2. aggregateMergedPRScore() on org merged PRs — descending
+    // 3. Total PRs in organization — descending
+    // 4. Alphabetical by login
+    orgSummaries.sort((a, b) => {
+      if (b.mergedPRs !== a.mergedPRs) return b.mergedPRs - a.mergedPRs;
+      if (b.scoreMergedPRs !== a.scoreMergedPRs)
+        return b.scoreMergedPRs - a.scoreMergedPRs;
+      if (b.totalPRs !== a.totalPRs) return b.totalPRs - a.totalPRs;
+      return a.profile.login.localeCompare(b.profile.login);
+    });
+
+    realContributors = orgSummaries.map((c, i) => ({
+      ...c,
+      rank: i + 1, // Organization-specific rank
+    }));
+
+    otherStudents = [];
+    totalPRs = realContributors.reduce((s, c) => s + c.totalPRs, 0);
+    totalMerged = realContributors.reduce((s, c) => s + c.mergedPRs, 0);
+  } else {
+    // ── Normal Contributor Search Mode ─────────────────────────────────────
+    const matchesFilters = (s: StudentSummary) => {
+      if (search) {
+        const q = search.toLowerCase();
+        const matchesText =
+          s.profile.login.toLowerCase().includes(q) ||
+          (s.profile.name ?? "").toLowerCase().includes(q) ||
+          (s.year ?? "").toLowerCase().includes(q) ||
+          (s.campus ?? "").toLowerCase().includes(q);
+        if (!matchesText) return false;
+      }
+      if (year && s.year !== year) return false;
+      if (campus && s.campus !== campus) return false;
+      return true;
+    };
+
+    const summaries = allSummaries.filter(matchesFilters);
+    totalPRs = summaries.reduce((s, c) => s + c.totalPRs, 0);
+    totalMerged = summaries.reduce((s, c) => s + c.mergedPRs, 0);
+
+    realContributors = rankedLeaderboard.filter(matchesFilters);
+    otherStudents = summaries.filter((s) => !hasActivity(s));
+  }
+
+  // In org-search mode, podium shows the organization-specific top 3 contributors.
+  // In normal mode, podium shows global top 3, but is hidden if text/year/campus filter is active.
+  const podium = isOrgSearch
+    ? realContributors.slice(0, 3)
+    : search || year || campus
+      ? []
+      : rankedLeaderboard.slice(0, 3);
   const kicker = PERIOD_KICKERS[period] ?? "ALL TIME";
 
-  const refreshedAgo = cachedAt
-    ? Math.max(
-        0,
-        Math.round((Date.now() - new Date(cachedAt).getTime()) / 60000),
-      )
-    : null;
+  const refreshedAgo = cachedAt ? getMinutesAgo(cachedAt) : null;
 
   return (
     <main className="min-h-screen bg-panel pb-20">
@@ -508,80 +622,104 @@ export default async function ContributorsPage({
                 <div className="order-3 hidden md:block" />
               )}
             </div>
-          ) : (
+          ) : !isOrgSearch && !search && !year && !campus ? (
             <div className="bg-panel border border-line rounded-2xl p-8 text-center max-w-md mx-auto">
               <p className="text-ink-soft text-sm">
                 No contributions found for this filter yet.
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* CTA Banner */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-        <div className="bg-gradient-to-r from-brand-0/70 via-ground to-violet-0/60 border border-brand-100 rounded-2xl shadow-card p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex-1 min-w-[260px]">
-            <h2 className="text-ink text-[16px] md:text-[17px] font-[650]">
-              Get PRs merged to climb the leaderboard!
-            </h2>
-            <p className="text-ink-soft text-[13px] mt-1">
-              Real contributions only — spam and self-merges are automatically
-              filtered out.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/issues"
-              className="flex items-center h-[38px] px-4 rounded-[9px] bg-brand-solid hover:bg-brand-solid-hover text-white text-[13.5px] font-[550] shadow-brand-btn transition-colors"
-            >
-              Find an issue
-            </Link>
-            <Link
-              href="/check-work"
-              className="flex items-center h-[38px] px-4 rounded-[9px] bg-ground border border-line-strong hover:bg-panel text-ink text-[13.5px] font-[550] transition-colors"
-            >
-              Check my work
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary strip */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-        <div className="bg-ground border border-line rounded-2xl shadow-card grid grid-cols-2 md:grid-cols-4">
-          {[
-            { label: "Students", value: summaries.length, num: "text-ink" },
-            {
-              label: "Contributors",
-              value: realContributors.length,
-              num: "text-brand-600",
-            },
-            { label: "Pull requests", value: totalPRs, num: "text-ink" },
-            {
-              label: "Merged PRs",
-              value: totalMerged,
-              num: "text-success-600",
-            },
-          ].map((s, i) => (
-            <div
-              key={s.label}
-              className={`px-5 py-4 ${i > 0 ? "border-l border-line" : ""} ${i >= 2 ? "max-md:border-t max-md:border-line" : ""} ${i === 2 ? "max-md:border-l-0" : ""}`}
-            >
-              <div
-                className={`text-[22px] leading-none font-[650] tabular-nums ${s.num}`}
-              >
-                {s.value.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[12px] text-ink-soft mt-1">{s.label}</div>
+      {/* CTA Banner (only shown in normal view) */}
+      {!isOrgSearch && (
+        <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
+          <div className="bg-gradient-to-r from-brand-0/70 via-ground to-violet-0/60 border border-brand-100 rounded-2xl shadow-card p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex-1 min-w-[260px]">
+              <h2 className="text-ink text-[16px] md:text-[17px] font-[650]">
+                Get PRs merged to climb the leaderboard!
+              </h2>
+              <p className="text-ink-soft text-[13px] mt-1">
+                Real contributions only — spam and self-merges are automatically
+                filtered out.
+              </p>
             </div>
-          ))}
+            <div className="flex items-center gap-3">
+              <Link
+                href="/issues"
+                className="flex items-center h-[38px] px-4 rounded-[9px] bg-brand-solid hover:bg-brand-solid-hover text-white text-[13.5px] font-[550] shadow-brand-btn transition-colors"
+              >
+                Find an issue
+              </Link>
+              <Link
+                href="/check-work"
+                className="flex items-center h-[38px] px-4 rounded-[9px] bg-ground border border-line-strong hover:bg-panel text-ink text-[13.5px] font-[550] transition-colors"
+              >
+                Check my work
+              </Link>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Filter bar */}
+      {/* Summary strip (only shown in normal view) */}
+      {!isOrgSearch && (
+        <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
+          <div className="bg-ground border border-line rounded-2xl shadow-card grid grid-cols-2 md:grid-cols-4">
+            {[
+              {
+                label: "Students",
+                value: allSummaries?.length ?? 0,
+                num: "text-ink",
+              },
+              {
+                label: "Contributors",
+                value: realContributors.length,
+                num: "text-brand-600",
+              },
+              {
+                label: "Pull requests",
+                value: totalPRs,
+                num: "text-ink",
+              },
+              {
+                label: "Merged PRs",
+                value: totalMerged,
+                num: "text-success-600",
+              },
+            ].map((s, i) => (
+              <div
+                key={s.label}
+                className={`px-5 py-4 ${i > 0 ? "border-l border-line" : ""} ${i >= 2 ? "max-md:border-t max-md:border-line" : ""} ${i === 2 ? "max-md:border-l-0" : ""}`}
+              >
+                <div
+                  className={`text-[22px] leading-none font-[650] tabular-nums ${s.num}`}
+                >
+                  {s.value.toLocaleString("en-IN")}
+                </div>
+                <div className="text-[12px] text-ink-soft mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filter bar with integrated organization context */}
       <Suspense fallback={<FilterBarSkeleton />}>
-        <FilterBar organizations={organizations} />
+        <FilterBar
+          orgContext={
+            isOrgSearch && matchedOrg
+              ? {
+                  name: matchedOrg.name || matchedOrg.login,
+                  login: matchedOrg.login,
+                  avatarUrl: matchedOrg.avatarUrl,
+                  contributorsCount: realContributors.length,
+                  mergedPRs: totalMerged,
+                }
+              : undefined
+          }
+        />
       </Suspense>
 
       {/* Ranked table + other members */}
@@ -592,6 +730,14 @@ export default async function ContributorsPage({
         periodLabel={kicker.toLowerCase()}
         from={from}
         to={to}
+        orgContext={
+          isOrgSearch && matchedOrg
+            ? {
+                name: matchedOrg.name || matchedOrg.login,
+                login: matchedOrg.login,
+              }
+            : undefined
+        }
       />
     </main>
   );
