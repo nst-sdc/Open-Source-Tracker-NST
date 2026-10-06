@@ -60,6 +60,23 @@ function filterByPeriod<T extends { created_at: string }>(
   });
 }
 
+/* Narrows a profile to one organisation's repositories, so arriving here from
+   the org leaderboard keeps the context you clicked from. Deliberately the same
+   shape as filterByPeriod: it filters rather than reorders, and clearing it
+   restores everything -- matching how the period filter already behaves. */
+function filterByOrg<T extends { repository_url?: string }>(items: T[], org?: string): T[] {
+  if (!org) return items;
+  const target = org.trim().toLowerCase();
+  if (!target) return items;
+  return items.filter((item) => {
+    if (!item.repository_url) return false;
+    const owner = item.repository_url
+      .replace('https://api.github.com/repos/', '')
+      .split('/')[0];
+    return owner?.toLowerCase() === target;
+  });
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function ContributorPage({
@@ -67,9 +84,9 @@ export default async function ContributorPage({
   searchParams,
 }: {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ tab?: string; period?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ tab?: string; period?: string; from?: string; to?: string; org?: string }>;
 }) {
-  const [{ username }, { tab: rawTab, period, from, to }, students] = await Promise.all([
+  const [{ username }, { tab: rawTab, period, from, to, org }, students] = await Promise.all([
     params,
     searchParams,
     getStudentsKV(),
@@ -105,6 +122,11 @@ export default async function ContributorPage({
 
     // 2. Cache stale (>2hrs) — logged-in users get an immediate live re-fetch;
     //    anonymous users are queued for the background worker.
+    // This is an async Server Component: it runs once per request on the
+    // server and never re-renders, and cache age is precisely a function of
+    // "now". react-hooks/purity targets client components, where an impure
+    // call would drift between renders.
+    // eslint-disable-next-line react-hooks/purity
     const ageMs = Date.now() - new Date(cached.cachedAt).getTime();
     if (ageMs > 2 * 60 * 60 * 1000) {
       if (userLoggedIn) {
@@ -247,8 +269,8 @@ export default async function ContributorPage({
     return true;
   });
 
-  const filteredPRs = filterByPeriod(validPRs, period, from, to);
-  const filteredIssues = filterByPeriod(issues, period, from, to);
+  const filteredPRs = filterByOrg(filterByPeriod(validPRs, period, from, to), org);
+  const filteredIssues = filterByOrg(filterByPeriod(issues, period, from, to), org);
 
   const counts = {
     prs: filteredPRs.length,
@@ -268,6 +290,7 @@ export default async function ContributorPage({
   // total additionally decays repeat PRs into the same repo and caps any
   // single repo at 40% — so these badges are each PR's *first-PR* value, not
   // shares of the total.
+  // eslint-disable-next-line react-hooks/purity -- async Server Component, see above.
   const nowMs = Date.now();
   const viewedLogin = username.toLowerCase();
   const repoWeights: Record<string, number> = {};
@@ -452,6 +475,27 @@ export default async function ContributorPage({
               className="bg-ground hover:bg-brand-0 border border-brand-100 px-3.5 py-1.5 rounded-[9px] transition-colors text-xs font-[650] text-brand-600"
             >
               Clear filter
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* An org filter narrows this profile to one organisation's repos. Without
+          a visible, clearable marker it just looks like the person has far
+          fewer contributions than they do. */}
+      {org && (
+        <div className="max-w-4xl mx-auto px-4 md:px-6 mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-brand-0 border border-brand-100 rounded-xl px-4 py-2.5">
+            <p className="text-[13px] text-ink-mid">
+              Showing contributions to{' '}
+              <span className="font-[650] text-brand-600">{org}</span> only
+              {counts.prs === 0 && ' — none found in this period'}
+            </p>
+            <Link
+              href={`/contributors/${username}?period=${period ?? 'all'}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}${tab !== 'prs' ? `&tab=${tab}` : ''}`}
+              className="text-[12.5px] font-[550] text-brand-600 hover:underline whitespace-nowrap"
+            >
+              Show all contributions
             </Link>
           </div>
         </div>

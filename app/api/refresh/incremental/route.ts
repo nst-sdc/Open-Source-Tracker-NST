@@ -3,6 +3,7 @@ import { updateStaleProfiles, buildDateQuery, getSummaryFromCache } from '@/lib/
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { writeSummaryCache, readSummaryCache } from '@/lib/summary-cache';
 import { readProfileCache } from '@/lib/profile-cache';
+import { readOrgIndex, writeOrgIndex, indexStudentContributions } from '@/lib/org-index';
 import { getRepoCache } from '@/lib/repo-cache';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
@@ -46,6 +47,21 @@ async function performIncrementalRefresh() {
     const cached = await readProfileCache(username);
     if (cached) profiles.set(username.toLowerCase(), cached);
   }
+
+  // The org filter's index is derived from these same profiles, so it is built
+  // here rather than per request: no extra GitHub calls, no extra KV reads, and
+  // it populates whether or not anyone has searched -- which is what the
+  // previous lazy-write approach could never do.
+  const orgIndex = await readOrgIndex();
+  for (const [lowerName, profile] of profiles) {
+    const login = students.find(s => s.github.toLowerCase() === lowerName)?.github ?? lowerName;
+    indexStudentContributions(orgIndex, login, profile, {
+      flaggedPRIds,
+      isRepoValid: (repo) => repoCache[repo]?.valid !== false,
+    });
+  }
+  await writeOrgIndex(orgIndex);
+  console.log(`[Incremental Refresh] org index covers ${Object.keys(orgIndex).length} organisations`);
 
   for (const period of periods) {
     // bypassMemory: the loop below mutates existingCache.summaries in place
@@ -99,27 +115,27 @@ async function performIncrementalRefresh() {
   };
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const result = await performIncrementalRefresh();
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Incremental Refresh] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Internal Server Error' },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const result = await performIncrementalRefresh();
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Incremental Refresh] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Internal Server Error' },
       { status: 500 }
     );
   }
