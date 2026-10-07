@@ -76,7 +76,20 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const url = new URL(request.url);
   const username = url.searchParams.get('username');
-  const period = url.searchParams.get('period') || 'all';
+  const periodParam = url.searchParams.get('period');
+  const period = periodParam || 'all';
+
+  // A parameterless POST used to fall through to the period branch below with
+  // period defaulting to 'all', which rebuilds every student's summary from
+  // scratch -- so one unauthenticated request with no body blanked the
+  // leaderboard for hours. The Refresh button always sends one of these, so
+  // requiring it changes nothing a user can see.
+  if (!username && !periodParam) {
+    return Response.json(
+      { error: 'Specify ?username= or ?period=' },
+      { status: 400 },
+    );
+  }
 
   // 1. Refresh individual profile
   if (username) {
