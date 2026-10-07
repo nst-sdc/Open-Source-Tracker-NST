@@ -180,11 +180,13 @@ export async function POST(request: Request) {
         fromCache: false,
         cachedAt: new Date().toISOString(),
       });
-    } catch (err: any) {
-      const isRateLimit = err.name === 'GitHubRateLimitError' || err instanceof GitHubRateLimitError;
+    } catch (err) {
+      const isRateLimit =
+        err instanceof GitHubRateLimitError ||
+        (err instanceof Error && err.name === 'GitHubRateLimitError');
 
       if (isRateLimit) {
-        console.warn(`[Refresh API] Rate limit hit for @${username}. Queuing update. Error:`, err.message);
+        console.warn(`[Refresh API] Rate limit hit for @${username}. Queuing update. Error:`, err instanceof Error ? err.message : err);
         try {
           const queue = await kvGet<string[]>('refresh_queue') || [];
           if (!queue.some(u => u.toLowerCase() === username.toLowerCase())) {
@@ -204,7 +206,7 @@ export async function POST(request: Request) {
 
       console.error(`[Refresh API] Error refreshing @${username}:`, err);
       return Response.json(
-        { ok: false, error: err.message || 'Failed to fetch updates from GitHub' },
+        { ok: false, error: err instanceof Error ? err.message : 'Failed to fetch updates from GitHub' },
         { status: 500 }
       );
     }
