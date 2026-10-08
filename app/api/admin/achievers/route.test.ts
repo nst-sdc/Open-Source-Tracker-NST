@@ -1,15 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-/**
- * Regression tests for adding a program to someone who is already an achiever
- * — the "Agnik did GSoC and LFX but adding the LFX failed" report.
- *
- * The add was blocked by the GitHub existence check: getStudentProfile throws
- * on a rate limit (403/429) or a GitHub 5xx, nothing caught it, and the route
- * answered a bare 500. Someone already in the roster demonstrably exists, so a
- * failed verification must not stop the add.
- */
-
 const { getStudentProfile } = vi.hoisted(() => ({ getStudentProfile: vi.fn() }));
 const { addAchiever } = vi.hoisted(() => ({ addAchiever: vi.fn() }));
 const { getStudentsKV } = vi.hoisted(() => ({ getStudentsKV: vi.fn() }));

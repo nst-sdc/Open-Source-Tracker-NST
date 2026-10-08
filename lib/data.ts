@@ -8,8 +8,7 @@ export interface Program {
   year?: number;
   org?: string;
   url?: string;
-  /** What kind of achievement this is. Absent means 'program', so every entry
-   *  written before conferences and projects existed keeps its meaning. */
+  /** Absent means 'program'. */
   kind?: 'program' | 'conference' | 'project';
 }
 

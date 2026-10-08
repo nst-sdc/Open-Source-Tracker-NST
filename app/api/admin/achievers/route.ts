@@ -29,8 +29,6 @@ export async function POST(request: Request) {
   //    is tracked, and guarantees an achiever always has a leaderboard row for
   //    their label to appear on — previously an achiever outside the roster was
   //    simply invisible on /contributors, with nothing to explain why.
-  //    It runs before the GitHub lookup because it is a KV read: it catches the
-  //    usual typo without spending a GitHub call on it.
   const students = await getStudentsKV();
   const isTracked = students.some((s) => s.github.toLowerCase() === username.toLowerCase());
   if (!isTracked) {
@@ -40,14 +38,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. The account should also still exist on GitHub — a renamed or deleted
-  //    account left behind in the roster would become a Hall of Fame entry
-  //    pointing at nobody. Only a definitive 404 blocks the add: getStudentProfile
-  //    throws on rate limits (403/429) and on GitHub 5xx, and letting that
-  //    propagate turned a transient API hiccup into a bare 500 — which is how
-  //    adding a second program to an existing achiever came to look like it
-  //    failed for no reason. Someone already in the roster plainly exists, so a
-  //    failed verification is logged and the add proceeds.
+  // 2. Only a definitive 404 blocks the add. getStudentProfile throws on rate
+  //    limits and GitHub 5xx, and someone already in the roster plainly exists.
   try {
     const profile = await getStudentProfile(username);
     if (!profile) {

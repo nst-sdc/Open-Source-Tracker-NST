@@ -278,7 +278,6 @@ export default async function ContributorsPage({
   }
 
   const flaggedPRIds = await getFlaggedPRIdSet();
-  // One KV read for the whole board; see lib/recognitions.ts
   const recognitions = await getRecognitions();
   const repoCache = await getRepoCache();
 

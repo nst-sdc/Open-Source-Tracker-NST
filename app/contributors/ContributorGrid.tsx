@@ -30,7 +30,6 @@ interface GridProps {
     name: string;
     login: string;
   };
-  /** login (lowercased) -> why they are recognised; see lib/recognitions.ts */
   recognitions?: RecognitionMap;
 }
 
@@ -60,17 +59,8 @@ function StarIcon({ className }: { className?: string }) {
   );
 }
 
-/* Sits to the left of the rank, so it reads as "this person, plus something the
-   ranking does not capture" rather than as a competing score. Brand colour, not
-   gold: gold would blur into the crown badge beside it and look like a second
-   rank. One mark however many kinds apply -- the card carries the detail.
-
-   The card is CSS-only (group-hover / focus-within) because these rows are
-   server-rendered links; adding per-row React state to 1,800 rows to show a
-   tooltip would be a poor trade. */
 function RecognitionStar({ recognition }: { recognition?: Recognition }) {
   if (!recognition || recognition.kinds.length === 0) {
-    // Keeps the rank column aligned whether or not a mark is present.
     return <span className="w-3.5 shrink-0" aria-hidden="true" />;
   }
 
@@ -83,10 +73,7 @@ function RecognitionStar({ recognition }: { recognition?: Recognition }) {
 
       <span
         role="tooltip"
-        /* Anchored to the star's LEFT edge, not centred on it. The star is the
-           leftmost element in the row and the list is wrapped in a rounded
-           `overflow-hidden` container, so a centred card had its left half
-           clipped away. Growing rightward keeps it inside. */
+        /* left-0, not centred: the list clips overflow and cut a centred card in half. */
         className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-max max-w-[260px]
                    origin-top-left scale-95 opacity-0 transition-[opacity,scale] duration-150
                    group-hover/star:opacity-100 group-hover/star:scale-100

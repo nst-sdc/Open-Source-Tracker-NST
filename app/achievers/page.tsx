@@ -136,9 +136,6 @@ function AchieverCard({
   );
 }
 
-/* Conferences students can realistically get to, with the route in rather than
-   a wall of listings. Kept short and deliberately not exhaustive -- the point
-   is "here are five you could actually apply to", not a directory. */
 const CONFERENCES = [
   {
     name: 'FOSDEM',
@@ -209,9 +206,6 @@ export default async function AchieversPage() {
     })
   );
 
-  /* Program.kind is optional and absent on every entry written before
-     conferences existed, so "no kind" means "program" -- that keeps the
-     original grid showing exactly what it always did. */
   const isConf = (p: { kind?: string }) => p.kind === 'conference';
 
   const programAchievers = achievers

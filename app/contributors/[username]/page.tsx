@@ -286,9 +286,6 @@ export default async function ContributorPage({
             : filteredPRs;
 
   const badges = getBadges(validPRs, repoCache);
-  // Hall of Fame entries for this person. The leaderboard shows a star; the
-  // profile should say what it was for -- a GSoC acceptance is the biggest
-  // thing about some of these students and was invisible on their own page.
   const recognition = recognitionFor(await getRecognitions(), username);
 
   // Per-PR Impact: what one merged PR into this repo is worth under the #4
@@ -380,10 +377,6 @@ export default async function ContributorPage({
                     const base =
                       'inline-flex items-center gap-1.5 text-[11.5px] font-[600] text-brand-600 bg-brand-0 border border-brand-100 px-2.5 py-1 rounded-full';
 
-                    /* Linked only when the Hall of Fame entry carries a url --
-                       Program.url is optional and empty on most entries today,
-                       and a chip that looks clickable but goes nowhere is worse
-                       than one that plainly does not. */
                     return item.url ? (
                       <a
                         key={item.label}
