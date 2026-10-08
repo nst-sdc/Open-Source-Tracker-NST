@@ -136,50 +136,6 @@ function AchieverCard({
   );
 }
 
-const CONFERENCES = [
-  {
-    name: 'FOSDEM',
-    when: 'Feb',
-    link: 'https://fosdem.org',
-    desc: 'The largest free software gathering in Europe, in Brussels. Free to attend, no ticket, no registration.',
-    student: 'Open CFP across dozens of devrooms — the easiest first talk to land.',
-  },
-  {
-    name: 'KubeCon + CloudNativeCon',
-    when: 'Varies',
-    link: 'https://www.cncf.io/kubecon-cloudnativecon-events/',
-    desc: "CNCF's flagship event, run in Europe, North America, India and China.",
-    student: 'Offers diversity and need-based scholarships covering ticket and travel.',
-  },
-  {
-    name: 'IndiaFOSS',
-    when: 'Annual',
-    link: 'https://indiafoss.net',
-    desc: "FOSS United's community conference, India's biggest gathering of free software contributors.",
-    student: 'In India, low ticket cost, and a CFP that actively welcomes first-time speakers.',
-  },
-  {
-    name: 'FOSSASIA Summit',
-    when: 'Mar',
-    link: 'https://summit.fossasia.org',
-    desc: 'Asia-wide open source summit covering hardware, AI, web and open science.',
-    student: 'Student tickets and a track for newcomers to open source.',
-  },
-  {
-    name: 'PyCon India',
-    when: 'Sep–Oct',
-    link: 'https://in.pycon.org',
-    desc: "India's main Python conference, with devsprints where you contribute on the day.",
-    student: 'Financial aid available, and the devsprints need no prior speaking experience.',
-  },
-  {
-    name: 'Open Source Summit',
-    when: 'Varies',
-    link: 'https://events.linuxfoundation.org',
-    desc: 'The Linux Foundation\'s umbrella event series across several regions each year.',
-    student: 'Diversity and need-based scholarships; many talks come from first-time speakers.',
-  },
-];
 
 export default async function AchieversPage() {
   const [entries, students] = await Promise.all([getAchieversKV(), getStudentsKV()]);
@@ -295,10 +251,7 @@ export default async function AchieversPage() {
         )}
       </div>
 
-      {/* Open source conferences -- recognition for students who got there,
-          and a way in for everyone else. Kept on this page rather than
-          /programs because it is the same thing the Hall of Fame is for:
-          naming students who did something the leaderboard cannot score. */}
+      {/* Students who spoke at or attended an open source conference. */}
       <div className="max-w-6xl mx-auto px-4 pb-20 border-t border-line pt-16">
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
           <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-brand-600 border border-brand-100 bg-brand-0 px-2.5 py-1 rounded">
@@ -308,12 +261,12 @@ export default async function AchieversPage() {
             Open Source Conferences
           </h2>
           <p className="text-ink-soft text-sm">
-            Students who spoke at or attended major open source conferences — and the ones you can apply to next.
+            Students who spoke at or attended major open source conferences.
           </p>
         </div>
 
         {conferenceAchievers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-14">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
             {conferenceAchievers.map(({ entry, profile, student }) => (
               <AchieverCard key={entry.github} entry={entry} profile={profile} student={student} />
             ))}
@@ -322,37 +275,16 @@ export default async function AchieversPage() {
           <div className="bg-ground border border-line rounded-2xl p-8 text-center max-w-xl mx-auto mb-14">
             <p className="text-ink font-[600] text-sm">No conference talks recorded yet</p>
             <p className="text-ink-soft text-[13px] mt-1.5">
-              Be the first. Most of these run a student or first-time-speaker track,
-              and many offer travel funding.
+              Be the first — many conferences fund students to attend.
             </p>
           </div>
         )}
 
-        <h3 className="text-[12px] font-[650] text-ink-soft tracking-[0.08em] uppercase mb-4 text-center">
-          Conferences worth applying to
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CONFERENCES.map((c) => (
-            <a
-              key={c.name}
-              href={c.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group bg-ground border border-line rounded-2xl p-5 hover:border-brand-400 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-[15px] font-[650] text-ink group-hover:text-brand-600 transition-colors">
-                  {c.name}
-                </span>
-                <span className="shrink-0 text-[10px] font-[650] uppercase tracking-wider text-brand-600 bg-brand-0 border border-brand-100 px-1.5 py-0.5 rounded">
-                  {c.when}
-                </span>
-              </div>
-              <p className="text-[12.5px] text-ink-mid leading-relaxed mt-2">{c.desc}</p>
-              <p className="text-[11.5px] text-ink-soft mt-2.5">{c.student}</p>
-            </a>
-          ))}
-        </div>
+        <p className="text-center text-sm text-ink-soft">
+          <Link href="/programs#conferences" className="underline underline-offset-2 hover:text-ink">
+            Conferences you can apply to, and who funds travel
+          </Link>
+        </p>
       </div>
 
       {/* Featured Student Maintainers */}
