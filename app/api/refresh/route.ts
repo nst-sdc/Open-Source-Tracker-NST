@@ -76,7 +76,20 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const url = new URL(request.url);
   const username = url.searchParams.get('username');
-  const period = url.searchParams.get('period') || 'all';
+  const periodParam = url.searchParams.get('period');
+  const period = periodParam || 'all';
+
+  // A parameterless POST used to fall through to the period branch below with
+  // period defaulting to 'all', which rebuilds every student's summary from
+  // scratch -- so one unauthenticated request with no body blanked the
+  // leaderboard for hours. The Refresh button always sends one of these, so
+  // requiring it changes nothing a user can see.
+  if (!username && !periodParam) {
+    return Response.json(
+      { error: 'Specify ?username= or ?period=' },
+      { status: 400 },
+    );
+  }
 
   // 1. Refresh individual profile
   if (username) {
@@ -167,11 +180,13 @@ export async function POST(request: Request) {
         fromCache: false,
         cachedAt: new Date().toISOString(),
       });
-    } catch (err: any) {
-      const isRateLimit = err.name === 'GitHubRateLimitError' || err instanceof GitHubRateLimitError;
+    } catch (err) {
+      const isRateLimit =
+        err instanceof GitHubRateLimitError ||
+        (err instanceof Error && err.name === 'GitHubRateLimitError');
 
       if (isRateLimit) {
-        console.warn(`[Refresh API] Rate limit hit for @${username}. Queuing update. Error:`, err.message);
+        console.warn(`[Refresh API] Rate limit hit for @${username}. Queuing update. Error:`, err instanceof Error ? err.message : err);
         try {
           const queue = await kvGet<string[]>('refresh_queue') || [];
           if (!queue.some(u => u.toLowerCase() === username.toLowerCase())) {
@@ -191,7 +206,7 @@ export async function POST(request: Request) {
 
       console.error(`[Refresh API] Error refreshing @${username}:`, err);
       return Response.json(
-        { ok: false, error: err.message || 'Failed to fetch updates from GitHub' },
+        { ok: false, error: err instanceof Error ? err.message : 'Failed to fetch updates from GitHub' },
         { status: 500 }
       );
     }
