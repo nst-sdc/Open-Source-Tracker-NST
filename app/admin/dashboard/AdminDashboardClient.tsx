@@ -1540,26 +1540,36 @@ function AchieversTab() {
       });
     }
     setAdding(true); setError(''); setSuccess('');
-    const res = await fetch('/api/admin/achievers', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        github: form.github.trim(),
-        ...(form.name.trim() ? { name: form.name.trim() } : {}),
-        programs: staged,
-      }),
-    });
-    if (res.ok) {
-      const d = await res.json().catch(() => ({}));
-      const count = staged.length === 1 ? 'program' : `${staged.length} programs`;
-      setSuccess(d.merged
-        ? `Added ${count} to @${form.github.trim()}.`
-        : `@${form.github.trim()} added to Hall of Fame!`);
-      setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
-      setPendingPrograms([]);
-      await load();
+    try {
+      const res = await fetch('/api/admin/achievers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          github: form.github.trim(),
+          ...(form.name.trim() ? { name: form.name.trim() } : {}),
+          programs: staged,
+        }),
+      });
+      // Parse before branching, and tolerate a non-JSON body: a 500 answers with
+      // an HTML error page, and parsing that unguarded threw straight out of the
+      // handler — so neither the error message nor the spinner reset ever ran and
+      // the add appeared to do nothing at all.
+      const d: { error?: string; merged?: boolean } = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const count = staged.length === 1 ? 'program' : `${staged.length} programs`;
+        setSuccess(d.merged
+          ? `Added ${count} to @${form.github.trim()}.`
+          : `@${form.github.trim()} added to Hall of Fame!`);
+        setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+        setPendingPrograms([]);
+        await load();
+      } else {
+        setError(d.error ?? `Failed to add (HTTP ${res.status}).`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? `Failed to add: ${err.message}` : 'Failed to add.');
+    } finally {
+      setAdding(false);
     }
-    else { const d = await res.json(); setError(d.error ?? 'Failed'); }
-    setAdding(false);
   }
 
   const [confirmDeleteGithub, setConfirmDeleteGithub] = useState<string | null>(null);
@@ -1572,11 +1582,10 @@ function AchieversTab() {
     else setError('Failed to remove');
   }
 
-  // ── Edit mode: lets an existing achiever have programs added/removed, or
-  // their name fixed — the Add form above can only create a brand-new
-  // person (rejects a duplicate GitHub username), so this is the only way
-  // to give someone a second program (e.g. GSoC one year, LFX another)
-  // without deleting and re-adding them from scratch.
+  // ── Edit mode: lets an existing achiever have programs removed, or their
+  // name fixed. Adding a further program no longer needs this panel — the Add
+  // form above merges into an existing entry — but editing is still the only
+  // way to correct or drop one that is already recorded.
   const [editingGithub, setEditingGithub] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editPrograms, setEditPrograms] = useState<AchieverEntry['programs']>([]);
