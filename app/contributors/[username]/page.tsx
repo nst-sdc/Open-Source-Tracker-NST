@@ -20,6 +20,8 @@ import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION } from '
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
 import { getBadges } from '@/lib/badges';
+import { getRecognitions, recognitionFor } from '@/lib/recognitions';
+import { KIND_LABEL } from '@/lib/recognition-types';
 import { ContributionChart, periodRange } from '../ContributionChart';
 
 async function queueBackgroundRefresh(username: string) {
@@ -284,6 +286,10 @@ export default async function ContributorPage({
             : filteredPRs;
 
   const badges = getBadges(validPRs, repoCache);
+  // Hall of Fame entries for this person. The leaderboard shows a star; the
+  // profile should say what it was for -- a GSoC acceptance is the biggest
+  // thing about some of these students and was invisible on their own page.
+  const recognition = recognitionFor(await getRecognitions(), username);
 
   // Per-PR Impact: what one merged PR into this repo is worth under the #4
   // scoring (10·M^0.75), computed once per distinct repo. The leaderboard
@@ -357,6 +363,46 @@ export default async function ContributorPage({
               </div>
 
               {profile.bio && <p className="text-ink-mid text-sm mt-3 max-w-lg leading-relaxed">{profile.bio}</p>}
+
+              {/* Hall of Fame: programmes, conferences, and their own projects */}
+              {recognition && recognition.items.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-1.5 justify-center sm:justify-start">
+                  {recognition.items.map((item) => {
+                    const chip = (
+                      <>
+                        <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.4l6.5-.9L12 2.6Z" />
+                        </svg>
+                        {item.label}
+                        <span className="sr-only"> — {KIND_LABEL[item.kind]}</span>
+                      </>
+                    );
+                    const base =
+                      'inline-flex items-center gap-1.5 text-[11.5px] font-[600] text-brand-600 bg-brand-0 border border-brand-100 px-2.5 py-1 rounded-full';
+
+                    /* Linked only when the Hall of Fame entry carries a url --
+                       Program.url is optional and empty on most entries today,
+                       and a chip that looks clickable but goes nowhere is worse
+                       than one that plainly does not. */
+                    return item.url ? (
+                      <a
+                        key={item.label}
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${base} hover:bg-brand-100 hover:border-brand-400 transition-colors`}
+                      >
+                        {chip}
+                        <svg className="w-2.5 h-2.5 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M7 17 17 7M9 7h8v8" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span key={item.label} className={base}>{chip}</span>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* What this contributor's merged work shows */}
               {badges.length > 0 && (

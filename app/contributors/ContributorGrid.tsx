@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { KIND_LABEL, type Recognition, type RecognitionMap } from '@/lib/recognition-types';
 import Image from 'next/image';
 import { StudentSummary } from '@/lib/github';
 import type { RankedSummary } from './page';
@@ -29,6 +30,8 @@ interface GridProps {
     name: string;
     login: string;
   };
+  /** login (lowercased) -> why they are recognised; see lib/recognitions.ts */
+  recognitions?: RecognitionMap;
 }
 
 function CrownIcon({ className }: { className?: string }) {
@@ -49,29 +52,106 @@ function MergeIcon({ className }: { className?: string }) {
   );
 }
 
-function RankCell({ rank }: { rank: number }) {
+function StarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.4l6.5-.9L12 2.6Z" />
+    </svg>
+  );
+}
+
+/* Sits to the left of the rank, so it reads as "this person, plus something the
+   ranking does not capture" rather than as a competing score. Brand colour, not
+   gold: gold would blur into the crown badge beside it and look like a second
+   rank. One mark however many kinds apply -- the card carries the detail.
+
+   The card is CSS-only (group-hover / focus-within) because these rows are
+   server-rendered links; adding per-row React state to 1,800 rows to show a
+   tooltip would be a poor trade. */
+function RecognitionStar({ recognition }: { recognition?: Recognition }) {
+  if (!recognition || recognition.kinds.length === 0) {
+    // Keeps the rank column aligned whether or not a mark is present.
+    return <span className="w-3.5 shrink-0" aria-hidden="true" />;
+  }
+
+  const kinds = recognition.kinds.map((k) => KIND_LABEL[k]).join(' · ');
+
+  return (
+    <span className="relative group/star shrink-0 inline-flex" tabIndex={0}>
+      <StarIcon className="w-3.5 h-3.5 text-brand-600" />
+      <span className="sr-only">{kinds}: {recognition.items.map((i) => i.label).join(', ')}</span>
+
+      <span
+        role="tooltip"
+        /* Anchored to the star's LEFT edge, not centred on it. The star is the
+           leftmost element in the row and the list is wrapped in a rounded
+           `overflow-hidden` container, so a centred card had its left half
+           clipped away. Growing rightward keeps it inside. */
+        className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-max max-w-[260px]
+                   origin-top-left scale-95 opacity-0 transition-[opacity,scale] duration-150
+                   group-hover/star:opacity-100 group-hover/star:scale-100
+                   group-focus-within/star:opacity-100 group-focus-within/star:scale-100
+                   rounded-xl border border-line bg-ground shadow-card-hover px-3 py-2.5 text-left"
+      >
+        <span className="flex items-center gap-1.5 text-[11px] font-[650] uppercase tracking-[0.06em] text-brand-600">
+          <StarIcon className="w-3 h-3" />
+          {kinds}
+        </span>
+        <span className="mt-1.5 block space-y-1">
+          {/* Text, not links: the whole row is a <Link>, and nesting an <a>
+              inside it is invalid HTML and would swallow the row click. The
+              profile page links them instead. */}
+          {recognition.items.slice(0, 5).map((i) => (
+            <span key={i.label} className="block text-[12.5px] leading-snug text-ink">{i.label}</span>
+          ))}
+          {recognition.items.length > 5 && (
+            <span className="block text-[11.5px] text-ink-soft">
+              +{recognition.items.length - 5} more
+            </span>
+          )}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function RankCell({ rank, recognition }: { rank: number; recognition?: Recognition }) {
   if (rank === 1) {
     return (
-      <span className="inline-flex items-center gap-1 bg-gold-400 text-ink-on-accent rounded-full px-2.5 py-1 text-[12px] font-[650] tabular-nums">
-        <CrownIcon className="w-3 h-3" />{rank}
+      <span className="inline-flex items-center gap-1">
+        <RecognitionStar recognition={recognition} />
+        <span className="inline-flex items-center gap-1 bg-gold-400 text-ink-on-accent rounded-full px-2.5 py-1 text-[12px] font-[650] tabular-nums">
+          <CrownIcon className="w-3 h-3" />{rank}
+        </span>
       </span>
     );
   }
   if (rank === 2) {
     return (
-      <span className="inline-flex items-center gap-1 bg-panel-2 text-ink-mid rounded-full px-2.5 py-1 text-[12px] font-[650] tabular-nums">
-        <CrownIcon className="w-3 h-3" />{rank}
+      <span className="inline-flex items-center gap-1">
+        <RecognitionStar recognition={recognition} />
+        <span className="inline-flex items-center gap-1 bg-panel-2 text-ink-mid rounded-full px-2.5 py-1 text-[12px] font-[650] tabular-nums">
+          <CrownIcon className="w-3 h-3" />{rank}
+        </span>
       </span>
     );
   }
   if (rank === 3) {
     return (
-      <span className="inline-flex items-center gap-1 bg-warning-200 text-warning-800 rounded-full px-2.5 py-1 text-[12px] font-[650] tabular-nums">
-        <CrownIcon className="w-3 h-3" />{rank}
+      <span className="inline-flex items-center gap-1">
+        <RecognitionStar recognition={recognition} />
+        <span className="inline-flex items-center gap-1 bg-warning-200 text-warning-800 rounded-full px-2.5 py-1 text-[12px] font-[650] tabular-nums">
+          <CrownIcon className="w-3 h-3" />{rank}
+        </span>
       </span>
     );
   }
-  return <span className="text-[14px] font-[650] text-ink-soft tabular-nums pl-2">{rank}</span>;
+  return (
+    <span className="inline-flex items-center gap-1">
+      <RecognitionStar recognition={recognition} />
+      <span className="text-[14px] font-[650] text-ink-soft tabular-nums">{rank}</span>
+    </span>
+  );
 }
 
 const ROW_GRID =
@@ -84,12 +164,14 @@ function ContributorRow({
   from,
   to,
   org,
+  recognition,
 }: {
   summary: StudentSummary;
   rank: number;
   period: string;
   from?: string;
   to?: string;
+  recognition?: Recognition;
   /** Carried into the profile link so the org view survives the click. */
   org?: string;
 }) {
@@ -99,7 +181,7 @@ function ContributorRow({
       href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}${org ? `&org=${encodeURIComponent(org)}` : ''}`}
       className={`${ROW_GRID} px-3 md:px-5 py-3 border-t border-panel hover:bg-panel/60 transition-colors group ${highlight}`}
     >
-      <span><RankCell rank={rank} /></span>
+      <span><RankCell rank={rank} recognition={recognition} /></span>
 
       <span className="flex items-center gap-2.5 md:gap-3 min-w-0">
         <Image
@@ -167,6 +249,7 @@ export function ContributorGrid({
   from,
   to,
   orgContext,
+  recognitions,
 }: GridProps) {
   const [visibleActiveCount, setVisibleActiveCount] = useState(50);
   const [visibleOtherCount, setVisibleOtherCount] = useState(50);
@@ -210,6 +293,7 @@ export function ContributorGrid({
               from={from}
               to={to}
               org={orgContext?.login}
+              recognition={recognitions?.[summary.profile.login.toLowerCase()]}
             />
           ))
         ) : (

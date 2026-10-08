@@ -18,6 +18,7 @@ import {
 } from "@/lib/repo-score";
 import { resolveOrganization, OrgCacheEntry } from "@/lib/org-cache";
 import { readOrgIndex, contributorsForOrg } from "@/lib/org-index";
+import { getRecognitions } from "@/lib/recognitions";
 import { FilterBar } from "./FilterBar";
 import { ContributorGrid } from "./ContributorGrid";
 import Link from "next/link";
@@ -277,6 +278,8 @@ export default async function ContributorsPage({
   }
 
   const flaggedPRIds = await getFlaggedPRIdSet();
+  // One KV read for the whole board; see lib/recognitions.ts
+  const recognitions = await getRecognitions();
   const repoCache = await getRepoCache();
 
   // ── Cache-first data loading ──────────────────────────────────────────────
@@ -737,6 +740,7 @@ export default async function ContributorsPage({
 
       {/* Ranked table + other members */}
       <ContributorGrid
+        recognitions={recognitions}
         realContributors={realContributors}
         otherStudents={otherStudents}
         period={period}
