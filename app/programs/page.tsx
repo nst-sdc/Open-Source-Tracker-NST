@@ -1,198 +1,255 @@
 import Link from 'next/link';
-import { NextCycleHighlight, ProgramCycleCountdown } from '../components/CycleCountdown';
 import { getAchieversKV } from '@/lib/kv-achievers';
+import {
+  CycleCountdownCompact,
+  NextCycleHighlight,
+  ProgramCycleCountdown,
+} from '../components/CycleCountdown';
 
 export const metadata = { title: 'Open Source Programs — Opensource Tracker NST' };
 export const revalidate = 3600;
 
-interface ProgramDef {
-  id: string;
-  name: string;
-  short: string;
-  org: string;
-  link: string;
-  /** Program names as the Hall of Fame records them, when they differ from `short`. */
-  hof?: string[];
-  applications: string;
-  runs: string;
-  stipend: string;
-  eligibility: string;
-  desc: string;
-  tips: string[];
-}
+const HOF_NAMES: Record<string, string[]> = { 'summer-of-bitcoin': ['Summer of Bitcoin', 'SoB'], lfdt: ['LFDT', 'Hyperledger'] };
 
-// Dates are from each program's 2026 timeline. Verify on the official site before relying on one.
-const PROGRAMS: ProgramDef[] = [
+const PROGRAMS = [
   {
     id: 'gsoc',
     name: 'Google Summer of Code',
     short: 'GSoC',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-500/5',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-100',
+    stipend: '$1,500 – $6,600 (by project size and country)',
+    duration: '12 weeks standard, up to 22 (late May – August)',
+    eligibility: '18+, new or beginner open source contributors. Students and non-students.',
+    deadline: 'Contributor applications 16 – 31 March; organizations announced ~19 February',
     org: 'Google',
     link: 'https://summerofcode.withgoogle.com',
-    applications: '16 – 31 March. Organisations are announced ~19 February.',
-    runs: 'Late May – August; 12 weeks standard, extendable to 22.',
-    stipend: '$1,500 – $6,600, by project size and country',
-    eligibility: '18+, new or beginner open source contributors. Students and non-students.',
-    desc: 'A paid programming project with a mentoring open source organisation, run by Google since 2005. 185 organisations took part in 2026.',
+    desc: 'The most prestigious open source internship program in the world, run by Google since 2005. Students work with a mentoring open source organization on a 12-week coding project and receive a stipend. Thousands of organizations participate each year — including Python, Linux Kernel, Mozilla, NumPy, KDE, and hundreds more.',
     tips: [
-      'Start contributing to your target org before the org list is even announced — selection is largely on merged PRs.',
-      'The proposal is the deciding document. Read accepted proposals from earlier years; many orgs publish them.',
-      'Talk to the mentors on the org\'s channels before you submit.',
+      'Start contributing to your target org 3–6 months before applications open',
+      'Write a strong proposal — the project plan is the single most important factor',
+      'Get at least 2–3 PRs merged in the org before submitting',
+      'Talk to potential mentors on the org\'s communication channels',
+      'Read accepted proposals from previous years (many orgs publish them)',
     ],
   },
   {
     id: 'lfx',
     name: 'LFX Mentorship',
     short: 'LFX',
+    color: 'text-violet-600',
+    accent: 'border-violet-500/30',
+    bg: 'bg-violet-500/5',
+    dot: 'bg-violet-500',
+    dotBorder: 'border-violet-500/40',
+    stipend: '$3,000 – $6,600 (by region)',
+    duration: '12 weeks; three terms (Mar – May, Jun – Aug, Sep – Nov)',
+    eligibility: '18+ and eligible to work in your country',
+    deadline: 'Two-week windows: 26 Jan – 10 Feb, 5 – 19 May, 3 – 18 Aug (2026)',
     org: 'Linux Foundation',
     link: 'https://mentorship.lfx.linuxfoundation.org',
-    applications: 'Three two-week windows a year. 2026: 26 Jan – 10 Feb, 5 – 19 May, 3 – 18 Aug.',
-    runs: 'Mar – May, Jun – Aug, Sep – Nov; 12 weeks each.',
-    stipend: '$3,000 – $6,600, by region',
-    eligibility: '18+ and eligible to work in your country.',
-    desc: 'The Linux Foundation\'s mentorship platform. CNCF, Kubernetes, the Linux kernel, Hyperledger and most other LF projects run their mentorships through it, so one application portal covers them all.',
+    desc: 'The Linux Foundation\'s mentorship platform. CNCF, Kubernetes, the Linux kernel, LF Decentralized Trust and most other LF projects run their mentorships through it, so one portal covers them all. Great for infrastructure, DevOps and cloud-native work.',
     tips: [
-      'Projects are listed per term — check the portal each cycle, not once.',
-      'CNCF projects publish their ideas in github.com/cncf/mentoring ahead of the portal opening.',
-      'A merged PR in the project before you apply is the strongest signal you can send.',
+      'Browse projects on the LFX portal and filter by technology or interest',
+      'Make early contributions to shortlisted projects — competition is high',
+      'Write a detailed application explaining your background and plan',
+      'CNCF and Kubernetes projects are very popular — start early',
+      'Each term has different projects, so check back each cycle',
     ],
   },
   {
     id: 'outreachy',
     name: 'Outreachy',
     short: 'Outreachy',
+    color: 'text-success-600',
+    accent: 'border-success-100',
+    bg: 'bg-success-0',
+    dot: 'bg-success-400',
+    dotBorder: 'border-success-200',
+    stipend: '$7,000',
+    duration: '3 months (May – August or December – March)',
+    eligibility: 'People underrepresented in tech. Specific eligibility criteria applies — check the site.',
+    deadline: 'One-week windows: 6 – 13 Feb for the May cohort, 24 – 31 Aug for the December cohort (2026)',
     org: 'Software Freedom Conservancy',
     link: 'https://www.outreachy.org',
-    applications: 'One week, twice a year. 2026: 6 – 13 Feb (May cohort), 24 – 31 Aug (December cohort).',
-    runs: 'May – August and December – March; 3 months.',
-    stipend: '$7,000',
-    eligibility: 'People facing under-representation or systemic bias in tech. Read the eligibility rules carefully.',
-    desc: 'Paid remote internships in open source and open science. The initial application window is short and strict; a contribution period with the project follows for those who pass it.',
+    desc: 'Outreachy provides paid internships in open source and open science to people subject to systemic bias and underrepresentation in tech. It has one of the highest stipends of any open source program ($7,000). Organizations include Wikimedia, GNOME, Linux Kernel, Mozilla, Python, and many more.',
     tips: [
-      'The initial application closes in a week — have your essays ready before it opens.',
-      'Contributions during the contribution period are what you are selected on.',
-      'Keep talking to mentors; they rank applicants they know.',
+      'Check eligibility criteria carefully before applying — it is specific',
+      'The contribution period (before final application) is critical — contribute actively',
+      'Communicate regularly with mentors during the contribution phase',
+      'Your final application quality directly reflects your contributions',
+      'Reach out to past Outreachy interns for guidance',
     ],
   },
   {
     id: 'summer-of-bitcoin',
     name: 'Summer of Bitcoin',
     short: 'SoB',
-    hof: ['Summer of Bitcoin', 'SoB'],
-    org: 'Summer of Bitcoin',
+    color: 'text-warning-600',
+    accent: 'border-warning-200',
+    bg: 'bg-warning-0',
+    dot: 'bg-warning-400',
+    dotBorder: 'border-warning-200',
+    stipend: 'Up to $6,600, paid in bitcoin (by location)',
+    duration: '12 weeks (June – August)',
+    eligibility: 'University students',
+    deadline: 'Opens in January, closes mid February (2026: 15 Feb); selection bootcamp runs Feb – Mar',
+    org: 'Summer of Bitcoin Foundation',
     link: 'https://www.summerofbitcoin.org',
-    applications: 'Opens in January, deadline mid February (2026: 15 Feb). A bootcamp follows until late March, then proposals by mid April.',
-    runs: 'June – August; 12 weeks.',
-    stipend: 'Up to $6,600, paid in bitcoin, by location',
-    eligibility: 'University students.',
-    desc: 'A summer programme on Bitcoin and Lightning open source projects, with a selection bootcamp before the project phase.',
+    desc: 'A global, online summer internship program focused on introducing university students to Bitcoin open source development and Bitcoin design. Students work with Bitcoin and Lightning Network projects and receive both a cash stipend and Bitcoin. This is one of the few programs specifically focused on the Bitcoin/Lightning ecosystem.',
     tips: [
-      'The bootcamp is the real filter — budget time for it in February and March.',
-      'Know Bitcoin Core and Lightning basics before applying; the bootcamp assumes them.',
-      'Prior work in Rust, C++ or Go is the usual background of selected students.',
-    ],
-  },
-  {
-    id: 'lfdt',
-    name: 'LF Decentralized Trust Mentorship',
-    short: 'LFDT',
-    hof: ['LFDT', 'Hyperledger'],
-    org: 'Linux Foundation',
-    link: 'https://www.lfdecentralizedtrust.org/mentorship',
-    applications: '31 March – 11 May (2026).',
-    runs: 'June – November, about 15 hours a week.',
-    stipend: 'Tiered by country of residence',
-    eligibility: 'Anyone, at any career stage.',
-    desc: 'The former Hyperledger mentorship, now under LF Decentralized Trust: Besu, Fabric, Indy and the other ledger projects. Longer and part-time, so it fits alongside a semester.',
-    tips: [
-      'Project ideas are on GitHub before the portal opens; pick two and go deep rather than applying to three.',
-      'Applications go through LFX — the same account as LFX Mentorship.',
-      'Go and Java are the main languages across the projects.',
-    ],
-  },
-  {
-    id: 'ospp',
-    name: 'Open Source Promotion Plan',
-    short: 'OSPP',
-    org: 'ISCAS, Chinese Academy of Sciences',
-    link: 'https://summer-ospp.ac.cn',
-    applications: 'Registration 29 April – 4 June; project applications until 16 June (2026).',
-    runs: '1 July – 30 September.',
-    stipend: '¥8,000 – ¥12,000 (about $1,100 – $1,700), by project level',
-    eligibility: 'Enrolled university students, 18+, worldwide.',
-    desc: 'A GSoC-style summer programme from China that is open internationally, with hundreds of communities including KDE, Apache projects and the OpenHarmony ecosystem.',
-    tips: [
-      'The site and most project pages are in English; mentor communication often is not — ask early.',
-      'Project applications are per project with a deadline a fortnight after registration closes.',
-      'Results come in November, well after the coding period.',
-    ],
-  },
-  {
-    id: 'gssoc',
-    name: 'GirlScript Summer of Code',
-    short: 'GSSoC',
-    org: 'GirlScript Foundation',
-    link: 'https://gssoc.girlscript.org',
-    applications: 'Early in the year; 2026 applications opened 20 January, with selections in April.',
-    runs: '15 May – 15 August (2026).',
-    stipend: 'None — certificates, swag and a leaderboard',
-    eligibility: 'Anyone. Beginner-friendly.',
-    desc: 'A large, free, beginner-oriented contribution programme. Good for a first merged PR and for learning the workflow; it carries little weight with the paid programmes above.',
-    tips: [
-      'Pick two or three active repositories and stay with them rather than chasing points everywhere.',
-      'Quality of PRs is what you can show afterwards; the leaderboard is not.',
-      'Use it as the warm-up for a GSoC or LFX application the following year.',
-    ],
-  },
-  {
-    id: 'sok',
-    name: 'Season of KDE',
-    short: 'SoK',
-    org: 'KDE',
-    link: 'https://mentorship.kde.org/sok/',
-    applications: 'December to mid January (2026 deadline: 14 January).',
-    runs: 'Late January – March (2026: 23 Jan – 20 Mar).',
-    stipend: 'None — certificate and swag',
-    eligibility: 'Anyone. Beginner-friendly.',
-    desc: 'KDE\'s own mentored programme, running over the winter. Unpaid, but a direct route into one of the largest desktop codebases and a known stepping stone to KDE\'s GSoC slots.',
-    tips: [
-      'Build the application you want to work on from source before you apply.',
-      'Introduce yourself on KDE Matrix and land a small patch first.',
-      'Propose using the KDE template; reviewers expect it.',
-    ],
-  },
-  {
-    id: 'codeheat',
-    name: 'FOSSASIA Codeheat',
-    short: 'Codeheat',
-    org: 'FOSSASIA',
-    link: 'https://codeheat.org',
-    applications: 'Join at any point during the contest.',
-    runs: 'September – February, every year.',
-    stipend: 'Travel grant to the FOSSASIA Summit for the winners',
-    eligibility: 'Anyone.',
-    desc: 'FOSSASIA\'s contribution contest across its projects (Open Event, Badge Magic, Phimpme and others). The prize for the top contributors is a funded trip to speak at the FOSSASIA Summit in March.',
-    tips: [
-      'Consistent contributions across the whole period score better than a burst.',
-      'Blog posts about your work count and get you noticed by the organisers.',
-      'Web and Android are where most of the issues are.',
+      'Learn Bitcoin fundamentals and Lightning Network basics before applying',
+      'Contribute to Bitcoin FOSS projects on GitHub ahead of the application period',
+      'Having prior knowledge of cryptography or distributed systems helps',
+      'Projects include Bitcoin Core, Lightning, Rust Bitcoin, and related tooling',
+      'The program is highly selective — quality of contributions matters a lot',
     ],
   },
   {
     id: 'hacktoberfest',
     name: 'Hacktoberfest',
     short: 'Hacktoberfest',
-    org: 'DigitalOcean',
+    color: 'text-violet-600',
+    accent: 'border-violet-100',
+    bg: 'bg-violet-0',
+    dot: 'bg-violet-500',
+    dotBorder: 'border-violet-200',
+    stipend: 'Digital rewards (no cash stipend)',
+    duration: 'October (1 month)',
+    eligibility: 'Anyone globally',
+    deadline: 'Every October — register in late September or during the month',
+    org: 'DigitalOcean + GitHub',
     link: 'https://hacktoberfest.com',
-    applications: 'Register in late September or during October.',
-    runs: 'October.',
-    stipend: 'None — digital rewards',
-    eligibility: 'Anyone.',
-    desc: 'The annual October open source event. In 2026 it is built around 300+ in-person and online "fests" focused on open source AI, rather than the four-PR badge of earlier years.',
+    desc: 'Hacktoberfest is the annual October open source event. In 2026 it is built around 300+ in-person and online "fests" focused on open source AI, rather than the four-pull-request badge of earlier years. Still the easiest first step into contributing.',
     tips: [
-      'Look for a fest near you — the 2026 format is event-based.',
-      'Spam PRs get marked invalid and reflect on your profile.',
-      'Treat it as practice for the programmes above, not as a credential.',
+      'Perfect for making your first open source contribution',
+      'Look for repos tagged with "hacktoberfest" on GitHub',
+      'Quality over quantity — spammy PRs will be marked as invalid',
+      'Use it as practice for larger programs like GSoC',
+      'Many orgs run workshops and events during October — attend them',
+    ],
+  },
+  {
+    id: 'sok',
+    name: 'Season of KDE',
+    short: 'SoK',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-0',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-200',
+    stipend: 'Certificate & swag (no cash stipend)',
+    duration: 'About 8 weeks (late January – March)',
+    eligibility: 'Open to anyone globally, great for beginners',
+    deadline: 'Applications December to mid January (2026 deadline: 14 Jan)',
+    org: 'KDE Community',
+    link: 'https://season.kde.org',
+    desc: 'Season of KDE is a community outreach program hosted by the KDE team. Similar to GSoC, students are mentored by experienced KDE developers to work on applications, user interface, translation, or documentation projects. Although unpaid, it is highly valued for gaining core desktop development experience.',
+    tips: [
+      'Join KDE Matrix channels and introduce yourself to project teams',
+      'Build and run your target KDE application locally before applying',
+      'Submit small patch contributions to get a feel of their workflow',
+      'Write a comprehensive proposal using the KDE template',
+      'Interact actively on developer forums and mailing lists',
+    ],
+  },
+  {
+    id: 'lfdt',
+    name: 'LF Decentralized Trust Mentorship',
+    short: 'LFDT',
+    color: 'text-brand-600',
+    accent: 'border-brand-100',
+    bg: 'bg-brand-0',
+    dot: 'bg-brand-400',
+    dotBorder: 'border-brand-200',
+    stipend: 'Tiered by country of residence',
+    duration: 'June – November, about 15 hours a week',
+    eligibility: 'Anyone, at any career stage',
+    deadline: 'Mentee applications 31 March – 11 May (2026)',
+    org: 'LF Decentralized Trust / Linux Foundation',
+    link: 'https://www.lfdecentralizedtrust.org/mentorship',
+    desc: 'The former Hyperledger Mentorship Program, now run by LF Decentralized Trust: Besu, Fabric, Indy and the other ledger projects. Longer and part-time, so it fits alongside a semester, and applications go through LFX.',
+    tips: [
+      'Learn standard blockchain architectures and cryptography principles',
+      'Study Golang, Node.js, and Java which are major Hyperledger tools',
+      'Familiarize yourself with Docker and container orchestration',
+      'Submit proposals directly tackling performance or consensus bugs',
+      'Reach out to project leads on the Hyperledger chat portal',
+    ],
+  },
+  {
+    id: 'gssoc',
+    name: 'GirlScript Summer of Code',
+    short: 'GSSoC',
+    color: 'text-error-600',
+    accent: 'border-error-100',
+    bg: 'bg-error-500/5',
+    dot: 'bg-error-400',
+    dotBorder: 'border-error-100',
+    stipend: 'Prizes & Goodies (no cash stipend)',
+    duration: '3 months (15 May – 15 August in 2026)',
+    eligibility: 'Open to everyone worldwide, very beginner-friendly',
+    deadline: 'Applications early in the year (2026: opened 20 Jan, selections in April)',
+    org: 'GirlScript Foundation',
+    link: 'https://gssoc.tech',
+    desc: 'GirlScript Summer of Code is a 3-month long open-source program during summers conducted by the GirlScript Foundation. Started in 2018, it aims to help beginners get started with open-source development while encouraging diversity. Participants work under the guidance of experienced mentors on diverse web, app, and system projects.',
+    tips: [
+      'Excellent program for making your very first contributions',
+      'Select active repositories from the official project list',
+      'Solve smaller "good first issues" to build confidence',
+      'Engage with project mentors on their Discord channels',
+      'Consistency is key — score points on the leaderboard throughout the program',
+    ],
+  },
+  {
+    id: 'ospp',
+    name: 'Open Source Promotion Plan',
+    short: 'OSPP',
+    color: 'text-violet-600',
+    accent: 'border-violet-100',
+    bg: 'bg-violet-0',
+    dot: 'bg-violet-500',
+    dotBorder: 'border-violet-100',
+    stipend: '¥8,000 – ¥12,000 (about $1,100 – $1,700)',
+    duration: '3 months (1 July – 30 September)',
+    eligibility: 'Students globally, 18+',
+    deadline: 'Registration 29 April – 4 June; project applications until 16 June (2026)',
+    org: 'ISCAS (Chinese Academy of Sciences)',
+    link: 'https://summer-ospp.ac.cn',
+    desc: 'Open Source Promotion Plan (OSPP) is an international summer program designed to encourage students to participate in open source software development. Students work with open-source communities worldwide under the guidance of experienced mentors on coding, optimization, or porting projects.',
+    tips: [
+      'Familiarize yourself with backend systems, compilers, and operating systems',
+      'Understand target project specifications before drafting proposals',
+      'Communicate with mentors on their Slack or GitHub issues early',
+      'Write highly technical proposals addressing the project requirements',
+      'Keep track of progress deliverables throughout the 3-month cycle',
+    ],
+  },
+  {
+    id: 'codeheat',
+    name: 'FOSSASIA Codeheat',
+    short: 'Codeheat',
+    color: 'text-error-600',
+    accent: 'border-error-100',
+    bg: 'bg-error-0',
+    dot: 'bg-error-400',
+    dotBorder: 'border-error-100',
+    stipend: 'Summit Travel Funding & Goodies',
+    duration: '6 months (September – February)',
+    eligibility: 'Open to anyone worldwide',
+    deadline: 'Join at any point during the contest (September – February)',
+    org: 'FOSSASIA',
+    link: 'https://codeheat.org',
+    desc: 'FOSSASIA Codeheat is a coding contest terms program where developers contribute to projects like EventYeti, Open Event, Badge Magic, and Phimpme. Mentors guide participants to make pull requests. The top participants receive travel funding to speak at the annual FOSSASIA Summit.',
+    tips: [
+      'Contribute regularly to build a track record on FOSSASIA repositories',
+      'Help other newcomers and actively participate in the community channels',
+      'Write blog posts detailing your project contributions to gain visibility',
+      'Select issues related to your core coding skills (Web, Python, Android)',
+      'Deliver clean code matching the style guides of FOSSASIA',
     ],
   },
 ];
@@ -214,134 +271,227 @@ const CONFERENCES = [
 
 export default async function ProgramsPage() {
   const achievers = await getAchieversKV();
-
-  const trackRecord = (p: ProgramDef) => {
-    const names = (p.hof ?? [p.short, p.name]).map((n) => n.toLowerCase());
-    const hits = achievers.flatMap((a) =>
-      (a.programs ?? [])
-        .filter((x) => names.includes(x.name.toLowerCase()))
-        .map((x) => x.org?.trim())
-    );
-    const orgs = [...new Set(hits.filter((o): o is string => !!o))];
-    return { count: hits.length, orgs };
+  const trackRecord = (p: { id: string; short: string; name: string }) => {
+    const names = (HOF_NAMES[p.id] ?? [p.short, p.name]).map((n) => n.toLowerCase());
+    const hits = achievers.flatMap((a) => (a.programs ?? []).filter((x) => names.includes(x.name.toLowerCase())));
+    if (hits.length === 0) return 'No NST selection in the Hall of Fame yet.';
+    const orgs = [...new Set(hits.map((x) => x.org?.trim()).filter((o): o is string => !!o))];
+    return `${hits.length} NST ${hits.length === 1 ? 'selection' : 'selections'}${orgs.length ? ' — ' + orgs.join(' · ') : ''}.`;
   };
 
   return (
     <main className="min-h-screen bg-panel">
-      <div className="max-w-4xl mx-auto px-4 pt-14 pb-24">
-        <Link href="/" className="text-sm text-ink-soft hover:text-ink transition-colors">← Home</Link>
-
-        <h1 className="text-4xl font-[650] text-ink tracking-tight mt-6 mb-3">Open source programs</h1>
-        <p className="text-ink-mid max-w-2xl leading-relaxed">
-          The programmes NST students apply to, with their real application windows, and the
-          conferences that fund students to attend. Where NST students have been selected, it
-          comes from the <Link href="/achievers" className="underline underline-offset-2 hover:text-ink">Hall of Fame</Link>.
-        </p>
-
-        <div className="mt-8">
-          <NextCycleHighlight programs={PROGRAMS.map((p) => ({ id: p.id, short: p.short }))} />
+      {/* Hero */}
+      <div className="relative overflow-hidden pt-14 pb-10 px-4">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute top-0 left-1/4 w-[500px] h-[350px] rounded-full bg-brand-100/40 blur-[100px]" />
+          <div className="absolute top-0 right-1/4 w-[400px] h-[300px] rounded-full bg-violet-600/7 blur-[100px]" />
         </div>
 
-        {/* Overview */}
-        <section className="mt-12">
-          <div className="grid grid-cols-[1.1fr_1.5fr_1fr] gap-x-4 text-[11px] uppercase tracking-wider text-ink-soft border-b border-line pb-2">
-            <span>Program</span><span>Applications</span><span>Stipend</span>
+        <div className="relative max-w-6xl mx-auto text-center">
+          <div className="flex justify-start mb-6">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+              </svg>
+              Home
+            </Link>
           </div>
-          <ul className="divide-y divide-line">
+
+          <div className="inline-flex items-center gap-2 bg-panel border border-line rounded-full px-4 py-1.5 text-xs text-brand-600/70 mb-6">
+            Paid internships · Global programs · Real-world impact
+          </div>
+          <h1 className="text-5xl md:text-6xl font-[650] text-ink mb-4 tracking-tight">
+            Open Source{' '}
+            <span className="text-violet-600">
+              Programs
+            </span>
+          </h1>
+          <p className="text-ink-soft text-lg max-w-2xl mx-auto leading-relaxed mb-6">
+            A guide to the world&apos;s best paid open source programs — stipends, timelines,
+            eligibility, and how NST students have fared.
+          </p>
+
+          {/* Whichever cycle is open now, or opens soonest */}
+          <div className="flex justify-center mb-8">
+            <NextCycleHighlight
+              programs={PROGRAMS.map((p) => ({ id: p.id, short: p.short }))}
+            />
+          </div>
+
+          {/* Quick jump */}
+          <div className="flex flex-wrap gap-2 justify-center">
             {PROGRAMS.map((p) => (
-              <li key={p.id} className="grid grid-cols-[1.1fr_1.5fr_1fr] gap-x-4 py-3 text-sm">
-                <a href={`#${p.id}`} className="font-[550] text-ink hover:text-brand-600 transition-colors">{p.short}</a>
-                <span className="text-ink-mid">{p.applications.split('.')[0]}</span>
-                <span className="text-ink-mid">{p.stipend.split(',')[0]}</span>
-              </li>
+              <a
+                key={p.id}
+                href={`#${p.id}`}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${p.bg} ${p.accent} ${p.color} hover:opacity-80`}
+              >
+                <span className={`inline-block w-1.5 h-1.5 rounded-full ${p.dot} mr-1.5 align-middle`} />
+                {p.short}
+              </a>
             ))}
-          </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 pb-24 space-y-12">
+
+        {/* Quick comparison cards */}
+        <section>
+          <h2 className="text-ink-soft text-xs font-[500] uppercase tracking-widest mb-4">
+            Quick Comparison
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {PROGRAMS.map((p) => (
+              <div key={p.id} className={`rounded-xl border ${p.accent} ${p.bg} p-4`}>
+                <div className={`font-[650] text-sm mb-2 ${p.color}`}>{p.short}</div>
+                {/* Label left, value right. The label never shrinks and the gap
+                    always holds, so a value long enough to wrap can't run back
+                    into it — these cards get narrow at the 3-column breakpoint. */}
+                <div className="space-y-1 text-xs text-ink-soft">
+                  <div className="flex justify-between gap-3"><span className="text-ink-soft shrink-0">Stipend</span><span className="text-right">{p.stipend}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-ink-soft shrink-0">Duration</span><span className="text-right">{p.duration.split('(')[0].trim()}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-ink-soft shrink-0">Deadline</span><span className="text-right">{p.deadline.split('—')[0].trim()}</span></div>
+                  <CycleCountdownCompact programId={p.id} />
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
 
-        {/* Details */}
-        <div className="mt-16 space-y-16">
-          {PROGRAMS.map((p) => {
-            const nst = trackRecord(p);
-            return (
-              <section key={p.id} id={p.id} className="scroll-mt-20">
-                <div className="flex items-baseline justify-between gap-4 flex-wrap">
-                  <h2 className="text-2xl font-[650] text-ink">{p.name}</h2>
-                  <a href={p.link} target="_blank" rel="noopener noreferrer"
-                    className="text-sm text-ink-soft hover:text-brand-600 transition-colors">
-                    {p.link.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')} ↗
+        {/* Program detail sections */}
+        {PROGRAMS.map((p) => (
+          <section key={p.id} id={p.id}>
+            <div className={`rounded-2xl border ${p.accent} ${p.bg} overflow-hidden`}>
+              {/* Header */}
+              <div className="p-6 border-b border-line">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`w-2 h-2 rounded-full ${p.dot}`} />
+                      <span className={`text-xs font-[500] ${p.color} opacity-70`}>{p.org}</span>
+                    </div>
+                    <h2 className={`text-2xl font-[650] ${p.color}`}>{p.name}</h2>
+                  </div>
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${p.accent} ${p.color} hover:opacity-80 transition-opacity`}
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Official site
                   </a>
                 </div>
-                <p className="text-xs text-ink-soft mt-0.5">{p.org}</p>
-                <p className="text-ink-mid text-sm leading-relaxed mt-4 max-w-2xl">{p.desc}</p>
 
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 mt-5 text-sm border-t border-line pt-5">
-                  {[
-                    ['Applications', p.applications],
-                    ['Runs', p.runs],
-                    ['Stipend', p.stipend],
-                    ['Eligibility', p.eligibility],
-                  ].map(([k, v]) => (
-                    <div key={k}>
-                      <dt className="text-[11px] uppercase tracking-wider text-ink-soft">{k}</dt>
-                      <dd className="text-ink-mid mt-0.5">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <p className="text-ink-mid text-sm mt-4 leading-relaxed">{p.desc}</p>
+              </div>
 
-                <div className="mt-5">
-                  <ProgramCycleCountdown programId={p.id} />
+              {/* Details */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-ground">
+                {[
+                  { label: 'Stipend', value: p.stipend },
+                  { label: 'Duration', value: p.duration },
+                  { label: 'Eligibility', value: p.eligibility },
+                  { label: 'Apply By', value: p.deadline },
+                ].map((item) => (
+                  <div key={item.label} className={`${p.bg} px-4 py-3`}>
+                    <div className="text-ink-soft text-xs mb-1">{item.label}</div>
+                    <div className="text-ink-mid text-xs font-[500] leading-snug">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Countdown to the next application cycle */}
+              <ProgramCycleCountdown programId={p.id} />
+
+              {/* Tips */}
+              <div className="p-6 border-t border-line">
+                <div className={`text-xs font-[550] ${p.color} uppercase tracking-wide mb-3`}>
+                  Tips to get selected
                 </div>
-
-                <ul className="mt-5 space-y-1.5 text-sm text-ink-mid list-disc pl-5 max-w-2xl">
-                  {p.tips.map((tip) => <li key={tip}>{tip}</li>)}
+                <ul className="space-y-2">
+                  {p.tips.map((tip, i) => (
+                    <li key={i} className="flex items-start gap-2 text-ink-soft text-sm">
+                      <span className={`${p.color} opacity-50 flex-shrink-0 mt-0.5`}>✓</span>
+                      {tip}
+                    </li>
+                  ))}
                 </ul>
+              </div>
 
-                <p className="mt-5 text-sm text-ink-soft">
-                  {nst.count > 0 ? (
-                    <>
-                      <span className="text-ink font-[550]">{nst.count} NST {nst.count === 1 ? 'selection' : 'selections'}</span>
-                      {nst.orgs.length > 0 && <> — {nst.orgs.join(' · ')}</>}
-                      {' · '}
-                      <Link href="/achievers" className="underline underline-offset-2 hover:text-ink">Hall of Fame</Link>
-                    </>
-                  ) : (
-                    'No NST selection recorded yet.'
-                  )}
-                </p>
-              </section>
-            );
-          })}
-        </div>
+              {/* NST track record */}
+              <div className={`px-6 py-4 border-t border-line bg-ground`}>
+                <span className={`text-xs font-[550] ${p.color}`}>NST track record — </span>
+                <span className="text-ink-soft text-xs">{trackRecord(p)}</span>
+              </div>
+            </div>
+          </section>
+        ))}
 
         {/* Conferences */}
-        <section id="conferences" className="mt-20 scroll-mt-20">
-          <h2 className="text-2xl font-[650] text-ink">Conferences</h2>
-          <p className="text-ink-mid text-sm mt-2 max-w-2xl leading-relaxed">
-            Most of these fund students to attend or have no ticket at all. Students who spoke at one are
-            listed in the <Link href="/achievers" className="underline underline-offset-2 hover:text-ink">Hall of Fame</Link>.
+        <section id="conferences">
+          <h2 className="text-ink-soft text-xs font-[500] uppercase tracking-widest mb-2">
+            Conferences
+          </h2>
+          <p className="text-ink-soft text-sm mb-4">
+            Most of these fund students to attend or have no ticket at all. Students who spoke at one are listed in the{' '}
+            <Link href="/achievers" className="underline underline-offset-2 hover:text-ink">Hall of Fame</Link>.
           </p>
-          <ul className="divide-y divide-line border-t border-line mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {CONFERENCES.map((c) => (
-              <li key={c.name} className="py-3 grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1.6fr] gap-x-6 gap-y-1 text-sm">
-                <div>
-                  <a href={c.link} target="_blank" rel="noopener noreferrer"
-                    className="font-[550] text-ink hover:text-brand-600 transition-colors">{c.name}</a>
-                  <span className="text-ink-soft"> · {c.where}</span>
-                </div>
-                <div className="text-ink-mid">
-                  {c.when}
-                  <span className="text-ink-soft"> · {c.edition}</span>
-                </div>
-                <div className="text-ink-mid">{c.support || <span className="text-ink-soft">—</span>}</div>
-              </li>
+              <a
+                key={c.name}
+                href={c.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-xl border border-line bg-ground p-4 hover:border-brand-400 transition-colors"
+              >
+                <div className="font-[650] text-sm text-ink">{c.name}</div>
+                <div className="text-xs text-ink-soft mt-1">{c.where} · {c.when}</div>
+                <div className="text-xs text-ink-mid mt-1">{c.edition}</div>
+                {c.support && <div className="text-xs text-ink-soft mt-2">{c.support}</div>}
+              </a>
             ))}
-          </ul>
+          </div>
         </section>
 
-        <p className="text-ink-soft text-xs mt-16">
-          Dates are from each programme&apos;s 2026 timeline and conference announcements as of October 2026.
-          Confirm on the official site before planning around one.
-        </p>
+        {/* CTA */}
+        <section className="rounded-2xl border border-line bg-ground p-8 text-center">
+          <h2 className="text-xl font-[650] text-ink mb-2">Ready to start your journey?</h2>
+          <p className="text-ink-soft text-sm mb-6">
+            See who is contributing and learn how to get started.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link
+              href="/contributors"
+              className="px-5 py-2.5 rounded-xl bg-panel border border-line text-ink text-sm font-[500] hover:bg-panel-2 transition-all"
+            >
+              View Contributors
+            </Link>
+            <Link
+              href="/achievers"
+              className="px-5 py-2.5 rounded-xl bg-gold-0 border border-gold-100 text-gold-600 text-sm font-[500] hover:bg-gold-0 transition-all"
+            >
+              Hall of Fame
+            </Link>
+            <Link
+              href="/get-started"
+              className="px-5 py-2.5 rounded-xl bg-success-0 border border-success-100 text-success-600 text-sm font-[500] hover:bg-success-100 transition-all"
+            >
+              Get Started Guide
+            </Link>
+          </div>
+          <p className="text-ink-soft text-xs mt-6">
+            Stipends and deadlines shown are approximate — always verify on the official program site before applying.
+          </p>
+        </section>
       </div>
     </main>
   );
