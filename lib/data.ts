@@ -8,6 +8,8 @@ export interface Program {
   year?: number;
   org?: string;
   url?: string;
+  /** Absent means 'program'. */
+  kind?: 'program' | 'conference' | 'project';
 }
 
 export interface PersonEntry {

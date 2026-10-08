@@ -148,95 +148,61 @@ export function formatCycleRange(opensAt: number, closesAt: number, now: number)
 }
 
 /**
- * Approximate application windows per program, keyed by the program ids used in
- * app/programs/page.tsx. Sourced from each program's most recent published
- * timeline; verify against the official site before relying on an exact date.
+ * Application windows per program, keyed by the ids in app/programs/page.tsx.
+ * From each program's 2026 timeline; verify on the official site before relying on a date.
  */
 export const PROGRAM_SCHEDULES: Record<string, ProgramSchedule> = {
   gsoc: {
     cycles: [
-      { label: 'Contributor applications', opens: { month: 3, day: 24 }, closes: { month: 4, day: 8 } },
+      { label: 'Contributor applications', opens: { month: 3, day: 16 }, closes: { month: 3, day: 31 } },
     ],
   },
   lfx: {
     cycles: [
-      { label: 'Spring term', opens: { month: 1, day: 8 }, closes: { month: 2, day: 4 } },
-      { label: 'Summer term', opens: { month: 4, day: 28 }, closes: { month: 5, day: 27 } },
-      { label: 'Fall term', opens: { month: 8, day: 25 }, closes: { month: 9, day: 16 } },
+      { label: 'Spring term', opens: { month: 1, day: 26 }, closes: { month: 2, day: 10 } },
+      { label: 'Summer term', opens: { month: 5, day: 5 }, closes: { month: 5, day: 19 } },
+      { label: 'Fall term', opens: { month: 8, day: 3 }, closes: { month: 8, day: 18 } },
     ],
   },
   outreachy: {
     cycles: [
-      { label: 'May–August cohort', opens: { month: 1, day: 8 }, closes: { month: 2, day: 6 } },
-      { label: 'December–March cohort', opens: { month: 8, day: 5 }, closes: { month: 9, day: 2 } },
+      { label: 'May–August cohort', opens: { month: 2, day: 6 }, closes: { month: 2, day: 13 } },
+      { label: 'December–March cohort', opens: { month: 8, day: 24 }, closes: { month: 8, day: 31 } },
     ],
   },
   'summer-of-bitcoin': {
     cycles: [
-      { label: 'Student applications', opens: { month: 2, day: 1 }, closes: { month: 3, day: 15 } },
+      { label: 'Student applications', opens: { month: 1, day: 15 }, closes: { month: 2, day: 15 } },
     ],
   },
-  mlh: {
-    cycles: [],
-    rolling: true,
-  },
-  hacktoberfest: {
+  lfdt: {
     cycles: [
-      { label: 'Hacktoberfest', opens: { month: 10, day: 1 }, closes: { month: 10, day: 31 } },
-    ],
-  },
-  gsod: {
-    cycles: [
-      { label: 'Technical writer applications', opens: { month: 3, day: 15 }, closes: { month: 4, day: 30 } },
-    ],
-  },
-  sok: {
-    cycles: [
-      { label: 'Season of KDE applications', opens: { month: 11, day: 1 }, closes: { month: 12, day: 6 } },
-    ],
-  },
-  asoc: {
-    cycles: [
-      { label: 'Student applications', opens: { month: 5, day: 1 }, closes: { month: 6, day: 4 } },
-    ],
-  },
-  hyperledger: {
-    cycles: [
-      { label: 'Mentee applications', opens: { month: 3, day: 15 }, closes: { month: 4, day: 30 } },
-    ],
-  },
-  gssoc: {
-    cycles: [
-      { label: 'Contributor registration', opens: { month: 3, day: 1 }, closes: { month: 4, day: 15 } },
-    ],
-  },
-  cncf: {
-    cycles: [
-      { label: 'Spring term (via LFX)', opens: { month: 1, day: 8 }, closes: { month: 2, day: 4 } },
-      { label: 'Summer term (via LFX)', opens: { month: 4, day: 28 }, closes: { month: 5, day: 27 } },
-      { label: 'Fall term (via LFX)', opens: { month: 8, day: 25 }, closes: { month: 9, day: 16 } },
+      { label: 'Mentee applications', opens: { month: 3, day: 31 }, closes: { month: 5, day: 11 } },
     ],
   },
   ospp: {
     cycles: [
-      { label: 'Student applications', opens: { month: 5, day: 1 }, closes: { month: 6, day: 4 } },
+      { label: 'Student registration', opens: { month: 4, day: 29 }, closes: { month: 6, day: 16 } },
+    ],
+  },
+  gssoc: {
+    cycles: [
+      { label: 'Contributor applications', opens: { month: 1, day: 20 }, closes: { month: 3, day: 31 } },
+    ],
+  },
+  sok: {
+    cycles: [
+      { label: 'Season of KDE applications', opens: { month: 12, day: 1 }, closes: { month: 1, day: 14 } },
     ],
   },
   codeheat: {
     cycles: [
-      { label: 'Contest term', opens: { month: 11, day: 1 }, closes: { month: 3, day: 15 } },
+      { label: 'Contest period', opens: { month: 9, day: 1 }, closes: { month: 2, day: 28 } },
     ],
   },
-  lkmp: {
+  hacktoberfest: {
     cycles: [
-      { label: 'Spring term', opens: { month: 1, day: 8 }, closes: { month: 2, day: 4 } },
-      { label: 'Summer term', opens: { month: 4, day: 28 }, closes: { month: 5, day: 27 } },
-      { label: 'Fall term', opens: { month: 8, day: 25 }, closes: { month: 9, day: 16 } },
-    ],
-  },
-  dssg: {
-    cycles: [
-      { label: 'Fellowship applications', opens: { month: 1, day: 5 }, closes: { month: 2, day: 15 } },
+      { label: 'Hacktoberfest', opens: { month: 10, day: 1 }, closes: { month: 10, day: 31 } },
     ],
   },
 };

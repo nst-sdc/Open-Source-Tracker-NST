@@ -302,8 +302,8 @@ function QueueTab({ students, reviewedIds, flaggedMap, onFlag, onApprove, onUnap
 
       setQueuePRs(all);
       setProgress({ done: data.stats?.cachedStudents ?? students.length, total: data.stats?.totalStudents ?? students.length });
-    } catch (err: any) {
-      setError(err.message || 'Failed to load queue');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load queue');
     }
 
     setLoaded(true);
@@ -446,7 +446,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
   useEffect(() => {
     fetch('/api/admin/join-requests')
       .then(res => res.json())
-      .then((data: any[]) => {
+      .then((data: Array<{ status?: string }>) => {
         setPendingReqCount(data.filter(r => r.status === 'pending').length);
       })
       .catch(() => {});
@@ -472,6 +472,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
   // Sync search input query with selected contributor
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror the selection into the input
     setSearchQuery(selectedUser);
   }, [selectedUser]);
 
@@ -487,6 +488,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
   // Keep queue PRs in sync when flaggedMap/reviewedIds change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- re-derive flags when the maps change
     setQueuePRs((prev) => applyMeta(prev));
   }, [flaggedMap, reviewedIds, applyMeta]);
 
@@ -775,7 +777,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                 ) : (
                   <>
                     <p className="text-base font-[500] text-ink-soft mb-1">Contributor selected: @{selectedUser}</p>
-                    <p className="text-sm">Click "Load PRs" to fetch their pull requests from GitHub.</p>
+                    <p className="text-sm">Click &quot;Load PRs&quot; to fetch their pull requests from GitHub.</p>
                   </>
                 )}
               </div>
@@ -832,7 +834,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
                           <span className="text-ink-faint text-xs">·</span>
                           <span className="text-ink-soft text-xs">{formatDate(flag.flaggedAt)}</span>
                         </div>
-                        {flag.note && <p className="text-ink-soft text-xs mt-1 italic">"{flag.note}"</p>}
+                        {flag.note && <p className="text-ink-soft text-xs mt-1 italic">&quot;{flag.note}&quot;</p>}
                       </div>
                       <button onClick={() => handleUnflag(flag.id)}
                         className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg bg-ground border border-line text-ink-soft hover:text-ink-mid hover:bg-panel transition-all">
@@ -909,6 +911,7 @@ function StudentsTab() {
     setLoading(false);
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
   useEffect(() => { load(); }, []);
 
   async function handleAdd(e: React.FormEvent) {
@@ -994,7 +997,7 @@ function StudentsTab() {
           placeholder="GitHub username" id="new-student-input"
           className="flex-1 bg-ground border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         
-        <select value={newYear} onChange={(e) => setNewYear(e.target.value as any)}
+        <select value={newYear} onChange={(e) => setNewYear(e.target.value as typeof newYear)}
           className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink text-sm focus:outline-none focus:border-violet-100 cursor-pointer">
           <option value="">Select Year</option>
           <option value="1st year">1st Year</option>
@@ -1003,7 +1006,7 @@ function StudentsTab() {
           <option value="4th year">4th Year</option>
         </select>
 
-        <select value={newCampus} onChange={(e) => setNewCampus(e.target.value as any)}
+        <select value={newCampus} onChange={(e) => setNewCampus(e.target.value as typeof newCampus)}
           className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink text-sm focus:outline-none focus:border-violet-100 cursor-pointer">
           <option value="">Select Campus</option>
           <option value="Rishihood">Rishihood</option>
@@ -1147,7 +1150,7 @@ function StudentsTab() {
                   <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-line animate-in slide-in-from-top-2 duration-150">
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[10px] font-[550] text-ink-soft uppercase tracking-wider">Year</span>
-                      <select value={editYear} onChange={(e) => setEditYear(e.target.value as any)}
+                      <select value={editYear} onChange={(e) => setEditYear(e.target.value as typeof editYear)}
                         className="bg-ground border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs focus:outline-none focus:border-violet-100 cursor-pointer">
                         <option value="">None</option>
                         <option value="1st year">1st Year</option>
@@ -1158,7 +1161,7 @@ function StudentsTab() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[10px] font-[550] text-ink-soft uppercase tracking-wider">Campus</span>
-                      <select value={editCampus} onChange={(e) => setEditCampus(e.target.value as any)}
+                      <select value={editCampus} onChange={(e) => setEditCampus(e.target.value as typeof editCampus)}
                         className="bg-ground border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs focus:outline-none focus:border-violet-100 cursor-pointer">
                         <option value="">None</option>
                         <option value="Rishihood">Rishihood</option>
@@ -1233,6 +1236,7 @@ function OwnReposTab() {
     setLoading(false);
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
   useEffect(() => { load(); }, []);
 
   async function handleAdd(e: React.FormEvent) {
@@ -1364,6 +1368,7 @@ function EventsTab() {
     if (res.ok) setEvents(await res.json());
     setLoading(false);
   }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
   useEffect(() => { load(); }, []);
 
   async function handleAdd(e: React.FormEvent) {
@@ -1522,6 +1527,7 @@ function AchieversTab() {
     if (res.ok) setAchievers(await res.json());
     setLoading(false);
   }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
   useEffect(() => { load(); }, []);
 
   async function handleAdd(e: React.FormEvent) {
@@ -1540,26 +1546,33 @@ function AchieversTab() {
       });
     }
     setAdding(true); setError(''); setSuccess('');
-    const res = await fetch('/api/admin/achievers', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        github: form.github.trim(),
-        ...(form.name.trim() ? { name: form.name.trim() } : {}),
-        programs: staged,
-      }),
-    });
-    if (res.ok) {
-      const d = await res.json().catch(() => ({}));
-      const count = staged.length === 1 ? 'program' : `${staged.length} programs`;
-      setSuccess(d.merged
-        ? `Added ${count} to @${form.github.trim()}.`
-        : `@${form.github.trim()} added to Hall of Fame!`);
-      setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
-      setPendingPrograms([]);
-      await load();
+    try {
+      const res = await fetch('/api/admin/achievers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          github: form.github.trim(),
+          ...(form.name.trim() ? { name: form.name.trim() } : {}),
+          programs: staged,
+        }),
+      });
+      // A 500 answers with HTML, not JSON.
+      const d: { error?: string; merged?: boolean } = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const count = staged.length === 1 ? 'program' : `${staged.length} programs`;
+        setSuccess(d.merged
+          ? `Added ${count} to @${form.github.trim()}.`
+          : `@${form.github.trim()} added to Hall of Fame!`);
+        setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+        setPendingPrograms([]);
+        await load();
+      } else {
+        setError(d.error ?? `Failed to add (HTTP ${res.status}).`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? `Failed to add: ${err.message}` : 'Failed to add.');
+    } finally {
+      setAdding(false);
     }
-    else { const d = await res.json(); setError(d.error ?? 'Failed'); }
-    setAdding(false);
   }
 
   const [confirmDeleteGithub, setConfirmDeleteGithub] = useState<string | null>(null);
@@ -1572,11 +1585,7 @@ function AchieversTab() {
     else setError('Failed to remove');
   }
 
-  // ── Edit mode: lets an existing achiever have programs added/removed, or
-  // their name fixed — the Add form above can only create a brand-new
-  // person (rejects a duplicate GitHub username), so this is the only way
-  // to give someone a second program (e.g. GSoC one year, LFX another)
-  // without deleting and re-adding them from scratch.
+  // ── Edit mode: remove programs from, or fix the name of, an existing achiever.
   const [editingGithub, setEditingGithub] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editPrograms, setEditPrograms] = useState<AchieverEntry['programs']>([]);
@@ -1804,6 +1813,7 @@ function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void
     setLoading(false);
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
   useEffect(() => { load(); }, []);
 
   async function handleAction(github: string, action: 'approve' | 'reject') {

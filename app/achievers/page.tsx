@@ -136,6 +136,7 @@ function AchieverCard({
   );
 }
 
+
 export default async function AchieversPage() {
   const [entries, students] = await Promise.all([getAchieversKV(), getStudentsKV()]);
 
@@ -161,8 +162,18 @@ export default async function AchieversPage() {
     })
   );
 
-  const programCount = achievers.reduce((n, a) => n + a.entry.programs.length, 0);
-  const programSet = new Set(achievers.flatMap((a) => a.entry.programs.map((p) => p.name)));
+  const isConf = (p: { kind?: string }) => p.kind === 'conference';
+
+  const programAchievers = achievers
+    .map((a) => ({ ...a, entry: { ...a.entry, programs: a.entry.programs.filter((p) => !isConf(p)) } }))
+    .filter((a) => a.entry.programs.length > 0);
+
+  const conferenceAchievers = achievers
+    .map((a) => ({ ...a, entry: { ...a.entry, programs: a.entry.programs.filter(isConf) } }))
+    .filter((a) => a.entry.programs.length > 0);
+
+  const programCount = programAchievers.reduce((n, a) => n + a.entry.programs.length, 0);
+  const programSet = new Set(programAchievers.flatMap((a) => a.entry.programs.map((p) => p.name)));
 
   return (
     <main className="min-h-screen bg-panel">
@@ -233,11 +244,47 @@ export default async function AchieversPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {achievers.map(({ entry, profile, student }) => (
+            {programAchievers.map(({ entry, profile, student }) => (
               <AchieverCard key={entry.github} entry={entry} profile={profile} student={student} />
             ))}
           </div>
         )}
+      </div>
+
+      {/* Students who spoke at or attended an open source conference. */}
+      <div className="max-w-6xl mx-auto px-4 pb-20 border-t border-line pt-16">
+        <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+          <div className="inline-block text-[10px] uppercase font-mono tracking-widest text-brand-600 border border-brand-100 bg-brand-0 px-2.5 py-1 rounded">
+            Conferences &amp; Events
+          </div>
+          <h2 className="text-3xl md:text-4xl font-[650] text-ink tracking-tight">
+            Open Source Conferences
+          </h2>
+          <p className="text-ink-soft text-sm">
+            Students who spoke at or attended major open source conferences.
+          </p>
+        </div>
+
+        {conferenceAchievers.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+            {conferenceAchievers.map(({ entry, profile, student }) => (
+              <AchieverCard key={entry.github} entry={entry} profile={profile} student={student} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-ground border border-line rounded-2xl p-8 text-center max-w-xl mx-auto mb-14">
+            <p className="text-ink font-[600] text-sm">No conference talks recorded yet</p>
+            <p className="text-ink-soft text-[13px] mt-1.5">
+              Be the first — many conferences fund students to attend.
+            </p>
+          </div>
+        )}
+
+        <p className="text-center text-sm text-ink-soft">
+          <Link href="/programs#conferences" className="underline underline-offset-2 hover:text-ink">
+            Conferences you can apply to, and who funds travel
+          </Link>
+        </p>
       </div>
 
       {/* Featured Student Maintainers */}

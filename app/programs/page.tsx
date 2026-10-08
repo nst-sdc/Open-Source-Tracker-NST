@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getAchieversKV } from '@/lib/kv-achievers';
 import {
   CycleCountdownCompact,
   NextCycleHighlight,
@@ -6,6 +7,9 @@ import {
 } from '../components/CycleCountdown';
 
 export const metadata = { title: 'Open Source Programs — Opensource Tracker NST' };
+export const revalidate = 3600;
+
+const HOF_NAMES: Record<string, string[]> = { 'summer-of-bitcoin': ['Summer of Bitcoin', 'SoB'], lfdt: ['LFDT', 'Hyperledger'] };
 
 const PROGRAMS = [
   {
@@ -17,10 +21,10 @@ const PROGRAMS = [
     bg: 'bg-brand-500/5',
     dot: 'bg-brand-400',
     dotBorder: 'border-brand-100',
-    stipend: '$3,000 – $6,600+',
-    duration: '12 weeks (June – August)',
-    eligibility: 'Students 18+ worldwide. No degree required.',
-    deadline: 'Applications typically open in March',
+    stipend: '$1,500 – $6,600 (by project size and country)',
+    duration: '12 weeks standard, up to 22 (late May – August)',
+    eligibility: '18+, new or beginner open source contributors. Students and non-students.',
+    deadline: 'Contributor applications 16 – 31 March; organizations announced ~19 February',
     org: 'Google',
     link: 'https://summerofcode.withgoogle.com',
     desc: 'The most prestigious open source internship program in the world, run by Google since 2005. Students work with a mentoring open source organization on a 12-week coding project and receive a stipend. Thousands of organizations participate each year — including Python, Linux Kernel, Mozilla, NumPy, KDE, and hundreds more.',
@@ -31,7 +35,6 @@ const PROGRAMS = [
       'Talk to potential mentors on the org\'s communication channels',
       'Read accepted proposals from previous years (many orgs publish them)',
     ],
-    nst: 'NST students have been selected into GSoC at Python Software Foundation, Google DeepMind, SymPy, Oppia, VideoLAN, KDE Community, JSON Schema, and University of Alaska Anchorage.',
   },
   {
     id: 'lfx',
@@ -42,13 +45,13 @@ const PROGRAMS = [
     bg: 'bg-violet-500/5',
     dot: 'bg-violet-500',
     dotBorder: 'border-violet-500/40',
-    stipend: '$3,000 – $6,600',
-    duration: '12 weeks, runs 3 terms per year',
-    eligibility: 'Students and new contributors globally',
-    deadline: 'Applications open 3 times a year (Spring, Summer, Fall)',
+    stipend: '$3,000 – $6,600 (by region)',
+    duration: '12 weeks; three terms (Mar – May, Jun – Aug, Sep – Nov)',
+    eligibility: '18+ and eligible to work in your country',
+    deadline: 'Two-week windows: 26 Jan – 10 Feb, 5 – 19 May, 3 – 18 Aug (2026)',
     org: 'Linux Foundation',
     link: 'https://mentorship.lfx.linuxfoundation.org',
-    desc: 'The Linux Foundation\'s mentorship program connecting new contributors with experienced open source mentors across CNCF, Kubernetes, Prometheus, Envoy, Hyperledger, and dozens of other major cloud-native and enterprise projects. Great for those interested in infrastructure, DevOps, and cloud-native technologies.',
+    desc: 'The Linux Foundation\'s mentorship platform. CNCF, Kubernetes, the Linux kernel, LF Decentralized Trust and most other LF projects run their mentorships through it, so one portal covers them all. Great for infrastructure, DevOps and cloud-native work.',
     tips: [
       'Browse projects on the LFX portal and filter by technology or interest',
       'Make early contributions to shortlisted projects — competition is high',
@@ -56,7 +59,6 @@ const PROGRAMS = [
       'CNCF and Kubernetes projects are very popular — start early',
       'Each term has different projects, so check back each cycle',
     ],
-    nst: 'NST students have contributed to Kubernetes, eBPF tooling, and CNCF projects through LFX.',
   },
   {
     id: 'outreachy',
@@ -68,9 +70,9 @@ const PROGRAMS = [
     dot: 'bg-success-400',
     dotBorder: 'border-success-200',
     stipend: '$7,000',
-    duration: '3 months',
+    duration: '3 months (May – August or December – March)',
     eligibility: 'People underrepresented in tech. Specific eligibility criteria applies — check the site.',
-    deadline: 'Applications typically open in January and August',
+    deadline: 'One-week windows: 6 – 13 Feb for the May cohort, 24 – 31 Aug for the December cohort (2026)',
     org: 'Software Freedom Conservancy',
     link: 'https://www.outreachy.org',
     desc: 'Outreachy provides paid internships in open source and open science to people subject to systemic bias and underrepresentation in tech. It has one of the highest stipends of any open source program ($7,000). Organizations include Wikimedia, GNOME, Linux Kernel, Mozilla, Python, and many more.',
@@ -81,7 +83,6 @@ const PROGRAMS = [
       'Your final application quality directly reflects your contributions',
       'Reach out to past Outreachy interns for guidance',
     ],
-    nst: 'NST students have interned at Wikimedia Foundation and GNOME through Outreachy.',
   },
   {
     id: 'summer-of-bitcoin',
@@ -92,10 +93,10 @@ const PROGRAMS = [
     bg: 'bg-warning-0',
     dot: 'bg-warning-400',
     dotBorder: 'border-warning-200',
-    stipend: '$3,000 + 0.1 BTC',
+    stipend: 'Up to $6,600, paid in bitcoin (by location)',
     duration: '12 weeks (June – August)',
-    eligibility: 'University students globally with interest in Bitcoin',
-    deadline: 'Applications open in February–March',
+    eligibility: 'University students',
+    deadline: 'Opens in January, closes mid February (2026: 15 Feb); selection bootcamp runs Feb – Mar',
     org: 'Summer of Bitcoin Foundation',
     link: 'https://www.summerofbitcoin.org',
     desc: 'A global, online summer internship program focused on introducing university students to Bitcoin open source development and Bitcoin design. Students work with Bitcoin and Lightning Network projects and receive both a cash stipend and Bitcoin. This is one of the few programs specifically focused on the Bitcoin/Lightning ecosystem.',
@@ -106,32 +107,6 @@ const PROGRAMS = [
       'Projects include Bitcoin Core, Lightning, Rust Bitcoin, and related tooling',
       'The program is highly selective — quality of contributions matters a lot',
     ],
-    nst: 'NST students have worked on Lightning Network payment tooling and Bitcoin Script testing infrastructure.',
-  },
-  {
-    id: 'mlh',
-    name: 'MLH Fellowship',
-    short: 'MLH',
-    color: 'text-error-600',
-    accent: 'border-error-100',
-    bg: 'bg-error-0',
-    dot: 'bg-error-400',
-    dotBorder: 'border-error-100',
-    stipend: '$5,000 (stipend varies by track)',
-    duration: '12 weeks',
-    eligibility: 'Students and recent graduates globally',
-    deadline: 'Rolling applications — check MLH site for current batch',
-    org: 'Major League Hacking',
-    link: 'https://fellowship.mlh.io',
-    desc: 'The MLH Fellowship is a 12-week internship alternative for software engineers. Fellows contribute to open source projects used by companies like Meta, GitHub, and others, or build their own open source projects. There are multiple tracks: Open Source, Explorer, and Production Engineering (with Meta). Fellows receive mentorship and a stipend.',
-    tips: [
-      'Apply early — spots fill up quickly',
-      'The Explorer track is good for beginners with no prior OS experience',
-      'The Open Source track requires demonstrated contribution ability',
-      'Prepare a strong GitHub profile with real projects',
-      'MLH also runs hackathons — participating helps you get noticed',
-    ],
-    nst: 'NST students have contributed to open source ML infrastructure through MLH Fellowship.',
   },
   {
     id: 'hacktoberfest',
@@ -145,10 +120,10 @@ const PROGRAMS = [
     stipend: 'Digital rewards (no cash stipend)',
     duration: 'October (1 month)',
     eligibility: 'Anyone globally',
-    deadline: 'Runs every October — register at any time during the month',
+    deadline: 'Every October — register in late September or during the month',
     org: 'DigitalOcean + GitHub',
     link: 'https://hacktoberfest.com',
-    desc: 'Hacktoberfest is a month-long celebration of open source held every October. Participants who complete 4 pull requests to participating GitHub repos earn a digital reward (previously a t-shirt, now a digital badge). It\'s the best on-ramp for first-time contributors — thousands of repos specifically tag "Hacktoberfest" issues for newcomers.',
+    desc: 'Hacktoberfest is the annual October open source event. In 2026 it is built around 300+ in-person and online "fests" focused on open source AI, rather than the four-pull-request badge of earlier years. Still the easiest first step into contributing.',
     tips: [
       'Perfect for making your first open source contribution',
       'Look for repos tagged with "hacktoberfest" on GitHub',
@@ -156,32 +131,6 @@ const PROGRAMS = [
       'Use it as practice for larger programs like GSoC',
       'Many orgs run workshops and events during October — attend them',
     ],
-    nst: 'A great starting point for NST students to build their first contribution track record before applying to bigger programs.',
-  },
-  {
-    id: 'gsod',
-    name: 'Google Season of Docs',
-    short: 'GSoD',
-    color: 'text-success-600',
-    accent: 'border-success-200',
-    bg: 'bg-success-500/5',
-    dot: 'bg-success-400',
-    dotBorder: 'border-success-200',
-    stipend: '$3,000 – $6,600+',
-    duration: '6 months (May – November)',
-    eligibility: 'Technical writers and developers globally, 18+',
-    deadline: 'Applications typically open in March–April',
-    org: 'Google',
-    link: 'https://developers.google.com/season-of-docs',
-    desc: 'Google Season of Docs provides support for open source projects to improve their documentation and gives professional technical writers an opportunity to gain experience in open source. It bridges the gap between open source developers and tech writers, supporting projects that need documentation guidance.',
-    tips: [
-      'Show prior technical writing samples or documentation portfolios',
-      'Study the target organization\'s existing documentation gaps thoroughly',
-      'Interact with project mentors on their discussion channels early',
-      'Write a highly structured proposal outlining documentation goals',
-      'Familiarize yourself with Markdown, Sphinx, Docusaurus, or Gitbook',
-    ],
-    nst: 'NST students with a passion for documentation and technical writing have participated in GSoD.',
   },
   {
     id: 'sok',
@@ -192,10 +141,10 @@ const PROGRAMS = [
     bg: 'bg-brand-0',
     dot: 'bg-brand-400',
     dotBorder: 'border-brand-200',
-    stipend: 'Merchandise & Travel Support (No cash stipend)',
-    duration: '10 weeks (December – February)',
+    stipend: 'Certificate & swag (no cash stipend)',
+    duration: 'About 8 weeks (late January – March)',
     eligibility: 'Open to anyone globally, great for beginners',
-    deadline: 'Applications typically open in November',
+    deadline: 'Applications December to mid January (2026 deadline: 14 Jan)',
     org: 'KDE Community',
     link: 'https://season.kde.org',
     desc: 'Season of KDE is a community outreach program hosted by the KDE team. Similar to GSoC, students are mentored by experienced KDE developers to work on applications, user interface, translation, or documentation projects. Although unpaid, it is highly valued for gaining core desktop development experience.',
@@ -206,49 +155,23 @@ const PROGRAMS = [
       'Write a comprehensive proposal using the KDE template',
       'Interact actively on developer forums and mailing lists',
     ],
-    nst: 'NST students have built and improved features for KDE desktop apps and infrastructure through Season of KDE.',
   },
   {
-    id: 'asoc',
-    name: 'Alibaba Summer of Code',
-    short: 'ASoC',
-    color: 'text-gold-600',
-    accent: 'border-gold-100',
-    bg: 'bg-gold-500/5',
-    dot: 'bg-gold-400',
-    dotBorder: 'border-gold-100',
-    stipend: '$1,000 – $3,000+',
-    duration: '12 weeks (July – September)',
-    eligibility: 'Students 18+ worldwide',
-    deadline: 'Applications typically open in May',
-    org: 'Alibaba Open Source',
-    link: 'https://github.com/alibaba/opensource',
-    desc: 'Alibaba Summer of Code is a global program that connects open source mentors with students to develop features for Alibaba\'s high-scale cloud-native, microservice, and database projects (e.g. Dubbo, Nacos, RocketMQ, Sentinel). It is great for students focused on backend infrastructure and cloud technologies.',
-    tips: [
-      'Gain solid skills in Java, Go, or C++ which are primary Alibaba tools',
-      'Study high-concurrency microservice architectures',
-      'Contribute to Alibaba open-source repos to build credibility',
-      'Outline precise technical designs for scaling database components',
-      'Keep communications active on project issues and pull requests',
-    ],
-    nst: 'NST students have gained enterprise Java and cloud infrastructure skills through ASoC.',
-  },
-  {
-    id: 'hyperledger',
-    name: 'Hyperledger Mentorship Program',
-    short: 'Hyperledger',
+    id: 'lfdt',
+    name: 'LF Decentralized Trust Mentorship',
+    short: 'LFDT',
     color: 'text-brand-600',
     accent: 'border-brand-100',
     bg: 'bg-brand-0',
     dot: 'bg-brand-400',
     dotBorder: 'border-brand-200',
-    stipend: '$3,000 – $6,600',
-    duration: '12 or 24 weeks (Summer/Year-round)',
-    eligibility: 'Open to university students and developers worldwide',
-    deadline: 'Applications typically open in March–April',
-    org: 'Hyperledger Foundation / Linux Foundation',
-    link: 'https://wiki.hyperledger.org/display/INTERN',
-    desc: 'Sponsored by the Linux Foundation, the Hyperledger Mentorship Program provides opportunities for students to design and implement ledger technologies, cryptographic protocols, smart contracts, and blockchain architectures across projects like Fabric, Besu, Indy, and Sawtooth.',
+    stipend: 'Tiered by country of residence',
+    duration: 'June – November, about 15 hours a week',
+    eligibility: 'Anyone, at any career stage',
+    deadline: 'Mentee applications 31 March – 11 May (2026)',
+    org: 'LF Decentralized Trust / Linux Foundation',
+    link: 'https://www.lfdecentralizedtrust.org/mentorship',
+    desc: 'The former Hyperledger Mentorship Program, now run by LF Decentralized Trust: Besu, Fabric, Indy and the other ledger projects. Longer and part-time, so it fits alongside a semester, and applications go through LFX.',
     tips: [
       'Learn standard blockchain architectures and cryptography principles',
       'Study Golang, Node.js, and Java which are major Hyperledger tools',
@@ -256,7 +179,6 @@ const PROGRAMS = [
       'Submit proposals directly tackling performance or consensus bugs',
       'Reach out to project leads on the Hyperledger chat portal',
     ],
-    nst: 'NST students have designed enterprise ledger features through the Hyperledger Mentorship Program.',
   },
   {
     id: 'gssoc',
@@ -268,9 +190,9 @@ const PROGRAMS = [
     dot: 'bg-error-400',
     dotBorder: 'border-error-100',
     stipend: 'Prizes & Goodies (no cash stipend)',
-    duration: '12 weeks (May – July)',
+    duration: '3 months (15 May – 15 August in 2026)',
     eligibility: 'Open to everyone worldwide, very beginner-friendly',
-    deadline: 'Applications typically open in March–April',
+    deadline: 'Applications early in the year (2026: opened 20 Jan, selections in April)',
     org: 'GirlScript Foundation',
     link: 'https://gssoc.tech',
     desc: 'GirlScript Summer of Code is a 3-month long open-source program during summers conducted by the GirlScript Foundation. Started in 2018, it aims to help beginners get started with open-source development while encouraging diversity. Participants work under the guidance of experienced mentors on diverse web, app, and system projects.',
@@ -281,32 +203,6 @@ const PROGRAMS = [
       'Engage with project mentors on their Discord channels',
       'Consistency is key — score points on the leaderboard throughout the program',
     ],
-    nst: 'A popular program for NST first-year and second-year students to kickstart their open-source contributions before GSoC.',
-  },
-  {
-    id: 'cncf',
-    name: 'CNCF Mentoring Programs',
-    short: 'CNCF',
-    color: 'text-brand-600',
-    accent: 'border-brand-100',
-    bg: 'bg-brand-0',
-    dot: 'bg-brand-400',
-    dotBorder: 'border-brand-200',
-    stipend: '$3,000 – $6,600',
-    duration: '12 weeks',
-    eligibility: 'Students and beginners globally',
-    deadline: 'Multiple terms per year — check LFX portal',
-    org: 'Cloud Native Computing Foundation',
-    link: 'https://github.com/cncf/mentoring',
-    desc: 'The Cloud Native Computing Foundation (CNCF) hosts multiple mentoring programs (including GSoC, Outreachy, and LFX terms) to guide beginners. Mentees work directly on Kubernetes, Prometheus, Envoy, CoreDNS, gRPC, and other cloud-native technologies under Linux Foundation mentors.',
-    tips: [
-      'Have solid skills in Go, Rust, or C++ which power cloud-native tools',
-      'Familiarize yourself with microservices, containers, and Docker',
-      'Look for the CNCF mentoring GitHub repository to browse project ideas',
-      'Make small contributions (fixes, docs, tests) early in target repos',
-      'Draft detailed application proposals outlining system designs',
-    ],
-    nst: 'NST students have contributed to Prometheus and Kubernetes projects through CNCF mentorships.',
   },
   {
     id: 'ospp',
@@ -317,10 +213,10 @@ const PROGRAMS = [
     bg: 'bg-violet-0',
     dot: 'bg-violet-500',
     dotBorder: 'border-violet-100',
-    stipend: '$1,500 – $3,000+',
-    duration: '3 months (July – September)',
+    stipend: '¥8,000 – ¥12,000 (about $1,100 – $1,700)',
+    duration: '3 months (1 July – 30 September)',
     eligibility: 'Students globally, 18+',
-    deadline: 'Applications typically open in May',
+    deadline: 'Registration 29 April – 4 June; project applications until 16 June (2026)',
     org: 'ISCAS (Chinese Academy of Sciences)',
     link: 'https://summer-ospp.ac.cn',
     desc: 'Open Source Promotion Plan (OSPP) is an international summer program designed to encourage students to participate in open source software development. Students work with open-source communities worldwide under the guidance of experienced mentors on coding, optimization, or porting projects.',
@@ -331,7 +227,6 @@ const PROGRAMS = [
       'Write highly technical proposals addressing the project requirements',
       'Keep track of progress deliverables throughout the 3-month cycle',
     ],
-    nst: 'NST students have participated in OSPP developing core open-source infrastructure tools.',
   },
   {
     id: 'codeheat',
@@ -343,9 +238,9 @@ const PROGRAMS = [
     dot: 'bg-error-400',
     dotBorder: 'border-error-100',
     stipend: 'Summit Travel Funding & Goodies',
-    duration: '2 months per term (runs autumn/winter)',
+    duration: '6 months (September – February)',
     eligibility: 'Open to anyone worldwide',
-    deadline: 'Applications open during the contest terms',
+    deadline: 'Join at any point during the contest (September – February)',
     org: 'FOSSASIA',
     link: 'https://codeheat.org',
     desc: 'FOSSASIA Codeheat is a coding contest terms program where developers contribute to projects like EventYeti, Open Event, Badge Magic, and Phimpme. Mentors guide participants to make pull requests. The top participants receive travel funding to speak at the annual FOSSASIA Summit.',
@@ -356,61 +251,34 @@ const PROGRAMS = [
       'Select issues related to your core coding skills (Web, Python, Android)',
       'Deliver clean code matching the style guides of FOSSASIA',
     ],
-    nst: 'NST students have been recognized as Codeheat winners and attended the FOSSASIA Summit.',
-  },
-  {
-    id: 'lkmp',
-    name: 'Linux Kernel Mentorship Program',
-    short: 'LKMP',
-    color: 'text-gold-600',
-    accent: 'border-gold-100',
-    bg: 'bg-gold-0',
-    dot: 'bg-gold-400',
-    dotBorder: 'border-gold-100',
-    stipend: '$3,000 – $6,600',
-    duration: '12 to 24 weeks',
-    eligibility: 'Aspiring Linux kernel developers globally',
-    deadline: 'Runs 3 terms per year — check LF portal',
-    org: 'Linux Foundation',
-    link: 'https://mentorship.lfx.linuxfoundation.org',
-    desc: 'The Linux Kernel Mentorship Program offers a structured remote learning opportunity to people who are aspiring to be Linux kernel developers. Mentees work directly under the guidance of experienced kernel maintainers and submit kernel patches, gaining deep systems programming experience.',
-    tips: [
-      'Take the free Linux Foundation kernel introduction courses first',
-      'Learn C programming, operating system concepts, and Git workflows',
-      'Understand how to send patches via email lists to the Linux kernel',
-      'Start by fixing compiler warnings or static analysis checks in the kernel tree',
-      'Follow the LKMP guidelines closely to write compliant kernel patches',
-    ],
-    nst: 'A highly advanced program for NST students specializing in systems engineering and low-level development.',
-  },
-  {
-    id: 'dssg',
-    name: 'Data Science for Social Good Fellowship',
-    short: 'DSSG',
-    color: 'text-brand-600',
-    accent: 'border-brand-100',
-    bg: 'bg-brand-0',
-    dot: 'bg-brand-400',
-    dotBorder: 'border-brand-200',
-    stipend: 'Varies (Paid summer fellowship)',
-    duration: '12 weeks (Summer)',
-    eligibility: 'Undergraduate & graduate students in computational/quantitative fields or social sciences',
-    deadline: 'Applications typically open in January–February',
-    org: 'DSSG Foundation & Partner Universities',
-    link: 'https://www.dssgfellowship.org',
-    desc: 'The Data Science for Social Good Fellowship is a full-time, paid summer program. Originally launched at the University of Chicago, it brings together aspiring data scientists to apply machine learning, artificial intelligence, and statistics to high-impact challenges in education, healthcare, public safety, and environment under the guidance of expert mentors.',
-    tips: [
-      'Demonstrate both quantitative strengths (ML/programming) and social commitment',
-      'Highlight experience working in interdisciplinary teams (social science + coding)',
-      'Prepare strong project samples showing data cleaning, modeling, and insights',
-      'Focus your application essays on your personal drive for social impact',
-      'Apply individually — teams are formed after selection',
-    ],
-    nst: 'NST students with machine learning and data science backgrounds have participated in DSSG fellowships.',
   },
 ];
 
-export default function ProgramsPage() {
+const CONFERENCES = [
+  { name: 'FOSDEM', where: 'Brussels', when: 'Late January', edition: '30 – 31 Jan 2027', support: 'Free, no registration', link: 'https://fosdem.org' },
+  { name: 'DevConf.IN', where: 'Pune', when: 'February', edition: '13 – 14 Feb 2026', support: 'Free', link: 'https://www.devconf.info/in/' },
+  { name: 'SCaLE', where: 'Pasadena', when: 'March', edition: '5 – 8 Mar 2026', support: '', link: 'https://www.socallinuxexpo.org' },
+  { name: 'FOSSASIA Summit', where: 'Bangkok, hybrid', when: 'March', edition: '8 – 10 Mar 2026', support: '', link: 'https://summit.fossasia.org' },
+  { name: 'Open Source Summit India', where: 'Mumbai', when: 'June', edition: '16 – 17 Jun 2026', support: '', link: 'https://events.linuxfoundation.org/open-source-summit-india/' },
+  { name: 'KubeCon + CloudNativeCon India', where: 'Mumbai', when: 'June', edition: '18 – 19 Jun 2026', support: 'Dan Kohn scholarship covers ticket and travel; apply by early April', link: 'https://events.linuxfoundation.org/kubecon-cloudnativecon-india/' },
+  { name: 'openSUSE Conference', where: 'Nuremberg', when: 'June', edition: '25 – 27 Jun 2026', support: 'Travel Support Program', link: 'https://events.opensuse.org' },
+  { name: 'GUADEC', where: 'A Coruña in 2026', when: 'July', edition: '16 – 21 Jul 2026', support: 'Travel sponsorship; request by mid March', link: 'https://events.gnome.org' },
+  { name: 'Akademy', where: 'Graz in 2026', when: 'September', edition: '18 – 24 Sep 2026', support: 'KDE e.V. travel reimbursement', link: 'https://akademy.kde.org' },
+  { name: 'IndiaFOSS', where: 'Bengaluru', when: 'September', edition: '26 – 27 Sep 2026', support: 'Free to attend', link: 'https://indiafoss.net' },
+  { name: 'PyCon India', where: 'Bengaluru in 2025', when: 'September', edition: '2026 dates not announced', support: 'Need-based travel and stay grant', link: 'https://in.pycon.org' },
+  { name: 'All Things Open', where: 'Raleigh', when: 'October', edition: '19 – 20 Oct 2026', support: '', link: 'https://www.allthingsopen.org' },
+];
+
+export default async function ProgramsPage() {
+  const achievers = await getAchieversKV();
+  const trackRecord = (p: { id: string; short: string; name: string }) => {
+    const names = (HOF_NAMES[p.id] ?? [p.short, p.name]).map((n) => n.toLowerCase());
+    const hits = achievers.flatMap((a) => (a.programs ?? []).filter((x) => names.includes(x.name.toLowerCase())));
+    if (hits.length === 0) return 'No NST selection in the Hall of Fame yet.';
+    const orgs = [...new Set(hits.map((x) => x.org?.trim()).filter((o): o is string => !!o))];
+    return `${hits.length} NST ${hits.length === 1 ? 'selection' : 'selections'}${orgs.length ? ' — ' + orgs.join(' · ') : ''}.`;
+  };
+
   return (
     <main className="min-h-screen bg-panel">
       {/* Hero */}
@@ -561,11 +429,38 @@ export default function ProgramsPage() {
               {/* NST track record */}
               <div className={`px-6 py-4 border-t border-line bg-ground`}>
                 <span className={`text-xs font-[550] ${p.color}`}>NST track record — </span>
-                <span className="text-ink-soft text-xs">{p.nst}</span>
+                <span className="text-ink-soft text-xs">{trackRecord(p)}</span>
               </div>
             </div>
           </section>
         ))}
+
+        {/* Conferences */}
+        <section id="conferences">
+          <h2 className="text-ink-soft text-xs font-[500] uppercase tracking-widest mb-2">
+            Conferences
+          </h2>
+          <p className="text-ink-soft text-sm mb-4">
+            Most of these fund students to attend or have no ticket at all. Students who spoke at one are listed in the{' '}
+            <Link href="/achievers" className="underline underline-offset-2 hover:text-ink">Hall of Fame</Link>.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {CONFERENCES.map((c) => (
+              <a
+                key={c.name}
+                href={c.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-xl border border-line bg-ground p-4 hover:border-brand-400 transition-colors"
+              >
+                <div className="font-[650] text-sm text-ink">{c.name}</div>
+                <div className="text-xs text-ink-soft mt-1">{c.where} · {c.when}</div>
+                <div className="text-xs text-ink-mid mt-1">{c.edition}</div>
+                {c.support && <div className="text-xs text-ink-soft mt-2">{c.support}</div>}
+              </a>
+            ))}
+          </div>
+        </section>
 
         {/* CTA */}
         <section className="rounded-2xl border border-line bg-ground p-8 text-center">

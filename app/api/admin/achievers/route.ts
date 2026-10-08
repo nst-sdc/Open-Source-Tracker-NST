@@ -24,18 +24,7 @@ export async function POST(request: Request) {
 
   const username = github.trim();
 
-  // 1. The account has to actually exist. Same check the public join flow does
-  //    (app/api/join-requests) — without it a typo silently becomes a Hall of
-  //    Fame entry pointing at nobody.
-  const profile = await getStudentProfile(username);
-  if (!profile) {
-    return Response.json(
-      { error: `GitHub username @${username} not found. Make sure it is spelled correctly.` },
-      { status: 404 }
-    );
-  }
-
-  // 2. Achievers must already be tracked contributors. Enforcing it here (rather
+  // 1. Achievers must already be tracked contributors. Enforcing it here (rather
   //    than quietly adding them to the roster) keeps one source of truth for who
   //    is tracked, and guarantees an achiever always has a leaderboard row for
   //    their label to appear on — previously an achiever outside the roster was
@@ -46,6 +35,23 @@ export async function POST(request: Request) {
     return Response.json(
       { error: `@${username} is not in the tracker yet. Add them under Students first, then add them here.` },
       { status: 409 }
+    );
+  }
+
+  // 2. Only a definitive 404 blocks the add. getStudentProfile throws on rate
+  //    limits and GitHub 5xx, and someone already in the roster plainly exists.
+  try {
+    const profile = await getStudentProfile(username);
+    if (!profile) {
+      return Response.json(
+        { error: `GitHub username @${username} not found. Make sure it is spelled correctly.` },
+        { status: 404 }
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `Could not verify @${username} against GitHub: ${err instanceof Error ? err.message : 'unknown error'}. ` +
+      'They are in the roster, so the add is proceeding.'
     );
   }
 
