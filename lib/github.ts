@@ -181,7 +181,11 @@ async function githubSearch<T>(
   let headers = await getGitHubHeaders(token);
   let res = await fetch(
     `https://api.github.com/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=${perPage}&page=${page}`,
-    { headers, next: { revalidate: 3600 } },
+    // no-store, never revalidate: with `next: { revalidate }` each server
+    // instance kept its own copy of this response and served it stale past the
+    // hour. A refresh that landed on a cold instance then wrote days-old PR
+    // states over a newer cache written by another instance.
+    { headers, cache: "no-store" },
   );
   if (!res.ok) {
     if (res.status === 401 && token) {
@@ -200,10 +204,10 @@ async function githubSearch<T>(
       };
       res = await fetch(
         `https://api.github.com/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=${perPage}&page=${page}`,
-        { headers, next: { revalidate: 3600 } },
+        { headers, cache: "no-store" },
       );
       if (res.ok) {
-        return res.json();
+        return completeSearchResult(await res.json());
       }
     }
     if (res.status === 403 || res.status === 429) {
@@ -211,7 +215,16 @@ async function githubSearch<T>(
     }
     return null;
   }
-  return res.json();
+  return completeSearchResult(await res.json());
+}
+
+/** GitHub sets incomplete_results when the search timed out and returned only
+ *  part of the matches. Persisting that would drop PRs from the student's
+ *  cache, so it is treated as a failed call. */
+function completeSearchResult<T>(
+  data: { total_count: number; items: T[]; incomplete_results?: boolean },
+): { total_count: number; items: T[] } | null {
+  return data.incomplete_results ? null : data;
 }
 
 async function githubSearchAll<T>(
@@ -225,10 +238,10 @@ async function githubSearchAll<T>(
 
   while (page <= maxPages) {
     const data = await githubSearch<T>(q, page, 100, true, token);
-    if (!data) {
-      if (page === 1) return null;
-      break;
-    }
+    // A failed later page used to end the loop and return what had been
+    // collected, so a transient error silently shortened the student's PR
+    // list. Fail the whole fetch instead; the caller keeps the old cache.
+    if (!data) return null;
     totalCount = data.total_count;
     allItems.push(...data.items);
     if (allItems.length >= data.total_count || data.items.length < 100) break;
