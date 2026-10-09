@@ -64,12 +64,43 @@ function trimIssue(issue: StudentIssue): StudentIssue {
   };
 }
 
+/** Newest activity timestamp in a PR list; -Infinity for an empty one. */
+function newestActivity(prs: StudentPR[]): number {
+  let newest = -Infinity;
+  for (const pr of prs) {
+    const t = Date.parse(pr.updated_at ?? pr.created_at);
+    if (t > newest) newest = t;
+  }
+  return newest;
+}
+
+/**
+ * Writes the cache, unless the incoming PR list is older than what is already
+ * stored. GitHub's search index and any intermediate cache can hand back a
+ * snapshot from days earlier; stamping that with a fresh cachedAt and writing
+ * it would turn merged PRs back into open ones and drop recent ones, which is
+ * exactly what happened before this guard existed. Returns false when skipped.
+ */
 export async function writeProfileCache(
   username: string,
   profile: GitHubUser,
   prs: StudentPR[],
   issues: StudentIssue[]
-): Promise<void> {
+): Promise<boolean> {
+  const existing = await readProfileCache(username);
+  if (existing && existing.prs.length > 0) {
+    const incoming = newestActivity(prs);
+    const stored = newestActivity(existing.prs);
+    if (incoming < stored) {
+      const iso = (t: number) => (Number.isFinite(t) ? new Date(t).toISOString() : 'none');
+      console.warn(
+        `[profile-cache] Skipped write for ${username}: incoming data (newest PR activity ` +
+          `${iso(incoming)}, ${prs.length} PRs) is older than the stored cache ` +
+          `(${iso(stored)}, ${existing.prs.length} PRs).`
+      );
+      return false;
+    }
+  }
   const entry: ProfileCacheEntry = {
     cachedAt: new Date().toISOString(),
     profile,
@@ -80,4 +111,5 @@ export async function writeProfileCache(
   if (!ok) {
     throw new Error(`Failed to write profile cache for ${username} (KV write rejected)`);
   }
+  return true;
 }
