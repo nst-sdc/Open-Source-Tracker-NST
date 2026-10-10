@@ -15,8 +15,8 @@ import { readProfileCache, writeProfileCache } from '@/lib/profile-cache';
 import { getStudentsKV } from '@/lib/kv-students';
 import { kvGet, kvSet } from '@/lib/kv';
 import { cookies } from 'next/headers';
-import { getRepoCache } from '@/lib/repo-cache';
-import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION } from '@/lib/repo-score';
+import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
+import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION, MIN_STARS, type ExclusionReason } from '@/lib/repo-score';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
 import { getBadges } from '@/lib/badges';
@@ -169,8 +169,7 @@ export default async function ContributorPage({
             const key = `${repo}#${pr.number}`;
 
             if (flagged.has(key)) return false;
-            const repoEntry = repoCache[repo];
-            if (repoEntry && repoEntry.valid === false) return false;
+            if (prExcludedBy(repoCache[repo], pr.pull_request?.merged_at)) return false;
 
             return true;
           });
@@ -265,12 +264,34 @@ export default async function ContributorPage({
     const key = `${repo}#${pr.number}`;
 
     if (flagged.has(key)) return false;
-    const repoEntry = repoCache[repo];
-    if (repoEntry && repoEntry.valid === false) return false;
+    if (prExcludedBy(repoCache[repo], pr.pull_request?.merged_at)) return false;
 
     return true;
   });
 
+  // Merged PRs the gate leaves out, by reason. Shown as one line under the
+  // counters, never as a list: the counters are the message on a quality
+  // tracker, and the line only explains them.
+  const notCounted = new Map<ExclusionReason | 'flagged', number>();
+  for (const pr of allPRs) {
+    const mergedAt = pr.pull_request?.merged_at;
+    if (!mergedAt || !pr.repository_url) continue;
+    const repo = pr.repository_url.replace('https://api.github.com/repos/', '');
+    const why = flagged.has(`${repo}#${pr.number}`) ? 'flagged' : prExcludedBy(repoCache[repo], mergedAt);
+    if (why) notCounted.set(why, (notCounted.get(why) ?? 0) + 1);
+  }
+  const notCountedTotal = [...notCounted.values()].reduce((a, b) => a + b, 0);
+  const NOT_COUNTED_LABEL: Record<ExclusionReason | 'flagged', string> = {
+    'under-star-minimum': `in repos under ${MIN_STARS} stars`,
+    'no-audience': 'in repos with no audience and no releases',
+    fork: 'into forks',
+    archived: 'into archived repos',
+    dead: 'into repos that no longer exist',
+    flagged: 'flagged by an admin',
+  };
+  const notCountedParts = [...notCounted.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([why, n]) => `${n} ${NOT_COUNTED_LABEL[why]}`);
   const filteredPRs = filterByOrg(filterByPeriod(validPRs, period, from, to), org);
   const filteredIssues = filterByOrg(filterByPeriod(issues, period, from, to), org);
 
@@ -482,6 +503,11 @@ export default async function ContributorPage({
             );
           })}
         </div>
+        {notCountedTotal > 0 && (
+          <p className="text-xs text-ink-soft mt-2" title="Merged pull requests into repositories the tracker does not count. See the scoring notes for the rules.">
+            {notCountedTotal} merged {notCountedTotal === 1 ? 'PR' : 'PRs'} not counted · {notCountedParts.join(' · ')}
+          </p>
+        )}
       </div>
 
       {/* Active period filter banner */}
