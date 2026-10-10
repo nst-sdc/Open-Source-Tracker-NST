@@ -17,7 +17,14 @@ import {
   isRepoValid,
   MULTIPLIER_MIN,
   MULTIPLIER_MAX,
-  CURATED_ORG_FLOOR,
+  PROGRAM_ORG_FLOOR,
+  ORG_PRIOR_FLOOR_MAX,
+  orgFloor,
+  hasOrgPrior,
+  prExclusionReason,
+  isConcentrated,
+  CONCENTRATED_DECAY,
+  NEUTRAL_MULTIPLIER,
   PER_REPO_DECAY,
   MIN_STARS,
 } from './repo-score';
@@ -147,16 +154,30 @@ describe('repoMultiplier', () => {
     expect(asOwner).toBeLessThan(asContributor * 0.35);
   });
 
-  it('curated orgs get a floor, not a fixed value', () => {
-    const youngCncf = repo({
-      ownerLogin: 'cncf', stars: 200, forks: 30, watchers: 8, releases: 2,
-      contributors: 15, commitsLastYear: 300, mergedPRCount: 120,
-      createdAt: '2026-05-01T00:00:00Z',
+  it('a program org lends a floor of 1.0, not a fixed value', () => {
+    const young = repo({
+      ownerLogin: 'sugarlabs', stars: 3, forks: 5, watchers: 0, releases: 5,
+      contributors: 13, commitsLastYear: 40, mergedPRCount: 30, createdAt: '2025-06-01',
     });
-    expect(repoMultiplier(youngCncf, NOW, notSelf)).toBeGreaterThanOrEqual(CURATED_ORG_FLOOR);
-    // ...while established repos beat the floor on their own merits.
-    expect(repoMultiplier(react, NOW, notSelf)).toBeGreaterThan(CURATED_ORG_FLOOR);
+    expect(repoMultiplier(young, NOW, notSelf)).toBeLessThan(PROGRAM_ORG_FLOOR);
+    expect(repoMultiplier(young, NOW, { selfOwned: false, prior: { programOrg: true } })).toBe(PROGRAM_ORG_FLOOR);
+    expect(repoMultiplier(react, NOW, { selfOwned: false, prior: { programOrg: true } })).toBeGreaterThan(PROGRAM_ORG_FLOOR);
   });
+
+  it('an org with a serious repo lends its small ones a capped share of it', () => {
+    expect(orgFloor({ programOrg: false, bestInOrg: 3.0 })).toBe(ORG_PRIOR_FLOOR_MAX);
+    expect(orgFloor({ programOrg: false, bestInOrg: 2.0 })).toBeCloseTo(1.2, 10);
+    expect(orgFloor({ programOrg: false, bestInOrg: 1.4 })).toBe(0);   // below ORG_PRIOR_MIN_BEST: lends nothing
+    expect(orgFloor({ programOrg: true, bestInOrg: 0.4 })).toBe(PROGRAM_ORG_FLOOR);
+    expect(orgFloor(undefined)).toBe(0);
+    expect(hasOrgPrior({ programOrg: false, bestInOrg: 1.5 })).toBe(true);
+    expect(hasOrgPrior({ programOrg: false, bestInOrg: 1.49 })).toBe(false);
+  });
+
+  it('a floor never applies to a self-owned repo', () => {
+    expect(repoMultiplier(gofr, NOW, { selfOwned: true, prior: { programOrg: true } })).toBeLessThan(PROGRAM_ORG_FLOOR);
+  });
+
 });
 
 describe('validity gate', () => {
@@ -166,11 +187,12 @@ describe('validity gate', () => {
     expect(isRepoValid(paySphere)).toBe(false);
   });
 
-  it('keeps real projects, archived repos and forks are always out', () => {
+  it('keeps real projects; forks are always out; archival is decided per PR', () => {
     expect(isRepoValid(gofr)).toBe(true);
     expect(isRepoValid(hyperfine)).toBe(true);
-    expect(isRepoValid(repo({ ...gofr, isArchived: true }))).toBe(false);
+    expect(isRepoValid(repo({ ...gofr, isArchived: true }))).toBe(true);
     expect(isRepoValid(repo({ ...gofr, isFork: true }))).toBe(false);
+    expect(isRepoValid(repo({ ...gofr, isFork: true }), { programOrg: true })).toBe(false);
   });
 
   it('a small honest project with a release survives the gate', () => {
@@ -188,6 +210,59 @@ describe('validity gate', () => {
     // Exactly at the floor is allowed; one below is not.
     expect(isRepoValid(repo({ stars: MIN_STARS, forks: 1, watchers: 3, releases: 2 }))).toBe(true);
     expect(isRepoValid(repo({ stars: MIN_STARS - 1, forks: 1, watchers: 3, releases: 2 }))).toBe(false);
+  });
+});
+
+describe('org prior bypasses the star and audience rules', () => {
+  it('a three-star repo under a program org is valid; the same repo elsewhere is not', () => {
+    const tiny = repo({ stars: 3, forks: 5, watchers: 0, releases: 5, mergedPRCount: 30 });
+    expect(isRepoValid(tiny)).toBe(false);
+    expect(isRepoValid(tiny, { programOrg: true })).toBe(true);
+    expect(isRepoValid(tiny, { programOrg: false, bestInOrg: 2.3 })).toBe(true);
+    expect(isRepoValid(tiny, { programOrg: false, bestInOrg: 0.4 })).toBe(false);
+  });
+  it('conda-forge shaped repos (everyone forks to contribute) pass through the org prior', () => {
+    expect(isRepoValid(ecoBuddy, { programOrg: true })).toBe(true);
+  });
+});
+
+describe('prExclusionReason', () => {
+  const live = repo({ ...gofr });
+  const archived = repo({ ...gofr, isArchived: true, archivedAt: '2026-04-28T00:00:00Z' });
+  it('a PR merged before archival counts; after it does not', () => {
+    expect(prExclusionReason(true, archived, '2026-03-01T00:00:00Z')).toBeNull();
+    expect(prExclusionReason(true, archived, '2026-05-01T00:00:00Z')).toBe('archived');
+  });
+  it('an archived repo with no archivedAt recorded excludes everything, as before', () => {
+    expect(prExclusionReason(true, repo({ ...gofr, isArchived: true }), '2026-03-01T00:00:00Z')).toBe('archived');
+  });
+  it('names the rule that failed', () => {
+    expect(prExclusionReason(true, live, '2026-03-01T00:00:00Z')).toBeNull();
+    expect(prExclusionReason(false, repo({ ...gofr, isFork: true }), null)).toBe('fork');
+    expect(prExclusionReason(false, repo({ stars: 2 }), null)).toBe('under-star-minimum');
+    expect(prExclusionReason(false, campusConnect, null)).toBe('no-audience'); // 21 stars, no audience, no release
+    expect(prExclusionReason(false, undefined, null)).toBe('dead');
+    expect(prExclusionReason(true, undefined, null)).toBeNull();
+  });
+});
+
+describe('concentration', () => {
+  it('one person being most of a small repo\'s merges is concentrated', () => {
+    expect(isConcentrated(318, { stars: 35, mergedPRCount: 330 })).toBe(true);
+    expect(isConcentrated(20, { stars: 901, mergedPRCount: 2000 })).toBe(false);  // ccextractor: big repo, small share
+    expect(isConcentrated(10, { stars: 35, mergedPRCount: 12 })).toBe(false);     // under the PR minimum
+    expect(isConcentrated(30, undefined)).toBe(false);
+  });
+  it('steeper decay roughly halves a flood\'s points', () => {
+    const prsInto = (n: number) => Array.from({ length: n }, () => 'x/flood');
+    const normal = aggregateMergedPRScore(prsInto(100), (r) => r, () => 0.24);
+    const steep = aggregateMergedPRScore(prsInto(100), (r) => r, () => 0.24, () => CONCENTRATED_DECAY);
+    // sum 1/(1+d(k-1)) over 100 PRs is ~11.4 at d=0.3 and ~6.8 at d=0.6
+    expect(steep).toBeLessThan(normal * 0.65);
+    expect(steep).toBeGreaterThan(normal * 0.55);
+  });
+  it('unknown repos price below a validated mid repo', () => {
+    expect(NEUTRAL_MULTIPLIER).toBeLessThan(1);
   });
 });
 

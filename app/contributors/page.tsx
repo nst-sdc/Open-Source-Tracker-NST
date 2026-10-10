@@ -3,18 +3,18 @@ import {
   buildDateQuery,
   repoFromUrl,
   StudentSummary,
+  makeRepoMultiplierResolver,
 } from "@/lib/github";
 import { getStudentsKV } from "@/lib/kv-students";
 import { getFlaggedPRIdSet } from "@/lib/flagged";
 import { readSummaryCache, writeSummaryCache } from "@/lib/summary-cache";
 import { readProfileCache } from "@/lib/profile-cache";
-import { getRepoCache } from "@/lib/repo-cache";
+import { getRepoCache, prExcludedBy } from "@/lib/repo-cache";
 import {
   aggregateMergedPRScore,
-  repoMultiplier,
-  legacyMultiplier,
-  NEUTRAL_MULTIPLIER,
-  REPO_SCHEMA_VERSION,
+  isConcentrated,
+  CONCENTRATED_DECAY,
+  PER_REPO_DECAY,
 } from "@/lib/repo-score";
 import { resolveOrganization, OrgCacheEntry } from "@/lib/org-cache";
 import { readOrgIndex, contributorsForOrg } from "@/lib/org-index";
@@ -395,8 +395,7 @@ export default async function ContributorsPage({
             const repo = repoFromUrl(pr.repository_url);
             const key = `${repo}#${pr.number}`;
             if (flaggedPRIds.has(key)) return false;
-            const repoEntry = repoCache[repo];
-            if (repoEntry && repoEntry.valid === false) return false;
+            if (prExcludedBy(repoCache[repo], pr.pull_request?.merged_at)) return false;
             return true;
           });
 
@@ -451,22 +450,20 @@ export default async function ContributorsPage({
             );
           });
 
-          // Organization-specific score using existing repo-quality multiplier and aggregateMergedPRScore
-          const repoMultiplierFor = (repoFullName: string) => {
-            const entry = repoCache[repoFullName];
-            if (!entry) return NEUTRAL_MULTIPLIER;
-            if (entry.signals && entry.schemaVersion === REPO_SCHEMA_VERSION) {
-              return repoMultiplier(entry.signals, Date.now(), {
-                selfOwned: false,
-              });
-            }
-            return legacyMultiplier(entry.stars);
-          };
-
+          // Same resolver and decay as the leaderboard, so the org view cannot drift.
+          const repoMultiplierFor = makeRepoMultiplierResolver(
+            repoCache,
+            studentSummary.profile.login,
+            new Set(),
+            // eslint-disable-next-line react-hooks/purity -- async Server Component, see b35811b
+            Date.now(),
+          );
           const orgScore = aggregateMergedPRScore(
             mergedPRList,
             (pr) => (pr.repository_url ? repoFromUrl(pr.repository_url) : null),
             repoMultiplierFor,
+            (repo, count) =>
+              repo && isConcentrated(count, repoCache[repo]?.signals) ? CONCENTRATED_DECAY : PER_REPO_DECAY,
           );
 
           orgSummaries.push({
