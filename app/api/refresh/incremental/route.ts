@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { updateStaleProfiles, buildDateQuery, getSummaryFromCache } from '@/lib/github';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
-import { writeSummaryCache, readSummaryCache } from '@/lib/summary-cache';
+import { writeSummaryCache, readSummaryCache, pruneToRoster } from '@/lib/summary-cache';
 import { readProfileCache } from '@/lib/profile-cache';
 import { readOrgIndex, writeOrgIndex, indexStudentContributions } from '@/lib/org-index';
 import { getRepoCache } from '@/lib/repo-cache';
@@ -77,12 +77,13 @@ async function performIncrementalRefresh() {
       if (!updatedCache) continue;
 
       const student = students.find(s => s.github.toLowerCase() === username.toLowerCase());
+      // A stale profile of someone no longer on the roster is still refreshed
+      // (the queue does not know), but it must not re-enter the leaderboard.
+      if (!student) continue;
       const ownRepoExceptions = ownRepoExceptionMap.get(username.toLowerCase()) ?? EMPTY_REPO_SET;
       const freshSummary = getSummaryFromCache(updatedCache, dateQuery, flaggedPRIds, repoCache, ownRepoExceptions);
-      if (student) {
-        freshSummary.year = student.year;
-        freshSummary.campus = student.campus;
-      }
+      freshSummary.year = student.year;
+      freshSummary.campus = student.campus;
 
       const idx = existingCache.summaries.findIndex(
         s => s.profile.login.toLowerCase() === username.toLowerCase()
@@ -95,6 +96,11 @@ async function performIncrementalRefresh() {
       changed = true;
     }
 
+    const pruned = pruneToRoster(existingCache.summaries, students);
+    if (pruned.length !== existingCache.summaries.length) {
+      existingCache.summaries = pruned;
+      changed = true;
+    }
     if (changed) {
       existingCache.summaries.sort((a, b) => b.scoreMergedPRs - a.scoreMergedPRs);
       await writeSummaryCache(existingCache.summaries, period);

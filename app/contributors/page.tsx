@@ -6,7 +6,7 @@ import {
 } from "@/lib/github";
 import { getStudentsKV } from "@/lib/kv-students";
 import { getFlaggedPRIdSet } from "@/lib/flagged";
-import { readSummaryCache, writeSummaryCache } from "@/lib/summary-cache";
+import { readSummaryCache, writeSummaryCache, pruneToRoster } from "@/lib/summary-cache";
 import { readProfileCache } from "@/lib/profile-cache";
 import { getRepoCache } from "@/lib/repo-cache";
 import {
@@ -336,6 +336,13 @@ export default async function ContributorsPage({
       (a, b) => b.scoreMergedPRs - a.scoreMergedPRs,
     );
   }
+
+  // The roster is the only source of truth for who is a student; a period
+  // cache may still carry people removed from it.
+  allSummaries = pruneToRoster(allSummaries, students);
+  const studentCount = students.filter(
+    (s) => (!year || s.year === year) && (!campus || s.campus === campus),
+  ).length;
 
   const hasActivity = (s: StudentSummary) =>
     s.totalPRs > 0 || (s.issuesCount ?? 0) > 0;
@@ -685,7 +692,7 @@ export default async function ContributorsPage({
             {[
               {
                 label: "Students",
-                value: allSummaries?.length ?? 0,
+                value: studentCount,
                 num: "text-ink",
               },
               {
