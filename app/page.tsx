@@ -351,6 +351,42 @@ export default async function Home() {
               <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform">→</span>
             </div>
           </a>
+
+          {/* Card 3: OSS Grid */}
+          <a
+            href="https://github.com/rajatrsrivastav/ossgrid"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex flex-col justify-between p-5 rounded-2xl bg-ground border border-line shadow-card card-hover"
+          >
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div>
+                  <h3 className="font-[650] text-ink text-sm">OSS Grid</h3>
+                  <span className="text-[10.5px] text-ink-soft font-[550] tracking-[0.06em] uppercase">Open-source mentorship</span>
+                </div>
+              </div>
+              <p className="text-ink-soft text-[12.5px] leading-relaxed mb-4">
+                Explore GSoC and LFX Mentorship organizations, past projects, mentors, and public proposals.
+                Search and filter open-source opportunities without signing in.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {['Next.js', 'TypeScript', 'Tailwind CSS', 'Fuse.js'].map((t) => (
+                  <span key={t} className="text-[10.5px] font-[550] px-2 py-0.5 rounded-md bg-panel text-ink-mid">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="pt-3 border-t border-panel flex items-center justify-between text-[11px] text-ink-soft">
+              <span className="flex items-center gap-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="https://avatars.githubusercontent.com/u/205837121?v=4" alt="rajatrsrivastav" className="w-4 h-4 rounded-full" />
+                Built by <strong className="text-ink-mid font-[600]">Rajat Srivastav (@rajatrsrivastav)</strong>
+              </span>
+              <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform">→</span>
+            </div>
+          </a>
         </div>
       </div>
 
