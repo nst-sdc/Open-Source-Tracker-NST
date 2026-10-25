@@ -39,6 +39,13 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # ESLint 10 removed context.getFilename(), which the eslint-plugin-react
+      # bundled inside eslint-config-next still calls, so CI's lint step
+      # crashes on every PR (see the pin in package.json). Lift this once a
+      # plugin release supports ESLint 10.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
 
   # ── Workflow actions (.github/workflows/*.yml) ─────────────────────────────
   # These pin major tags (actions/checkout@v4, docker/build-push-action@v6 and
