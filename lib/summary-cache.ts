@@ -103,3 +103,18 @@ export async function invalidateSummaryCache(): Promise<void> {
     }
   }
 }
+
+/**
+ * Keeps only summaries whose login is on the roster. A period cache is patched
+ * in place by the incremental refresh and never rebuilt on its own ("all" in
+ * particular), so a student removed or renamed on the roster lingered in it —
+ * and the Students figure, which was the array length, drifted apart between
+ * periods (2,193 / 2,100 / 2,088 for the same roster). Pure; cheap.
+ */
+export function pruneToRoster<T extends { profile: { login: string } }>(
+  summaries: T[],
+  roster: ReadonlyArray<{ github: string }>
+): T[] {
+  const allowed = new Set(roster.map((s) => s.github.toLowerCase()));
+  return summaries.filter((s) => allowed.has(s.profile.login.toLowerCase()));
+}
