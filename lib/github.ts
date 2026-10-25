@@ -10,6 +10,8 @@ import {
   saveRepoCache,
   isEntryStale,
   MIN_PRS_FOR_AVG_SCORE,
+  prExcludedBy,
+  buildOrgPriors,
 } from "./repo-cache";
 import {
   RepoSignals,
@@ -19,6 +21,9 @@ import {
   NEUTRAL_MULTIPLIER,
   aggregateMergedPRScore,
   isRepoValid,
+  isConcentrated,
+  CONCENTRATED_DECAY,
+  PER_REPO_DECAY,
 } from "./repo-score";
 import {
   readProfileCache,
@@ -377,6 +382,7 @@ const REPO_SIGNALS_QUERY_FIELDS = `
   repositoryTopics(first: 20) { nodes { topic { name } } }
   licenseInfo { spdxId }
   isArchived
+  archivedAt
   isFork
   createdAt
   pushedAt
@@ -398,6 +404,7 @@ interface GraphQLRepoNode {
   repositoryTopics: { nodes: Array<{ topic: { name: string } }> };
   licenseInfo: { spdxId: string | null } | null;
   isArchived: boolean;
+  archivedAt?: string | null;
   isFork: boolean;
   createdAt: string;
   pushedAt: string;
@@ -424,6 +431,7 @@ function signalsFromNode(node: GraphQLRepoNode): RepoSignals {
     licenseSpdxId: node.licenseInfo?.spdxId ?? null,
     isFork: node.isFork ?? false,
     isArchived: node.isArchived ?? false,
+    archivedAt: node.archivedAt ?? null,
     ownerLogin: node.owner?.login ?? "",
     createdAt: node.createdAt,
     pushedAt: node.pushedAt,
@@ -470,6 +478,7 @@ export async function validateNewRepos(
   token?: string,
 ): Promise<{ updated: boolean; map: import("./repo-cache").RepoCacheMap }> {
   let updated = false;
+  const priorFor = buildOrgPriors(repoCacheMap);
 
   // Collect repos needing a fetch: never seen, or written by an older schema.
   // The schema check is the #4 cache migration — without it, pre-overhaul
@@ -645,7 +654,7 @@ export async function validateNewRepos(
           // refreshes; the signals still update underneath it.
           valid: previous?.manualOverride
             ? previous.valid
-            : isRepoValid(signals),
+            : isRepoValid(signals, priorFor(repoFullName)),
           manualOverride: previous?.manualOverride,
           signals,
           checkedAt: new Date().toISOString(),
@@ -820,13 +829,14 @@ async function getOwnRepoExceptionPRs(
  *    upgrades it.
  *  - no entry at all: neutral 1.0.
  */
-function makeRepoMultiplierResolver(
+export function makeRepoMultiplierResolver(
   cacheMap: import("./repo-cache").RepoCacheMap,
   studentLogin: string,
   ownRepoExceptions: Set<string>,
   nowMs: number,
 ): (repoFullName: string) => number {
   const login = studentLogin.toLowerCase();
+  const priorFor = buildOrgPriors(cacheMap, nowMs);
   return (repoFullName: string) => {
     const entry = cacheMap[repoFullName];
     if (!entry) return NEUTRAL_MULTIPLIER;
@@ -834,7 +844,7 @@ function makeRepoMultiplierResolver(
       const selfOwned =
         repoFullName.split("/")[0]?.toLowerCase() === login &&
         !ownRepoExceptions.has(repoFullName.toLowerCase());
-      return repoMultiplier(entry.signals, nowMs, { selfOwned });
+      return repoMultiplier(entry.signals, nowMs, { selfOwned, prior: priorFor(repoFullName) });
     }
     return legacyMultiplier(entry.stars);
   };
@@ -863,7 +873,7 @@ export function getSummaryFromCache(
     if (flaggedPRIds.has(key)) return false;
     if (ownRepoExceptions.has(repo.toLowerCase())) return true;
     const repoEntry = repoCacheMap[repo];
-    if (repoEntry && repoEntry.valid === false) return false;
+    if (prExcludedBy(repoEntry, pr.pull_request?.merged_at)) return false;
     return true;
   });
 
@@ -930,6 +940,8 @@ export function getSummaryFromCache(
         ? pr.repository_url.replace("https://api.github.com/repos/", "")
         : null,
     repoMultiplierFor,
+    (repo, count) =>
+      repo && isConcentrated(count, repoCacheMap[repo]?.signals) ? CONCENTRATED_DECAY : PER_REPO_DECAY,
   );
 
   // Secondary "project impact" signal — see StudentSummary.avgScore doc.
@@ -1218,7 +1230,7 @@ export async function getAllStudentSummaries(
       const key = `${repo}#${pr.number}`;
       if (flaggedPRIds.has(key)) return false;
       const repoEntry = repoCache[repo];
-      if (repoEntry && repoEntry.valid === false) return false;
+      if (prExcludedBy(repoEntry, pr.pull_request?.merged_at)) return false;
       return true;
     });
 
@@ -1260,6 +1272,8 @@ export async function getAllStudentSummaries(
           ? pr.repository_url.replace("https://api.github.com/repos/", "")
           : null,
       liveRepoMultiplierFor,
+      (repo, count) =>
+        repo && isConcentrated(count, repoCache[repo]?.signals) ? CONCENTRATED_DECAY : PER_REPO_DECAY,
     );
     // Plain mean of each merged PR's own repo multiplier — see the doc
     // comment on the equivalent computation in getSummaryFromCache for why

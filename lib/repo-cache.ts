@@ -1,6 +1,13 @@
 import { kvGet, kvSet } from './kv';
 import type { RepoSignals } from './repo-score';
-import { REPO_SCHEMA_VERSION } from './repo-score';
+import {
+  REPO_SCHEMA_VERSION,
+  prExclusionReason,
+  repoMultiplier,
+  type ExclusionReason,
+  type OrgPrior,
+} from './repo-score';
+import { isProgramOrg } from './program-orgs';
 
 export interface RepoCacheEntry {
   /** Absent on entries written before the #4 scoring overhaul. Entries whose
@@ -80,3 +87,34 @@ export async function saveRepoCache(map: RepoCacheMap): Promise<void> {
  * huge repo would read as a perfect average — noise, not a signal of
  * consistently choosing impactful projects. */
 export const MIN_PRS_FOR_AVG_SCORE = 5;
+
+/** Why a merged PR does not count, given its repo's cache entry; null when
+ *  it does. Unknown repos count (they are priced at NEUTRAL_MULTIPLIER until
+ *  the next refresh). This is the one place every PR filter should ask. */
+export function prExcludedBy(
+  entry: RepoCacheEntry | undefined,
+  mergedAt: string | null | undefined
+): ExclusionReason | null {
+  if (!entry) return null;
+  return prExclusionReason(entry.valid, entry.signals, mergedAt);
+}
+
+/** The prior each owner lends its repos, from what the cache already knows:
+ *  program membership, and the best multiplier among the owner's other
+ *  repos. Built once per scoring pass; see OrgPrior in repo-score.ts. */
+export function buildOrgPriors(map: RepoCacheMap, nowMs: number = Date.now()): (repoFullName: string) => OrgPrior {
+  const best = new Map<string, number>();
+  for (const [name, entry] of Object.entries(map)) {
+    if (!entry.signals || entry.schemaVersion !== REPO_SCHEMA_VERSION) continue;
+    const owner = name.split('/')[0]?.toLowerCase();
+    if (!owner) continue;
+    // selfOwned false and no prior: the repo's own merit only, so a floor
+    // never feeds back into the floor it came from.
+    const m = repoMultiplier(entry.signals, nowMs, { selfOwned: false });
+    best.set(owner, Math.max(best.get(owner) ?? 0, m));
+  }
+  return (repoFullName: string) => {
+    const owner = repoFullName.split('/')[0]?.toLowerCase() ?? '';
+    return { programOrg: isProgramOrg(owner), bestInOrg: best.get(owner) };
+  };
+}

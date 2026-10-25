@@ -50,6 +50,9 @@ export interface RepoSignals {
   licenseSpdxId: string | null;
   isFork: boolean;
   isArchived: boolean;
+  /** ISO timestamp of archival, when isArchived. Absent on entries fetched
+   *  before it was recorded; such entries exclude every PR, as before. */
+  archivedAt?: string | null;
   ownerLogin: string;
   createdAt: string;
   pushedAt: string;
@@ -170,34 +173,52 @@ export function penaltyGate(s: RepoSignals, opts: { selfOwned: boolean }): numbe
 export const MULTIPLIER_MIN = 0.15;
 export const MULTIPLIER_MAX = 3.0;
 
-/** Orgs whose repos never score below this, so a three-month-old CNCF sandbox
- *  project isn't punished for being new. A floor only — established repos in
- *  these orgs earn their (higher) score the normal way. */
-export const CURATED_ORG_FLOOR = 1.5;
-export const CURATED_ORGS = new Set([
-  'apache',
-  'kubernetes',
-  'cncf',
-  'nodejs',
-  'python',
-  'rust-lang',
-  'golang',
-  'jenkinsci',
-  'mozilla',
-  'torvalds',
-]);
+/**
+ * What the owner lends a repo. Replaces the hand-typed list of ten orgs.
+ *
+ *  - programOrg: the owner runs a mentorship program (lib/program-orgs.ts).
+ *    That list is the open source world's own statement of who mentors, and
+ *    it is exactly what this tracker celebrates, so a repo under one is
+ *    always valid and floors at PROGRAM_ORG_FLOOR.
+ *  - bestInOrg: the highest multiplier of any other repo under the same
+ *    owner. An owner with a serious repo lends its small ones a floor of
+ *    ORG_PRIOR_SHARE of it, capped so a five-star site under a 3.0 org does
+ *    not outscore a real mid-sized project. Only counts from ORG_PRIOR_MIN_BEST
+ *    up: a student org whose best repo is 0.4 lends nothing.
+ */
+export interface OrgPrior {
+  programOrg: boolean;
+  bestInOrg?: number;
+}
+export const PROGRAM_ORG_FLOOR = 1.0;
+export const ORG_PRIOR_MIN_BEST = 1.5;
+export const ORG_PRIOR_SHARE = 0.6;
+export const ORG_PRIOR_FLOOR_MAX = 1.5;
+
+export function orgFloor(prior: OrgPrior | undefined): number {
+  if (!prior) return 0;
+  let floor = prior.programOrg ? PROGRAM_ORG_FLOOR : 0;
+  if ((prior.bestInOrg ?? 0) >= ORG_PRIOR_MIN_BEST) {
+    floor = Math.max(floor, Math.min(ORG_PRIOR_FLOOR_MAX, ORG_PRIOR_SHARE * (prior.bestInOrg ?? 0)));
+  }
+  return floor;
+}
+
+/** True when the owner vouches for the repo enough to skip the star and
+ *  audience rules of the validity gate. */
+export function hasOrgPrior(prior: OrgPrior | undefined): boolean {
+  return !!prior && (prior.programOrg || (prior.bestInOrg ?? 0) >= ORG_PRIOR_MIN_BEST);
+}
 
 export function repoMultiplier(
   s: RepoSignals,
   nowMs: number,
-  opts: { selfOwned: boolean }
+  opts: { selfOwned: boolean; prior?: OrgPrior }
 ): number {
   const c = criticalityScore(s, nowMs);
   const g = penaltyGate(s, opts);
   let m = MULTIPLIER_MIN + (MULTIPLIER_MAX - MULTIPLIER_MIN) * (c * g);
-  if (!opts.selfOwned && CURATED_ORGS.has(s.ownerLogin.toLowerCase())) {
-    m = Math.max(m, CURATED_ORG_FLOOR);
-  }
+  if (!opts.selfOwned) m = Math.max(m, orgFloor(opts.prior));
   return Math.min(MULTIPLIER_MAX, Math.max(MULTIPLIER_MIN, m));
 }
 
@@ -214,8 +235,10 @@ export function legacyMultiplier(stars: number): number {
   );
 }
 
-/** Multiplier for a repo we know nothing about at all (no cache entry yet). */
-export const NEUTRAL_MULTIPLIER = 1.0;
+/** Multiplier for a repo we know nothing about at all (no cache entry yet).
+ *  Below a mid repo on purpose: until the next refresh validates it, an unseen
+ *  repo should not out-earn one that has been checked and found wanting. */
+export const NEUTRAL_MULTIPLIER = 0.5;
 
 export const PR_BASE_POINTS = 10;
 /** Prestige dampener: a big-name repo helps, but doesn't decide on its own. */
@@ -226,8 +249,27 @@ export const PER_REPO_DECAY = 0.3;
 
 /** Score of the k-th merged PR (k = 1, 2, ...) into a repo with multiplier m.
  *  The effort term E from #4 is not implemented yet and reads as 1. */
-export function prScore(m: number, k: number): number {
-  return (PR_BASE_POINTS * Math.pow(m, PRESTIGE_EXPONENT)) / (1 + PER_REPO_DECAY * (k - 1));
+export function prScore(m: number, k: number, decay: number = PER_REPO_DECAY): number {
+  return (PR_BASE_POINTS * Math.pow(m, PRESTIGE_EXPONENT)) / (1 + decay * (k - 1));
+}
+
+/** Steeper decay for a repo the student is effectively the author of: a small
+ *  repo where their own merged PRs are most of the repo's lifetime merges.
+ *  The `-user:` search filter cannot see a repo on a friend's account; this
+ *  can. 318 PRs into a 35-star repo by one person is development, not
+ *  contribution, and is priced as such. */
+export const CONCENTRATED_DECAY = 0.6;
+export const CONCENTRATION_MIN_PRS = 20;
+export const CONCENTRATION_SHARE = 0.5;
+export const CONCENTRATION_MAX_STARS = 200;
+
+export function isConcentrated(studentMergedCount: number, s: Pick<RepoSignals, 'stars' | 'mergedPRCount'> | undefined): boolean {
+  if (!s) return false;
+  return (
+    s.stars < CONCENTRATION_MAX_STARS &&
+    studentMergedCount >= CONCENTRATION_MIN_PRS &&
+    studentMergedCount >= CONCENTRATION_SHARE * Math.max(1, s.mergedPRCount)
+  );
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -257,7 +299,8 @@ export const MAX_SHARE_PER_REPO = 0.4;
 export function aggregateMergedPRScore<T>(
   mergedPRs: T[],
   repoOf: (pr: T) => string | null,
-  multiplierFor: (repoFullName: string) => number
+  multiplierFor: (repoFullName: string) => number,
+  decayFor: (repoFullName: string | null, count: number) => number = () => PER_REPO_DECAY
 ): number {
   const countByRepo = new Map<string | null, number>();
   for (const pr of mergedPRs) {
@@ -268,8 +311,9 @@ export function aggregateMergedPRScore<T>(
   const subtotals: number[] = [];
   for (const [repo, count] of countByRepo) {
     const m = repo === null ? NEUTRAL_MULTIPLIER : multiplierFor(repo);
+    const decay = decayFor(repo, count);
     let subtotal = 0;
-    for (let k = 1; k <= count; k++) subtotal += prScore(m, k);
+    for (let k = 1; k <= count; k++) subtotal += prScore(m, k, decay);
     subtotals.push(subtotal);
   }
 
@@ -295,13 +339,40 @@ export const MIN_STARS = 5;
 export const VALIDITY_MIN_AUDIENCE = 0.15;
 
 /** A repo's PRs are excluded from the tracker entirely when this is false.
- *  Archived repos and forks are out, as is anything under the star minimum;
- *  so is anything with effectively no audience AND no releases — the signature
- *  of a pure farm target. This is a coarse gate; the multiplier does the
- *  fine-grained pricing above it. */
-export function isRepoValid(s: RepoSignals): boolean {
-  if (s.isArchived || s.isFork) return false;
+ *  Forks are out, as is anything under the star minimum; so is anything with
+ *  effectively no audience AND no releases — the signature of a pure farm
+ *  target. An owner with a prior (see OrgPrior) vouches past the last two.
+ *  Archival is not decided here: it is a per-PR question, answered by
+ *  prExclusionReason, because a PR merged into a live project stays a real
+ *  contribution after the maintainers move on. This is a coarse gate; the
+ *  multiplier does the fine-grained pricing above it. */
+export function isRepoValid(s: RepoSignals, prior?: OrgPrior): boolean {
+  if (s.isFork) return false;
+  if (hasOrgPrior(prior)) return true;
   if (s.stars < MIN_STARS) return false;
   if (audienceRatio(s) < VALIDITY_MIN_AUDIENCE && s.releases === 0) return false;
   return true;
+}
+
+export type ExclusionReason = 'fork' | 'under-star-minimum' | 'no-audience' | 'archived' | 'dead';
+
+/** Why a merged PR into this repo does not count, or null when it does.
+ *  `valid` is the stored gate decision (which may be an admin override);
+ *  the signals explain it. A PR merged before the repo was archived counts;
+ *  an archived repo with no archivedAt recorded excludes everything, which
+ *  is what it did before the timestamp existed. */
+export function prExclusionReason(
+  valid: boolean,
+  s: RepoSignals | undefined,
+  mergedAt: string | null | undefined
+): ExclusionReason | null {
+  if (!s) return valid ? null : 'dead';
+  if (s.isArchived) {
+    if (!s.archivedAt) return 'archived';
+    if (!mergedAt || mergedAt >= s.archivedAt) return 'archived';
+  }
+  if (valid) return null;
+  if (s.isFork) return 'fork';
+  if (s.stars < MIN_STARS) return 'under-star-minimum';
+  return 'no-audience';
 }
