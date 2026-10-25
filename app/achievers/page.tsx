@@ -1,3 +1,5 @@
+import { COMMUNITY_PROJECTS } from '@/lib/community-projects';
+import { CommunityProjectCard } from '@/app/components/CommunityProjectCard';
 import { getProgramMeta, type PersonEntry } from '@/lib/data';
 import { getAchieversKV } from '@/lib/kv-achievers';
 import { getStudentProfile, type GitHubUser } from '@/lib/github';
@@ -298,83 +300,14 @@ export default async function AchieversPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* Card 1: Termstory */}
-          <a
-            href="https://github.com/bitflicker64/Termstory"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-ground border border-line hover:bg-panel hover:border-violet-100 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
-          >
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-
-                <div>
-                  <h3 className="font-[650] text-ink text-base group-hover:text-ink transition-colors">Termstory</h3>
-                  <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">Memory Engine</span>
-                </div>
-              </div>
-              <p className="text-ink-mid text-xs leading-relaxed mb-4">
-                Turns your terminal history into a searchable, AI-narrated timeline of your development life. Recover commands, correlate Git commits, and visualize your terminal work.
-              </p>
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {['Python', 'TUI', 'Shell-History', 'CLI'].map((t) => (
-                  <span key={t} className="text-[10px] px-2.5 py-0.5 rounded bg-panel border border-line text-ink-soft font-mono">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="pt-4 border-t border-line flex items-center justify-between text-xs text-ink-soft">
-              <span className="flex items-center gap-2">
-                <img
-                  src="https://avatars.githubusercontent.com/u/211528427?v=4"
-                  alt="bitflicker64"
-                  className="w-5 h-5 rounded-full border border-line"
-                />
-                Built by <strong className="text-ink-mid">KAI (@bitflicker64)</strong>
-              </span>
-              <span className="text-violet-600 group-hover:translate-x-0.5 transition-transform">→</span>
-            </div>
-          </a>
-
-          {/* Card 2: Filedrop */}
-          <a
-            href="https://github.com/Dreamstick9/filedrop"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-ground border border-line hover:bg-panel hover:border-brand-100 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
-          >
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-
-                <div>
-                  <h3 className="font-[650] text-ink text-base group-hover:text-ink transition-colors">filedrop</h3>
-                  <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">File Sharing</span>
-                </div>
-              </div>
-              <p className="text-ink-mid text-xs leading-relaxed mb-4">
-                Instantly host encrypted files locally with QR codes for mobile transfer. Features AES-256-GCM browser encryption, ephemeral URLs, and DDoS protection.
-              </p>
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {['JavaScript', 'Node.js', 'AES-256', 'Crypto'].map((t) => (
-                  <span key={t} className="text-[10px] px-2.5 py-0.5 rounded bg-panel border border-line text-ink-soft font-mono">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="pt-4 border-t border-line flex items-center justify-between text-xs text-ink-soft">
-              <span className="flex items-center gap-2">
-                <img
-                  src="https://avatars.githubusercontent.com/u/222502230?v=4"
-                  alt="Dreamstick9"
-                  className="w-5 h-5 rounded-full border border-line"
-                />
-                Built by <strong className="text-ink-mid">Dreamstick (@Dreamstick9)</strong>
-              </span>
-              <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform">→</span>
-            </div>
-          </a>
+          {COMMUNITY_PROJECTS.map((project, i) => (
+            <CommunityProjectCard
+              key={project.repoUrl}
+              project={project}
+              variant="achievers"
+              accent={i % 2 === 0 ? 'violet' : 'brand'}
+            />
+          ))}
         </div>
       </div>
     </main>
