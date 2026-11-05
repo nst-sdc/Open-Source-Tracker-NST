@@ -14,21 +14,17 @@ export const THEME_STORAGE_KEY = 'theme';
 const THEME_CHANGE_EVENT = 'themechange';
 
 function subscribe(onChange: () => void) {
-  const media = window.matchMedia('(prefers-color-scheme: dark)');
-  media.addEventListener('change', onChange);
   window.addEventListener(THEME_CHANGE_EVENT, onChange);
   return () => {
-    media.removeEventListener('change', onChange);
     window.removeEventListener(THEME_CHANGE_EVENT, onChange);
   };
 }
 
-/** The theme actually in effect: an explicit choice if one was made, otherwise
- *  whatever the operating system asks for. */
+// Gets the active theme, defaulting to light
 function readTheme(): Theme {
   const explicit = document.documentElement.dataset.theme;
   if (explicit === 'dark' || explicit === 'light') return explicit;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'light';
 }
 
 /** The server has no way to know, and the markup it sends is the light one, so
