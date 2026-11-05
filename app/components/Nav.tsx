@@ -9,7 +9,6 @@ import { KAIRI_PATH, KAIRI_SHORT_NAME } from '@/lib/kairi';
 // "Join Tracker" is elevated to the nav's primary action button; every other
 // destination stays a plain link.
 const LINKS = [
-  { href: '/',             label: 'Home'         },
   { href: '/contributors', label: 'Contributors' },
   { href: '/repo-activity', label: 'Repo Activity'},
   { href: '/issues',       label: 'Issues'       },
