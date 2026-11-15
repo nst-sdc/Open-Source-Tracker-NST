@@ -1,25 +1,21 @@
 # Kubernetes Deployment for the NST SDC cluster (rancher.nstsdc.org).
-# See docs/DEPLOYMENT.md for the full step-by-step walkthrough.
+# See docs/DEPLOYMENT.md for the full walkthrough.
 #
-# Image is pushed to ghcr.io/nst-sdc/open-source-tracker-nst. Ideally this
-# happens automatically via .github/workflows/build-and-push.yml on every
-# push to main — but that requires the nst-sdc org's Actions "Workflow
-# permissions" to be set to Read and write (org Settings > Actions >
-# General); until an org owner does that, the workflow will fail trying to
-# push, and the image needs to be built+pushed manually instead.
+# The `image:` tag below is written by CI, not by hand: on every push to
+# main, .github/workflows/build-and-push.yml builds the image, pushes it,
+# and commits the new short-SHA tag here. Fleet (deploy/fleet/gitrepo.yaml)
+# watches this folder and applies the commit, so that commit IS the deploy.
 #
-# The `image:` tag below MUST be a specific build (short git SHA), never
-# `latest`. Real incident: this file used to pin `:latest`, a routine
-# `kubectl apply -f 02-deployment.yaml` (to pick up an unrelated replicas/
-# resources change) silently reset the running container back to whatever
-# `:latest` happened to point at, wiping out a deploy that had actually been
-# reviewed and tested. Every manual deploy in this repo's history has used
-# `kubectl set image deployment/opensource-tracker opensource-tracker=<tag>`
-# with the short SHA from `git log`, which does NOT update this file — so
-# after every such deploy, also update the tag below to match, or the next
-# `kubectl apply` here will revert it again. (If build-and-push.yml is ever
-# turned on, note it tags with the *full* `github.sha`, not the short SHA
-# used everywhere manually so far — reconcile that before relying on it.)
+# Consequences:
+#   - Never `:latest`. A specific build, always, so a re-apply of this file
+#     can only ever produce the state git describes. (Real incident: a
+#     `:latest` pin once silently reverted a reviewed deploy.)
+#   - Do not `kubectl set image` by hand; Fleet corrects drift back to this
+#     file within a minute. To roll back, revert the "chore(deploy): roll
+#     out …" commit on main.
+#   - The registry may be GHCR or Docker Hub depending on which the workflow
+#     could push to (see its header comment); the sed in the workflow
+#     recognises both forms.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,7 +38,7 @@ spec:
     spec:
       containers:
         - name: opensource-tracker
-          image: ghcr.io/nst-sdc/open-source-tracker-nst:ae2318c
+          image: docker.io/saiudayagiri/opensource-tracker:b2cbb2c
           ports:
             - containerPort: 3000
           envFrom:

@@ -1,51 +1,123 @@
-name: Build and Push Image to GHCR
+name: Build, push and roll out
 
-# Builds the Docker image and pushes it to GitHub Container Registry on every
-# push to main. Uses the built-in GITHUB_TOKEN (no new secrets needed) — see
-# docs/DEPLOYMENT.md for how to pull this image on the cluster.
+# Every push to main becomes a deploy, with no cluster access needed:
 #
-# This workflow only builds and pushes the image. It does NOT deploy to the
-# cluster — that's a manual `kubectl apply` step for now (see docs/DEPLOYMENT.md
-# for why, and what the eventual Fleet/GitOps upgrade looks like).
+#   1. build the Docker image and push it to GHCR, tagged with the short SHA
+#   2. write that tag into k8s/02-deployment.yaml and commit it back to main
+#   3. Fleet (Rancher's GitOps engine, already on the cluster) notices the
+#      commit and applies k8s/ — see docs/DEPLOYMENT.md "Deploying from GitHub"
+#
+# The commit in step 2 carries "[skip ci]" and only touches k8s/, so it does
+# not start this workflow again (paths-ignore below is the second guard).
+#
+# One-time requirements, both repository/organisation settings, not code:
+#   - Settings → Actions → General → Workflow permissions: "Read and write"
+#     (the org-level setting of the same name must allow it)
+#   - the GHCR package ghcr.io/nst-sdc/open-source-tracker-nst is public, or
+#     the cluster's ghcr-pull-secret is valid (docs/DEPLOYMENT.md step 7)
+#   - OR, to bypass GHCR: repository secrets DOCKERHUB_USERNAME + DOCKERHUB_TOKEN
+#     (a Docker Hub access token) and optionally the variable IMAGE_REPO
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'k8s/**'
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-and-push:
+  build-push-rollout:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
+        with:
+          # The deploy commit below needs to push to main.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Registry: GHCR by default. If the repository has DOCKERHUB_TOKEN (and
+      # optionally the variable IMAGE_REPO, e.g. "saiudayagiri/opensource-tracker"),
+      # push to Docker Hub instead — the escape hatch while the nst-sdc org's
+      # "Workflow permissions" setting blocks GHCR pushes.
+      - name: Choose registry and tag
+        id: image
+        env:
+          HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+          IMAGE_REPO: ${{ vars.IMAGE_REPO }}
+        run: |
+          if [ "$HAS_DOCKERHUB" = "true" ]; then
+            echo "registry=docker.io" >> "$GITHUB_OUTPUT"
+            echo "name=docker.io/${IMAGE_REPO:-${{ github.repository_owner }}/opensource-tracker}" >> "$GITHUB_OUTPUT"
+          else
+            echo "registry=${REGISTRY}" >> "$GITHUB_OUTPUT"
+            echo "name=${REGISTRY}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        if: steps.image.outputs.registry == 'ghcr.io'
+        uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # GHCR/Docker image names must be lowercase, but a repo name can contain
-      # uppercase letters (this one does: OpenSource_NST_Tracker-k8s) — lowercase
-      # it here rather than let the push fail with a confusing error.
-      - name: Compute lowercase image name
-        id: image
-        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Log in to Docker Hub
+        if: steps.image.outputs.registry == 'docker.io'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
+            ${{ steps.image.outputs.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Pin the new tag in the deployment manifest
+        run: |
+          IMAGE="${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}"
+          # Replace the tracker container's image line whichever registry it points at today.
+          sed -i -E "s#^([[:space:]]*image: )(ghcr\.io/nst-sdc/open-source-tracker-nst|docker\.io/[A-Za-z0-9._-]+/opensource-tracker):[^ ]+#\1${IMAGE}#" k8s/02-deployment.yaml
+          grep -nE 'image: (ghcr|docker)\.io' k8s/02-deployment.yaml
+
+      - name: Commit the pin so Fleet rolls it out
+        run: |
+          if git diff --quiet k8s/02-deployment.yaml; then
+            echo "manifest already pins this tag; nothing to roll out"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/02-deployment.yaml
+          git commit -m "chore(deploy): roll out ${{ steps.image.outputs.tag }} [skip ci]" \
+            -m "Image ${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }} built from $(git rev-parse HEAD~0) by run ${{ github.run_id }}."
+          git push origin HEAD:main
+          {
+            echo "## Rolled out"
+            echo
+            echo "Image: \`${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}\`"
+            echo
+            echo "Fleet applies the pinned manifest within about a minute. Check: \`kubectl -n opensource-tracker rollout status deployment/opensource-tracker\` or https://oss-tracker.nstsdc.org/api/health"
+          } >> "$GITHUB_STEP_SUMMARY"

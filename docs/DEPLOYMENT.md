@@ -179,9 +179,70 @@ kubectl -n opensource-tracker exec deploy/opensource-tracker -- cat /sys/fs/cgro
 
 For anything cluster-specific (Traefik quirks, DNS propagation, `kubectl` connectivity, general "this cluster-wide thing is broken"), the cluster's own docs are the source of truth and already cover far more ground than this file should try to duplicate: `nst-sdc/nst-cluster-docs`, especially `reference/tips.md` and `reference/troubleshooting.md`. For anything about this **app's** behavior specifically (caching, rate limits, the admin system), see [ARCHITECTURE.md](./ARCHITECTURE.md) and [../DOCUMENTATION.md](../DOCUMENTATION.md).
 
-## Once this is working: the next step is Fleet, not more manual deploys
+## Deploying from GitHub (Fleet)
 
-Everything above is a **manual** deploy — you `kubectl apply` by hand each time you want the cluster to pick up a new image. That's deliberately the starting point rather than the end state: it's the smallest number of new concepts to learn on day one. The cluster already runs **Fleet** (Rancher's GitOps engine), which can watch this repo and auto-apply `k8s/` on every push — turning step 6 above into "just push to main". Once the manual path above is working end-to-end, wiring up Fleet is a good next project for whoever owns this deployment — see `nst-sdc/nst-cluster-docs`' `guide/fleet.md`.
+Since November 2026 a push to `main` is a deploy. Nobody needs cluster access for a routine release.
+
+How it works:
+
+1. `.github/workflows/build-and-push.yml` builds the image, pushes it (GHCR by default; Docker Hub when the repository has `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets), then **commits the new tag into `k8s/02-deployment.yaml`** on `main` with `[skip ci]`.
+2. **Fleet**, Rancher's GitOps engine already running on the cluster, watches `k8s/` on `main` (the `GitRepo` in `deploy/fleet/gitrepo.yaml`) and applies whatever changed, within a minute.
+3. Fleet also corrects drift: a manual `kubectl set image` is reverted to what git says. The manifest is the single source of truth, which is what the warning at the top of `02-deployment.yaml` always wanted.
+
+One-time setup (needs cluster access once, and a repository admin once):
+
+```bash
+# on nst-n1 — register the GitRepo
+sudo kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/deploy/fleet/gitrepo.yaml
+sudo kubectl -n fleet-default get gitrepo opensource-tracker -w     # READY when the first sync lands
+```
+
+On GitHub: Settings → Actions → General → Workflow permissions → **Read and write permissions** (and the same at organisation level if it is restricted there). If GHCR pushes still fail, add the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token) and the workflow pushes there instead; make that Docker Hub repository public so nodes pull without a secret.
+
+Day to day:
+
+- **Release:** merge to `main`. Watch Actions → "Build, push and roll out", then `kubectl -n opensource-tracker rollout status deployment/opensource-tracker`, or just hit `/api/health`.
+- **Roll back:** `git revert` the `chore(deploy): roll out …` commit on `main` (or edit the tag in `02-deployment.yaml`). Fleet applies it. `kubectl rollout undo` also works but Fleet will re-apply git on its next sync, so change git.
+- **Pause GitOps** (for example during an incident): `kubectl -n fleet-default patch gitrepo opensource-tracker --type=merge -p '{"spec":{"paused":true}}'`; set `false` to resume.
+- **Change replicas, resources, env:** edit the manifest, open a PR, merge. That is the deploy.
+
+Anything under `deploy/` is applied by hand exactly once and is deliberately outside Fleet's path.
+
+## In-cluster database (Valkey behind an Upstash-compatible proxy)
+
+The app originally used a hosted Upstash Redis over its REST API. In November 2026 that connection failed from inside the cluster and every page fell back to rebuilding the leaderboard from GitHub on each request — 60-second loads. The replacement runs inside the cluster, needs no account, has no daily quota, and answers in about a millisecond:
+
+- `k8s/07-valkey.yaml` — Valkey (open-source Redis), one pod, append-only persistence on a local-path volume, nightly RDB backups to a second volume (14 kept).
+- `k8s/08-kv-rest.yaml` — `serverless-redis-http`, which speaks the exact Upstash REST protocol `lib/kv.ts` already uses. **No application code changes.** Only two values in `opensource-tracker-secrets` change.
+
+Cut-over, on nst-n1, about ten minutes:
+
+```bash
+cd $(mktemp -d) && git clone -q --depth 1 https://github.com/nst-sdc/Open-Source-Tracker-NST.git . 
+
+# 1. token for the proxy (not in git), then the store + proxy (Fleet applies these too once merged)
+sudo kubectl -n opensource-tracker create secret generic kv-rest-secret --from-literal=token="$(openssl rand -hex 32)"
+sudo kubectl apply -f k8s/07-valkey.yaml -f k8s/08-kv-rest.yaml
+sudo kubectl -n opensource-tracker rollout status deploy/valkey && sudo kubectl -n opensource-tracker rollout status deploy/kv-rest
+
+# 2. copy every key from Upstash (TTLs preserved); prints a verification table at the end
+sudo kubectl -n opensource-tracker create configmap migrate-kv --from-file=scripts/migrate-kv.mjs
+sudo kubectl apply -f deploy/jobs/migrate-kv.yaml
+sudo kubectl -n opensource-tracker logs -f job/migrate-kv
+
+# 3. point the app at the proxy and restart
+TOKEN=$(sudo kubectl -n opensource-tracker get secret kv-rest-secret -o jsonpath='{.data.token}' | base64 -d)
+sudo kubectl -n opensource-tracker patch secret opensource-tracker-secrets --type=merge -p "$(printf '{"stringData":{"KV_REST_API_URL":"http://kv-rest.opensource-tracker.svc.cluster.local","KV_REST_API_TOKEN":"%s","KV_REST_API_READ_ONLY_TOKEN":"%s"}}' "$TOKEN" "$TOKEN")"
+sudo kubectl -n opensource-tracker rollout restart deployment/opensource-tracker
+sudo kubectl -n opensource-tracker rollout status deployment/opensource-tracker
+curl -s -o /dev/null -w "%{time_total}s\n" https://oss-tracker.nstsdc.org/contributors   # expect ~2 s, not 60
+```
+
+If the migration Job cannot reach Upstash (which is what broke in the first place), the admin data can instead be re-seeded: the roster, flags, achievers and events also live in `data/*.json` and are loaded on first read when the key is absent; the summary caches are rebuilt by the refresh CronJob within fifteen minutes. Join requests and course progress have no file fallback, so copy those by hand if the migration cannot run.
+
+Going back is the same three steps with the old values in the secret; the Upstash data is untouched by the migration.
+
+**Backups.** `valkey-backup` runs nightly at 02:30 UTC into the `valkey-backups` volume. To restore: scale `valkey` to 0, copy the chosen `dump-YYYY-MM-DD.rdb` to `/data/dump.rdb` on the data volume (both volumes are local-path directories under `/var/lib/rancher/k3s/storage/` on the node the pod runs on), delete the append-only file, scale back to 1.
 
 ## Tearing it down
 

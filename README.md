@@ -12,15 +12,11 @@ This exact codebase runs in two independent places:
 |---|---|
 | **URL** | `oss-tracker.nstsdc.org` |
 | **Owner repo** |  `nst-sdc/Open-Source-Tracker-NST` |
-| **Database** | A separate, dedicated Upstash Redis — never shared with production |
+| **Database** | Valkey inside the cluster, behind an Upstash-compatible REST proxy (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
 | **Refresh trigger** | A native Kubernetes CronJob (15 min) — GitHub Actions' own scheduled trigger doesn't fire on this repo (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
-| **Deploys on push?** | No — see below |
+| **Deploys on push?** | Yes — GitHub Actions builds the image and pins its tag in `k8s/`; Fleet applies it (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
 
-**Important: pushing to `main` in this repo does not automatically deploy.** Two separate steps are needed for a change to actually go live here:
-1. Someone builds and pushes a new Docker image (normally automatic via `.github/workflows/build-and-push.yml`, but this currently requires manual `docker build`/`docker push` — see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for why and how).
-2. Someone tells the cluster to actually pull it: `kubectl -n opensource-tracker rollout restart deployment/opensource-tracker`.
-
-If something goes live and turns out to be broken, `kubectl rollout undo deployment/opensource-tracker` rolls back to the previous image immediately.
+**Pushing to `main` deploys.** The "Build, push and roll out" workflow builds the image, pushes it, and commits the new tag into `k8s/02-deployment.yaml`; Fleet on the cluster applies that commit within a minute. To roll back, revert the `chore(deploy): roll out …` commit. To pause deploys during an incident, pause the Fleet GitRepo. Details, including the one-time setup, are in [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md).
 
 ## Contributing
 

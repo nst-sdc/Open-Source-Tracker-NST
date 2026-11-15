@@ -1,0 +1,77 @@
+# Upstash-compatible REST front for Valkey (07-valkey.yaml).
+#
+# lib/kv.ts speaks the Upstash REST protocol: POST / with a JSON array
+# command and a Bearer token, answer {"result": ...}. serverless-redis-http
+# (SRH, github.com/hiett/serverless-redis-http, MIT) implements exactly that
+# protocol over any Redis, so the application code is untouched. Point the
+# app at this Service by changing two values in opensource-tracker-secrets:
+#
+#   KV_REST_API_URL             http://kv-rest.opensource-tracker.svc.cluster.local
+#   KV_REST_API_TOKEN           the value of kv-rest-secret/token (below)
+#   KV_REST_API_READ_ONLY_TOKEN the same value (the app does not distinguish)
+#
+# then restart the deployment. docs/DEPLOYMENT.md "In-cluster database" has
+# the full cut-over including the migration of existing keys.
+#
+# The token Secret is NOT in git. Create it once:
+#   kubectl -n opensource-tracker create secret generic kv-rest-secret --from-literal=token="$(openssl rand -hex 32)"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kv-rest
+  namespace: opensource-tracker
+  labels:
+    app: kv-rest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kv-rest
+  template:
+    metadata:
+      labels:
+        app: kv-rest
+    spec:
+      containers:
+        - name: srh
+          image: hiett/serverless-redis-http:0.0.10
+          env:
+            - name: SRH_MODE
+              value: env
+            - name: SRH_CONNECTION_STRING
+              value: redis://valkey.opensource-tracker.svc.cluster.local:6379
+            - name: SRH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kv-rest-secret
+                  key: token
+            - name: SRH_PORT
+              value: '8079'
+          ports:
+            - containerPort: 8079
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kv-rest
+  namespace: opensource-tracker
+spec:
+  selector:
+    app: kv-rest
+  ports:
+    - port: 80
+      targetPort: http
