@@ -197,7 +197,12 @@ sudo kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Trac
 sudo kubectl -n fleet-default get gitrepo opensource-tracker -w     # READY when the first sync lands
 ```
 
-On GitHub: Settings → Actions → General → Workflow permissions → **Read and write permissions** (and the same at organisation level if it is restricted there). If GHCR pushes still fail, add the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token) and the workflow pushes there instead; make that Docker Hub repository public so nodes pull without a secret.
+On GitHub, pick one of two ways for the workflow to push an image:
+
+- **Docker Hub (what production uses today, recommended).** Repository Settings → Secrets and variables → Actions → add `DOCKERHUB_USERNAME` (the Docker Hub account) and `DOCKERHUB_TOKEN` (an access token from hub.docker.com → Account settings → Personal access tokens, with Read & Write). The workflow then pushes `docker.io/<DOCKERHUB_USERNAME>/opensource-tracker`; set the repository variable `IMAGE_REPO` only if the image should live somewhere else. Keep that Docker Hub repository public so nodes pull without a secret.
+- **GHCR.** Organisation and repository Settings → Actions → General → Workflow permissions → **Read and write permissions**, and on the package page (Organisation → Packages → `open-source-tracker-nst` → Package settings → Manage Actions access) grant this repository the **Write** role. Without that the push fails with `403 Forbidden`, and the cluster additionally needs a valid `ghcr-pull-secret` (step 7 above) because the package is private.
+
+Then run the workflow once by hand: Actions → "Build, push and roll out" → Run workflow, and confirm a `chore(deploy): roll out …` commit appears on `main`.
 
 Day to day:
 
