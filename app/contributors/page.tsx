@@ -21,6 +21,8 @@ import { readOrgIndex, contributorsForOrg } from "@/lib/org-index";
 import { getRecognitions } from "@/lib/recognitions";
 import { FilterBar } from "./FilterBar";
 import { ContributorGrid } from "./ContributorGrid";
+import { BootstrapBanner } from "./BootstrapBanner";
+import { isLocalAutoRefreshEnabled } from "@/lib/local-auto-refresh";
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -725,6 +727,14 @@ export default async function ContributorsPage({
       )}
 
       {/* Filter bar with integrated organization context */}
+      {isLocalAutoRefreshEnabled() && (
+        <BootstrapBanner
+          // A fetched profile carries GitHub's numeric avatar URL (/u/<id>);
+          // the zero-PR placeholder for a not-yet-fetched student does not.
+          populated={allSummaries.filter((s) => /\/u\/\d+/.test(s.profile.avatar_url)).length}
+          total={students.length}
+        />
+      )}
       <Suspense fallback={<FilterBarSkeleton />}>
         <FilterBar
           orgContext={
