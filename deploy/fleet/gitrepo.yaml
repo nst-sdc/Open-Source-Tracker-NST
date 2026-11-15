@@ -1,0 +1,37 @@
+# Fleet GitRepo: tells the cluster to watch this repository's k8s/ folder
+# and apply whatever is there. Applied ONCE, by hand, on nst-n1:
+#
+#   sudo kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/deploy/fleet/gitrepo.yaml
+#
+# After that, every commit to main that changes k8s/ is a deploy, including
+# the image-tag commit that .github/workflows/build-and-push.yml makes after
+# each build. Nobody needs kubectl for a routine release again.
+#
+# This file lives under deploy/, not k8s/, on purpose: Fleet applies
+# everything under the paths it watches, and a GitRepo that applies itself
+# is confusing. deploy/ holds things a human applies once.
+#
+# Watch it: sudo kubectl -n fleet-default get gitrepo opensource-tracker
+# Pause it: sudo kubectl -n fleet-default patch gitrepo opensource-tracker --type=merge -p '{"spec":{"paused":true}}'
+apiVersion: fleet.cattle.io/v1alpha1
+kind: GitRepo
+metadata:
+  name: opensource-tracker
+  namespace: fleet-default
+spec:
+  repo: https://github.com/nst-sdc/Open-Source-Tracker-NST
+  branch: main
+  paths:
+    - k8s
+  # Fleet polls the repo on this interval (seconds). 60 keeps GitHub happy
+  # and still makes a deploy land within a minute of the commit.
+  pollingInterval: 60s
+  # Fleet "corrects drift": a manual `kubectl set image` on the deployment
+  # would be reverted to what git says. That is the point of GitOps, and it
+  # is why 02-deployment.yaml must always pin the tag that should be live.
+  correctDrift:
+    enabled: true
+  targets:
+    - clusterSelector:
+        matchLabels:
+          management.cattle.io/cluster-display-name: local

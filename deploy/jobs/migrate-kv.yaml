@@ -1,0 +1,54 @@
+# One-off Job: copy every key from Upstash to the in-cluster kv-rest.
+# Lives under deploy/ (applied by hand), not k8s/ (applied by Fleet), so it
+# runs exactly once. Full procedure in docs/DEPLOYMENT.md "In-cluster
+# database"; the short version, on nst-n1:
+#
+#   kubectl -n opensource-tracker create configmap migrate-kv --from-file=scripts/migrate-kv.mjs
+#   kubectl apply -f deploy/jobs/migrate-kv.yaml
+#   kubectl -n opensource-tracker logs -f job/migrate-kv
+#
+# SRC_* come from the existing app secret (still pointing at Upstash at this
+# point); DST_* from kv-rest-secret. Set DRY_RUN to "1" first if you want a
+# key count before copying.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-kv
+  namespace: opensource-tracker
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: node:20-alpine
+          command: [node, /work/migrate-kv.mjs]
+          env:
+            - name: DRY_RUN
+              value: '0'
+            - name: SRC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: opensource-tracker-secrets
+                  key: KV_REST_API_URL
+            - name: SRC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: opensource-tracker-secrets
+                  key: KV_REST_API_TOKEN
+            - name: DST_URL
+              value: http://kv-rest.opensource-tracker.svc.cluster.local
+            - name: DST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kv-rest-secret
+                  key: token
+          volumeMounts:
+            - name: script
+              mountPath: /work
+      volumes:
+        - name: script
+          configMap:
+            name: migrate-kv

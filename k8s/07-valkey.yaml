@@ -1,0 +1,154 @@
+# In-cluster key-value store, replacing the hosted Upstash database.
+#
+# Why: every page read its leaderboard summary (a ~3 MB JSON blob) from
+# Upstash over the internet on each request, and when that connection broke
+# the site fell back to rebuilding the leaderboard from GitHub on every page
+# load (minutes). Valkey here answers in about a millisecond from inside the
+# cluster, has no daily command quota, and cannot be "paused" by a free tier.
+#
+# Valkey is the open-source continuation of Redis (same protocol). The app
+# does not talk to it directly: 08-kv-rest.yaml puts an Upstash-compatible
+# REST proxy in front, so lib/kv.ts needs no changes — only the two secret
+# values KV_REST_API_URL and KV_REST_API_TOKEN change.
+#
+# Storage is a local-path volume (k3s' built-in provisioner), which ties the
+# pod to one node. For this data that is acceptable: the big keys are caches
+# the refresh job rebuilds, and the small admin keys (roster, flags, join
+# requests, achievers, events, course progress) are backed up nightly by
+# the CronJob at the bottom of this file into a second volume.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: valkey-data
+  namespace: opensource-tracker
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: valkey-backups
+  namespace: opensource-tracker
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: opensource-tracker
+  labels:
+    app: valkey
+spec:
+  replicas: 1
+  # One pod, one volume: never run two at once against the same data dir.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.1.11-alpine
+          args:
+            # Append-only log plus periodic snapshots: a crash loses at most
+            # a second of writes, and a snapshot exists for the backup job.
+            - --appendonly
+            - 'yes'
+            - --appendfsync
+            - everysec
+            - --save
+            - '300 1'
+            - --maxmemory
+            - 512mb
+            - --maxmemory-policy
+            - noeviction
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: [valkey-cli, ping]
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: [valkey-cli, ping]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 640Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: valkey-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: opensource-tracker
+spec:
+  selector:
+    app: valkey
+  ports:
+    - port: 6379
+      targetPort: redis
+---
+# Nightly backup: copies the latest snapshot to the backups volume, keeping
+# 14 days. Restore = stop valkey, copy a dump.rdb back to /data, start it.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: valkey-backup
+  namespace: opensource-tracker
+spec:
+  schedule: '30 2 * * *'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 600
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: valkey/valkey:8.1.11-alpine
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  valkey-cli -h valkey --rdb /backups/dump-$(date +%F).rdb
+                  ls -1t /backups/dump-*.rdb | tail -n +15 | xargs -r rm -f
+                  ls -lh /backups | tail -5
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: valkey-backups

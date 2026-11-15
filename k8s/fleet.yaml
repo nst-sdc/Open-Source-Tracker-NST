@@ -1,0 +1,4 @@
+# Fleet options for this folder (read by the GitRepo in deploy/fleet/).
+# Every manifest here names its namespace explicitly; this just makes the
+# default match so nothing can land in "default" by accident.
+defaultNamespace: opensource-tracker
