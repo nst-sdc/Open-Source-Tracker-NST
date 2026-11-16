@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { vi } from 'vitest';
 vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvRead: vi.fn(async () => ({ ok: true, value: null })), kvSet: vi.fn(async () => true), kvDel: vi.fn(async () => {}) }));
 vi.mock('./profile-cache', () => ({ readProfileCache: vi.fn(async () => null) }));
-import { indexStudentContributions, orgIndexLooksIncomplete, rebuildOrgIndex, readOrgIndexForWrite, type OrgIndex } from './org-index';
+import { indexStudentContributions, orgIndexLooksIncomplete, studentsMissingFromIndex, rebuildOrgIndex, readOrgIndexForWrite, type OrgIndex } from './org-index';
 import * as kv from './kv';
 
 const pr = (repo: string, n: number) => ({
@@ -84,15 +84,24 @@ describe('org index', () => {
 describe('org index self-healing', () => {
   const sum = (login: string, mergedPRs: number) => ({ profile: { login }, mergedPRs });
 
-  it('calls an index incomplete when it misses students who have merged PRs', () => {
+  it('names every student with counted merged PRs who is missing from the index', () => {
     const index: OrgIndex = {};
     indexStudentContributions(index, 'alice', { prs: [pr('apache/kafka', 1)] });
     const summaries = [sum('Alice', 1), sum('bob', 3), sum('carol', 2), sum('dave', 0)];
+    expect(studentsMissingFromIndex(index, summaries)).toEqual(['bob', 'carol']);
     expect(orgIndexLooksIncomplete(index, summaries)).toBe(true);
     indexStudentContributions(index, 'bob', { prs: [pr('apache/spark', 2)] });
     indexStudentContributions(index, 'carol', { prs: [pr('kubeflow/kubeflow', 3)] });
     expect(orgIndexLooksIncomplete(index, summaries)).toBe(false);
     expect(orgIndexLooksIncomplete({}, [sum('nobody', 0)])).toBe(false);
+  });
+
+  it('applies the summary\'s own exclusion rule when given one', () => {
+    const index: OrgIndex = {};
+    indexStudentContributions(index, 'alice', { prs: [pr('apache/kafka', 1), pr('tiny/repo', 2)] }, {
+      excludesPR: (repo) => repo === 'tiny/repo',
+    });
+    expect(Object.keys(index)).toEqual(['apache']);
   });
 
   it('reports a failed read so the caller does not write an empty index back', async () => {
@@ -109,10 +118,15 @@ describe('org index self-healing', () => {
       alice: { prs: [pr('apache/kafka', 1), pr('apache/spark', 2)] },
       bob: { prs: [pr('grafana/grafana', 3)] },
     };
+    let flaky = 0;
     const index = await rebuildOrgIndex(
       [{ github: 'alice' }, { github: 'bob' }, { github: 'uncached' }],
-      {},
-      async (login) => (profiles[login] as never) ?? null,
+      () => ({}),
+      async (login) => {
+        // First read of bob fails; the retry must save him.
+        if (login === 'bob' && flaky++ === 0) throw new Error('burst');
+        return (profiles[login] as never) ?? null;
+      },
     );
     expect(index?.apache.contributors).toEqual({ alice: 2 });
     expect(index?.grafana.contributors).toEqual({ bob: 1 });
