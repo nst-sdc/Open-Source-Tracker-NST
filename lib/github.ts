@@ -1,4 +1,4 @@
-import { getStudentsKV, removeStudent } from "./kv-students";
+import { getStudentsKV, applyRosterUpdates, type RosterUpdate, type Student } from "./kv-students";
 import {
   getExceptionRepoSetForUser,
   getOwnRepoExceptions,
@@ -285,6 +285,9 @@ export interface StudentPR {
 }
 
 export interface GitHubUser {
+  /** Numeric id; stable across renames. Optional only because old cache
+   *  entries and the zero-PR placeholders do not carry one. */
+  id?: number;
   login: string;
   avatar_url: string;
   html_url: string;
@@ -300,11 +303,7 @@ export interface GitHubUser {
   created_at: string;
 }
 
-export interface Student {
-  github: string;
-  year?: "1st year" | "2nd year" | "3rd year" | "4th year";
-  campus?: "Rishihood" | "ADYPU" | "SVYASA";
-}
+export type { Student } from "./kv-students";
 
 export interface StudentSummary {
   organizations: string[];
@@ -378,6 +377,27 @@ export async function getStudentProfile(
     );
   }
   return res.json();
+}
+
+/**
+ * Looks a user up by numeric id. This is how a renamed account is found
+ * again: /users/<old-login> 404s, /user/<id> answers with the new login.
+ * null means GitHub has no such account any more (deleted or suspended).
+ */
+export async function getGitHubUserById(
+  id: number,
+  token?: string,
+): Promise<GitHubUser | null> {
+  const headers = await getGitHubHeaders(token);
+  const res = await fetch(`https://api.github.com/user/${id}`, {
+    headers,
+    cache: "no-store",
+  });
+  if (res.ok) return res.json();
+  if (res.status === 404) return null;
+  if (res.status === 401 && token) throw new InvalidTokenError();
+  if (res.status === 403 || res.status === 429) throw new GitHubRateLimitError();
+  throw new Error(`GitHub API returned status ${res.status}: ${res.statusText}`);
 }
 
 /** Fetches missing repository metadata from GitHub and updates the repo cache */
@@ -1367,14 +1387,12 @@ export class NotFoundError extends Error {
 export async function refreshStudentCache(
   username: string,
   token?: string,
-): Promise<void> {
+): Promise<GitHubUser> {
   console.log(`Refreshing cache for user: ${username}`);
   const profile = await getStudentProfile(username, true, token);
 
   if (!profile) {
-    console.warn(
-      `Profile not found (404) for user: ${username}. It will be removed from tracking.`,
-    );
+    // A rename or a deleted account; updateStaleProfiles resolves which.
     throw new NotFoundError(`Profile not found for user: ${username}`);
   }
 
@@ -1398,6 +1416,7 @@ export async function refreshStudentCache(
   }
 
   await writeProfileCache(username, profile, prs, issues);
+  return profile;
 }
 
 // Each student refresh costs 2 search-API calls (PRs + issues). Staying at
@@ -1446,8 +1465,9 @@ export const FAIL_STATE_KEY = "refresh_fail_state";
 // other never-cached student behind them in the list. This is not a
 // cooldown or a strike count: one attempt, success or failure, is enough to
 // rotate a student into the normal round-robin cycle. They keep getting
-// retried like everyone else — nothing here ever removes a student. Only a
-// confirmed-invalid username (404, see NotFoundError below) is ever removed.
+// retried like everyone else — nothing here ever removes a student. A 404
+// (NotFoundError below) is resolved by GitHub id to the account's new login,
+// or, failing that, the student is marked unresolved and stays on the roster.
 export type FailState = Record<string, string>; // username (lower) -> lastAttempt ISO timestamp
 
 /**
@@ -1462,6 +1482,30 @@ function computeAutoBatchSize(tokenCount: number): number {
     1,
     Math.min(MAX_TOTAL_BATCH, tokenCount * PER_TOKEN_CANDIDATE_POOL),
   );
+}
+
+/**
+ * A login 404ed. Work out what happened from the id we know for it, taken
+ * from the roster or from the last successful profile fetch.
+ */
+async function resolveMissingLogin(
+  username: string,
+  student: Student | undefined,
+  token?: string,
+): Promise<RosterUpdate> {
+  let id = student?.githubId;
+  if (typeof id !== "number") {
+    const cached = await readProfileCache(username).catch(() => null);
+    if (typeof cached?.profile.id === "number") id = cached.profile.id;
+  }
+  if (typeof id !== "number") return { type: "unresolved", github: username };
+  const user = await getGitHubUserById(id, token);
+  if (!user) return { type: "unresolved", github: username };
+  if (user.login.toLowerCase() === username.toLowerCase()) {
+    // Same login after all; the 404 was GitHub being briefly inconsistent.
+    return { type: "id", github: username, githubId: id };
+  }
+  return { type: "rename", github: username, newLogin: user.login, githubId: id };
 }
 
 export async function updateStaleProfiles(
@@ -1610,6 +1654,13 @@ export async function updateStaleProfiles(
   });
 
   const tickStart = Date.now();
+  // What this tick learned about the roster (ids, renames, vanished
+  // accounts), applied in one write at the end so parallel workers do not
+  // race each other on students_list.
+  const rosterUpdates: RosterUpdate[] = [];
+  const studentByLogin = new Map(
+    students.map((st) => [st.github.toLowerCase(), st] as const),
+  );
 
   await Promise.all(
     groups.map(async (group, groupIndex) => {
@@ -1623,8 +1674,15 @@ export async function updateStaleProfiles(
         }
         const lower = username.toLowerCase();
         try {
-          await refreshStudentCache(username, token);
+          const profile = await refreshStudentCache(username, token);
           updatedUsernames.push(username);
+          const student = studentByLogin.get(lower);
+          if (
+            typeof profile.id === "number" &&
+            (student?.githubId !== profile.id || student?.unresolvedSince)
+          ) {
+            rosterUpdates.push({ type: "id", github: username, githubId: profile.id });
+          }
           if (failState[lower]) {
             delete failState[lower];
             failStateChanged = true;
@@ -1637,14 +1695,39 @@ export async function updateStaleProfiles(
               "name" in err &&
               (err as { name: unknown }).name === "NotFoundError")
           ) {
-            console.error(
-              `Removing invalid GitHub ID from tracking: ${username}`,
-            );
-            await removeStudent(username);
-            // We consider it "updated" so it gets removed from the refresh queue
-            updatedUsernames.push(username);
-            if (failState[lower]) {
-              delete failState[lower];
+            // The login is gone from GitHub. Nobody leaves the roster for
+            // that: find the account by id (a rename) or mark it unresolved.
+            try {
+              const update = await resolveMissingLogin(
+                username,
+                studentByLogin.get(lower),
+                token,
+              );
+              rosterUpdates.push(update);
+              if (update.type === "rename") {
+                console.warn(
+                  `${username} is now @${update.newLogin} on GitHub; roster updated.`,
+                );
+                // Fill the new login's cache now, so the student does not
+                // show as a placeholder until the next tick reaches them.
+                await refreshStudentCache(update.newLogin, token).catch(() => undefined);
+              } else {
+                console.warn(
+                  `${username} cannot be found on GitHub (deleted or suspended); kept on the roster as unresolved.`,
+                );
+              }
+              // Processed either way: drop from the refresh queue and the
+              // never-cached lane so the rest of the roster gets its turn.
+              updatedUsernames.push(username);
+              if (failState[lower]) {
+                delete failState[lower];
+                failStateChanged = true;
+              }
+            } catch (resolveErr) {
+              // Rate limit or network trouble while resolving: decide nothing
+              // this tick, retry like any other failure.
+              console.error(`Could not resolve ${username} by id this tick:`, resolveErr);
+              failState[lower] = new Date().toISOString();
               failStateChanged = true;
             }
           } else if (err instanceof InvalidTokenError) {
@@ -1666,8 +1749,8 @@ export async function updateStaleProfiles(
             // Do NOT write a fallback cache on Rate Limit or network errors.
             // Record that an attempt happened so this student rotates into
             // the normal round-robin cycle instead of being retried first on
-            // every tick — the student is never removed for this; only a
-            // confirmed-invalid username (NotFoundError, above) ever is.
+            // every tick — the student is never removed for this, or for
+            // anything else the loop sees (NotFoundError above included).
             failState[lower] = new Date().toISOString();
             failStateChanged = true;
           }
@@ -1678,6 +1761,14 @@ export async function updateStaleProfiles(
       }
     }),
   );
+
+  if (rosterUpdates.length > 0) {
+    try {
+      await applyRosterUpdates(rosterUpdates);
+    } catch (err) {
+      console.error("Failed to apply roster updates after stale processing:", err);
+    }
+  }
 
   // 5. Update the queue in KV by removing the successfully processed users
   if (validQueue.length > 0) {

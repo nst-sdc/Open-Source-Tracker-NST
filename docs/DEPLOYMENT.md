@@ -258,3 +258,16 @@ kubectl delete namespace opensource-tracker
 ```
 
 This is fully reversible in the other direction too — nothing about deleting the namespace touches this repo, the GHCR image, or your Upstash database, so redoing the whole walkthrough from step 4 onward brings it right back. Good to know if you're experimenting and want a clean slate, or tearing down a test deploy once you've confirmed everything works.
+
+## Restoring dropped students
+
+Until November 2026 the refresh loop removed a student from the roster whenever GitHub answered 404 for their login, which is what a rename or a deleted account looks like. The live roster fell from about 1,900 to about 1,730 that way. The loop now resolves a 404 by the account's numeric id and renames the roster entry, or keeps the student as "unresolved" (still counted, flagged in the admin Students tab). To bring back the people already lost, run the restore job once; it rebuilds the missing entries from the summary and profile caches, asks GitHub what became of each account, and adds them back. Nothing is removed.
+
+```bash
+cd ~/Open-Source-Tracker-NST && git pull
+sudo kubectl -n opensource-tracker create configmap restore-roster --from-file=scripts/restore-roster.mjs --dry-run=client -o yaml | sudo kubectl apply -f -
+sudo kubectl apply -f deploy/jobs/restore-roster.yaml
+sudo kubectl -n opensource-tracker logs -f job/restore-roster
+```
+
+The log ends with "roster now has N students". The next refresh tick rebuilds the summary cache; the Students tile on `/contributors` and the home page reads the roster directly, so it updates at once. To preview without writing, edit `DRY_RUN` to `"1"` in the Job first. Outside the cluster the same script runs against any Upstash-compatible store with `KV_REST_API_URL=... KV_REST_API_TOKEN=... GITHUB_TOKEN=... node scripts/restore-roster.mjs`; it has nothing to do on a checkout using the disk fallback, where the roster is seeded from `data/students.json`.

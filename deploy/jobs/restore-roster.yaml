@@ -1,0 +1,39 @@
+# One-off Job: add back the students the refresh loop dropped on GitHub 404s
+# (renames and deleted accounts). Lives under deploy/ (applied by hand), not
+# k8s/ (applied by Fleet). On nst-n1:
+#
+#   kubectl -n opensource-tracker create configmap restore-roster --from-file=scripts/restore-roster.mjs
+#   kubectl apply -f deploy/jobs/restore-roster.yaml
+#   kubectl -n opensource-tracker logs -f job/restore-roster
+#
+# Set DRY_RUN to "1" first to see who would come back without writing. Reads
+# the KV and GitHub credentials from the app's own secret, so it works
+# against Upstash and the in-cluster kv-rest alike.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restore-roster
+  namespace: opensource-tracker
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: restore
+          image: node:20-alpine
+          command: [node, /work/restore-roster.mjs]
+          env:
+            - name: DRY_RUN
+              value: '0'
+          envFrom:
+            - secretRef:
+                name: opensource-tracker-secrets
+          volumeMounts:
+            - name: script
+              mountPath: /work
+      volumes:
+        - name: script
+          configMap:
+            name: restore-roster
