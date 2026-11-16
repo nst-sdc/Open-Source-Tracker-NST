@@ -271,3 +271,18 @@ sudo kubectl -n opensource-tracker logs -f job/restore-roster
 ```
 
 The log ends with "roster now has N students". The next refresh tick rebuilds the summary cache; the Students tile on `/contributors` and the home page reads the roster directly, so it updates at once. To preview without writing, edit `DRY_RUN` to `"1"` in the Job first. Outside the cluster the same script runs against any Upstash-compatible store with `KV_REST_API_URL=... KV_REST_API_TOKEN=... GITHUB_TOKEN=... node scripts/restore-roster.mjs`; it has nothing to do on a checkout using the disk fallback, where the roster is seeded from `data/students.json`.
+
+## Adding students in bulk
+
+The admin dashboard adds one student at a time. For a batch, put them in a text file, one per line as `username, year, campus` (year `1st year`..`4th year` or just `1`..`4`; campus `Rishihood`, `ADYPU` or `SVYASA`; both optional; `@` and full GitHub URLs are accepted), then on nst-n1:
+
+```bash
+cd ~/Open-Source-Tracker-NST && git pull
+nano new-students.txt    # paste the list, save
+sudo kubectl -n opensource-tracker create configmap add-students --from-file=add-students.mjs=scripts/add-students.mjs --from-file=students.txt=new-students.txt --dry-run=client -o yaml | sudo kubectl apply -f -
+sudo kubectl -n opensource-tracker delete job add-students --ignore-not-found
+sudo kubectl apply -f deploy/jobs/add-students.yaml
+sudo kubectl -n opensource-tracker logs -f job/add-students
+```
+
+Each new name is looked up on GitHub so the entry carries the numeric id; a name GitHub does not know is still added, marked "account not found" in the admin tab, so a typo is visible rather than silently dropped. Names already tracked are skipped. The log ends with "roster now has N students". Also append the same students to `data/students.json` in a pull request so a fresh local checkout has them.

@@ -1,0 +1,43 @@
+# Bulk-add students to the live roster. Applied by hand (deploy/, not k8s/).
+# On nst-n1, with the list in new-students.txt (one "username, year, campus"
+# per line; see scripts/add-students.mjs for the accepted shapes):
+#
+#   kubectl -n opensource-tracker create configmap add-students \
+#     --from-file=add-students.mjs=scripts/add-students.mjs --from-file=students.txt=new-students.txt \
+#     --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl -n opensource-tracker delete job add-students --ignore-not-found
+#   kubectl apply -f deploy/jobs/add-students.yaml
+#   kubectl -n opensource-tracker logs -f job/add-students
+#
+# Set DRY_RUN to "1" to preview. Reads KV and GitHub credentials from the
+# app's own secret.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: add-students
+  namespace: opensource-tracker
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: add
+          image: node:20-alpine
+          command: [node, /work/add-students.mjs]
+          env:
+            - name: DRY_RUN
+              value: '0'
+            - name: STUDENTS_FILE
+              value: /work/students.txt
+          envFrom:
+            - secretRef:
+                name: opensource-tracker-secrets
+          volumeMounts:
+            - name: work
+              mountPath: /work
+      volumes:
+        - name: work
+          configMap:
+            name: add-students
