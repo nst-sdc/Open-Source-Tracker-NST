@@ -38,7 +38,7 @@ spec:
     spec:
       containers:
         - name: opensource-tracker
-          image: docker.io/saiudayagiri/opensource-tracker:b2cbb2c
+          image: docker.io/saiudayagiri/opensource-tracker:6e6def9
           ports:
             - containerPort: 3000
           envFrom:
