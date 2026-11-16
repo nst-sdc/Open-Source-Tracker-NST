@@ -3,6 +3,7 @@ import { getAchieversKV } from '@/lib/kv-achievers';
 import { getEventsKV } from '@/lib/kv-events';
 import { UpcomingEvents } from './components/UpcomingEvents';
 import { readSummaryCache } from '@/lib/summary-cache';
+import { getStudentsKV } from '@/lib/kv-students';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,8 +53,11 @@ function RankChip({ rank }: { rank: number }) {
 export default async function Home() {
   const events = await getEventsKV();
   const achievers = await getAchieversKV();
-  const cache = await readSummaryCache();
-  const weeklyCache = await readSummaryCache("week");
+  const [cache, weeklyCache, students] = await Promise.all([
+    readSummaryCache(),
+    readSummaryCache("week"),
+    getStudentsKV(),
+  ]);
 
   // Stats from achievers
   const programSet = new Set(achievers.flatMap((a) => a.programs.map((p) => p.name)));
@@ -61,7 +65,9 @@ export default async function Home() {
   const totalSelections = achievers.reduce((n, a) => n + a.programs.length, 0);
 
   // Stats from summary cache
-  const totalStudents = cache?.summaries.length ?? 0;
+  // Roster size, not summary count: the roster is the one source of truth
+  // for who is tracked, and it does not shrink when a profile fetch fails.
+  const totalStudents = students.length;
   const activeContributorsCount = cache?.summaries.filter((s) => s.totalPRs > 0 || (s.issuesCount ?? 0) > 0).length ?? 0;
   const totalMerged = cache?.summaries.reduce((s, c) => s + c.mergedPRs, 0) ?? 0;
   const totalPRs = cache?.summaries.reduce((s, c) => s + c.totalPRs, 0) ?? 0;

@@ -877,6 +877,9 @@ interface Student {
   github: string;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
   campus?: 'Rishihood' | 'ADYPU' | 'SVYASA';
+  githubId?: number;
+  unresolvedSince?: string;
+  previousLogins?: string[];
 }
 
 function StudentsTab() {
@@ -1114,6 +1117,19 @@ function StudentsTab() {
                         {s.campus && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-0 text-brand-600 border border-brand-100 font-[550]">
                             {s.campus}
+                          </span>
+                        )}
+                        {s.unresolvedSince && (
+                          <span
+                            title={`GitHub has had no account under this name (or its id) since ${new Date(s.unresolvedSince).toLocaleDateString('en-IN')}. Still counted; remove only if you are sure.`}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-warning-0 text-warning-600 border border-warning-200 font-[550]"
+                          >
+                            account not found
+                          </span>
+                        )}
+                        {s.previousLogins && s.previousLogins.length > 0 && (
+                          <span title={`Previously tracked as ${s.previousLogins.map((p) => '@' + p).join(', ')}`} className="text-[10px] px-1.5 py-0.5 rounded bg-panel text-ink-soft border border-line font-[550]">
+                            renamed
                           </span>
                         )}
                       </div>

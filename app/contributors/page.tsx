@@ -342,7 +342,12 @@ export default async function ContributorsPage({
   // The roster is the only source of truth for who is a student; a period
   // cache may still carry people removed from it.
   allSummaries = pruneToRoster(allSummaries, students);
-  const studentCount = students.filter(
+  // "Students" is the size of the roster, full stop. Once someone is added to
+  // the tracker they count, whatever period, year or campus is selected, and
+  // whether or not GitHub can still find their account. The filter's own
+  // headcount is shown underneath when it differs.
+  const studentCount = students.length;
+  const studentsInFilter = students.filter(
     (s) => (!year || s.year === year) && (!campus || s.campus === campus),
   ).length;
 
@@ -693,6 +698,10 @@ export default async function ContributorsPage({
                 label: "Students",
                 value: studentCount,
                 num: "text-ink",
+                sub:
+                  studentsInFilter !== studentCount
+                    ? `${studentsInFilter.toLocaleString("en-IN")} in this filter`
+                    : undefined,
               },
               {
                 label: "Contributors",
@@ -720,6 +729,9 @@ export default async function ContributorsPage({
                   {s.value.toLocaleString("en-IN")}
                 </div>
                 <div className="text-[12px] text-ink-soft mt-1">{s.label}</div>
+                {"sub" in s && s.sub && (
+                  <div className="text-[11px] text-ink-soft/80 mt-0.5 tabular-nums">{s.sub}</div>
+                )}
               </div>
             ))}
           </div>
@@ -731,7 +743,10 @@ export default async function ContributorsPage({
         <BootstrapBanner
           // A fetched profile carries GitHub's numeric avatar URL (/u/<id>);
           // the zero-PR placeholder for a not-yet-fetched student does not.
-          populated={allSummaries.filter((s) => /\/u\/\d+/.test(s.profile.avatar_url)).length}
+          populated={
+            allSummaries.filter((s) => /\/u\/\d+/.test(s.profile.avatar_url)).length +
+            students.filter((s) => s.unresolvedSince).length
+          }
           total={students.length}
         />
       )}
