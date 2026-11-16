@@ -1,5 +1,6 @@
-import { kvGet, kvSet } from './kv';
-import type { ProfileCacheEntry } from './profile-cache';
+import { kvGet, kvRead, kvSet } from './kv';
+import { readProfileCache, type ProfileCacheEntry } from './profile-cache';
+import type { Student } from './kv-students';
 
 /**
  * Which students have contributed to which organisation, precomputed.
@@ -33,6 +34,18 @@ const KV_KEY = 'org_index';
 
 export async function readOrgIndex(): Promise<OrgIndex> {
   return (await kvGet<OrgIndex>(KV_KEY)) || {};
+}
+
+/**
+ * For writers. `ok: false` means the store did not answer, and the caller
+ * must not fold into `index` and write it back: that replaces the whole
+ * index with the handful of students in the current tick. It happened once,
+ * during the KV outage, and the apache view then listed 22 of 35 students
+ * until the index was rebuilt.
+ */
+export async function readOrgIndexForWrite(): Promise<{ ok: boolean; index: OrgIndex }> {
+  const { ok, value } = await kvRead<OrgIndex>(KV_KEY);
+  return { ok, index: value || {} };
 }
 
 export async function writeOrgIndex(index: OrgIndex): Promise<void> {
@@ -121,4 +134,70 @@ export function contributorsForOrg(index: OrgIndex, orgLogin: string): Set<strin
   return new Set(
     Object.keys(index[orgLogin.toLowerCase()]?.contributors ?? {}).map((l) => l.toLowerCase()),
   );
+}
+
+/** Lowercased logins of every student the index knows about. */
+export function indexedStudents(index: OrgIndex): Set<string> {
+  const out = new Set<string>();
+  for (const entry of Object.values(index)) {
+    for (const login of Object.keys(entry.contributors)) out.add(login.toLowerCase());
+  }
+  return out;
+}
+
+/**
+ * Does the index cover the students who, per the summary cache, have merged
+ * PRs? The two are built from the same profiles and only the index's
+ * flagged/invalid-repo filters should separate them, so a large gap means
+ * the index was wiped or never backfilled. Pure, so it is testable.
+ */
+export function orgIndexLooksIncomplete(
+  index: OrgIndex,
+  summaries: Array<{ profile: { login: string }; mergedPRs: number }>,
+  minCoverage = 0.9,
+): boolean {
+  const withMerged = summaries.filter((s) => s.mergedPRs > 0).map((s) => s.profile.login.toLowerCase());
+  if (withMerged.length === 0) return false;
+  const known = indexedStudents(index);
+  const covered = withMerged.filter((l) => known.has(l)).length;
+  return covered / withMerged.length < minCoverage;
+}
+
+const REBUILT_AT_KEY = 'org_index_rebuilt_at';
+export const REBUILD_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/** True if a full rebuild ran recently enough that another would be waste. */
+export async function orgIndexRebuiltRecently(nowMs = Date.now()): Promise<boolean> {
+  const at = await kvGet<string>(REBUILT_AT_KEY);
+  return typeof at === 'string' && nowMs - new Date(at).getTime() < REBUILD_MIN_INTERVAL_MS;
+}
+
+/**
+ * Rebuilds the whole index from every student's profile cache. One KV read
+ * per student (batched), which is why it runs only when the index is
+ * visibly incomplete and at most every REBUILD_MIN_INTERVAL_MS, never per
+ * request. Returns the new index, or null if the store was unreachable.
+ */
+export async function rebuildOrgIndex(
+  students: Student[],
+  filters: IndexFilters,
+  readProfile: (login: string) => Promise<Pick<ProfileCacheEntry, 'prs'> | null> = readProfileCache,
+): Promise<OrgIndex | null> {
+  const index: OrgIndex = {};
+  const BATCH = 50;
+  let read = 0;
+  for (let i = 0; i < students.length; i += BATCH) {
+    const batch = students.slice(i, i + BATCH);
+    const profiles = await Promise.all(batch.map((s) => readProfile(s.github).catch(() => null)));
+    profiles.forEach((profile, j) => {
+      if (!profile) return;
+      read++;
+      indexStudentContributions(index, batch[j].github, profile, filters);
+    });
+  }
+  const written = await kvSet(KV_KEY, index);
+  if (!written) return null;
+  await kvSet(REBUILT_AT_KEY, new Date().toISOString());
+  console.log(`[org-index] rebuilt from ${read} profile caches: ${Object.keys(index).length} organisations`);
+  return index;
 }

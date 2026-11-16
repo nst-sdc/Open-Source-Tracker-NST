@@ -11,7 +11,14 @@ import { updateStaleProfiles, buildDateQuery, getSummaryFromCache } from '@/lib/
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { writeSummaryCache, readSummaryCache, pruneToRoster } from '@/lib/summary-cache';
 import { readProfileCache } from '@/lib/profile-cache';
-import { readOrgIndex, writeOrgIndex, indexStudentContributions } from '@/lib/org-index';
+import {
+  readOrgIndexForWrite,
+  writeOrgIndex,
+  indexStudentContributions,
+  orgIndexLooksIncomplete,
+  orgIndexRebuiltRecently,
+  rebuildOrgIndex,
+} from '@/lib/org-index';
 import { getRepoCache } from '@/lib/repo-cache';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
@@ -60,16 +67,35 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
   // here rather than per request: no extra GitHub calls, no extra KV reads, and
   // it populates whether or not anyone has searched -- which is what the
   // previous lazy-write approach could never do.
-  const orgIndex = await readOrgIndex();
-  for (const [lowerName, profile] of profiles) {
-    const login = students.find(s => s.github.toLowerCase() === lowerName)?.github ?? lowerName;
-    indexStudentContributions(orgIndex, login, profile, {
-      flaggedPRIds,
-      isRepoValid: (repo) => repoCache[repo]?.valid !== false,
-    });
+  const indexFilters = {
+    flaggedPRIds,
+    isRepoValid: (repo: string) => repoCache[repo]?.valid !== false,
+  };
+  const { ok: indexReadOk, index: orgIndex } = await readOrgIndexForWrite();
+  if (!indexReadOk) {
+    // Folding this tick's students into an empty "index" and writing it back
+    // would erase everyone else. Skip; the next tick picks these students up
+    // again if their cache is still the stalest, and the rebuild below heals
+    // any gap that opens.
+    console.error('[Incremental Refresh] org index unreadable this tick; leaving it untouched');
+  } else {
+    for (const [lowerName, profile] of profiles) {
+      const login = students.find(s => s.github.toLowerCase() === lowerName)?.github ?? lowerName;
+      indexStudentContributions(orgIndex, login, profile, indexFilters);
+    }
+    await writeOrgIndex(orgIndex);
+    console.log(`[Incremental Refresh] org index covers ${Object.keys(orgIndex).length} organisations`);
+
+    // Self-heal: the index only ever learns about students as they are
+    // refreshed, so after a wipe (or on a store seeded from elsewhere) it
+    // stays partial for weeks. Compare it with the summary cache and rebuild
+    // from every profile when it is clearly missing people.
+    const allSummaries = (await readSummaryCache('all'))?.summaries ?? [];
+    if (orgIndexLooksIncomplete(orgIndex, allSummaries) && !(await orgIndexRebuiltRecently())) {
+      console.warn('[Incremental Refresh] org index is missing students with merged PRs; rebuilding from all profiles');
+      await rebuildOrgIndex(students, indexFilters);
+    }
   }
-  await writeOrgIndex(orgIndex);
-  console.log(`[Incremental Refresh] org index covers ${Object.keys(orgIndex).length} organisations`);
 
   for (const period of periods) {
     // bypassMemory: the loop below mutates existingCache.summaries in place
