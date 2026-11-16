@@ -27,6 +27,7 @@ Contributions are welcome. Local setup, environment variables, testing, and the 
 - **[DOCUMENTATION.md](./DOCUMENTATION.md)** — the complete technical reference: every page, every API route, the caching architecture, the admin system, known gotchas. Read this before making any non-trivial change.
 - **[HOW_IT_WORKS.md](./HOW_IT_WORKS.md)** — the mechanics: GitHub rate limits, why tokens matter, login vs. guest, the full request lifecycle, with a schematic.
 - **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — step-by-step Kubernetes/Rancher deployment walkthrough.
+- **[docs/PROFILE-SOCIALS.md](./docs/PROFILE-SOCIALS.md)** — the Connect card on contributor pages, where students add their own contact links.
 
 ## License
 
