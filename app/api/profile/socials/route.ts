@@ -5,6 +5,7 @@ import { isSameOrigin } from '@/lib/same-origin';
 import { checkRateLimit, rateLimitedResponse } from '@/lib/rate-limit';
 import { getStudentsKV, findStudent } from '@/lib/kv-students';
 import { deleteSocials, getSocials, normalizeSocials, saveSocials } from '@/lib/socials';
+import { verifyLinks } from '@/lib/socials-verify';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,11 +45,19 @@ export async function PUT(request: Request) {
   const body = await request.json().catch(() => null);
   const result = normalizeSocials(body);
   if (!result.ok) return NextResponse.json({ error: 'Some fields need a fix.', fields: result.errors }, { status: 400 });
-  if (!(await saveSocials(who.login, result.value))) {
+  // Format is fine; now ask each platform whether the account exists. A link
+  // only becomes visible once it passes (or when the platform offers no way
+  // to check, see lib/socials-verify.ts).
+  const checked = await verifyLinks(result.value.links);
+  if (Object.keys(checked.errors).length) {
+    return NextResponse.json({ error: 'Some accounts could not be confirmed.', fields: checked.errors }, { status: 400 });
+  }
+  const toSave = { ...result.value, verifiedAt: checked.verifiedAt };
+  if (!(await saveSocials(who.login, toSave))) {
     return NextResponse.json({ error: 'Could not save right now. Try again shortly.' }, { status: 503 });
   }
   revalidatePath(`/contributors/${who.login}`);
-  return NextResponse.json({ ok: true, socials: result.value });
+  return NextResponse.json({ ok: true, socials: toSave });
 }
 
 /** DELETE /api/profile/socials — clear your own links. */

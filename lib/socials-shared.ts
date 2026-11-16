@@ -24,6 +24,9 @@ export interface StudentSocials {
   /** One line about what they are looking for or working on. */
   tagline?: string;
   links: Partial<Record<SocialPlatform, string>>;
+  /** Platform → ISO time the platform confirmed the account exists
+   *  (lib/socials-verify.ts). Absent for platforms that cannot be checked. */
+  verifiedAt?: Partial<Record<SocialPlatform, string>>;
   updatedAt: string;
 }
 
@@ -151,6 +154,8 @@ export function normalizeSocials(
 export interface SocialLink {
   platform: SocialPlatform;
   label: string;
+  /** ISO time the platform confirmed the account, when it could be checked. */
+  verifiedAt?: string;
   /** What to show: a handle or host, never the raw URL. */
   display: string;
   /** null for Discord, which has no profile URL; the username is copied instead. */
@@ -176,10 +181,11 @@ export function socialLinks(socials: StudentSocials | null): SocialLink[] {
     const v = socials.links[platform];
     if (!v) continue;
     const label = PLATFORM_LABEL[platform];
-    if (platform === 'email') out.push({ platform, label, display: v, href: `mailto:${v}` });
-    else if (platform === 'discord') out.push({ platform, label, display: v, href: null });
-    else if (platform === 'website') out.push({ platform, label, display: v.replace(/^https?:\/\/(www\.)?/, ''), href: v });
-    else out.push({ platform, label, display: `@${v.split('/').pop()?.replace(/^@/, '')}`, href: v });
+    const verifiedAt = socials.verifiedAt?.[platform];
+    if (platform === 'email') out.push({ platform, label, verifiedAt, display: v, href: `mailto:${v}` });
+    else if (platform === 'discord') out.push({ platform, label, verifiedAt, display: v, href: null });
+    else if (platform === 'website') out.push({ platform, label, verifiedAt, display: v.replace(/^https?:\/\/(www\.)?/, ''), href: v });
+    else out.push({ platform, label, verifiedAt, display: `@${v.split('/').pop()?.replace(/^@/, '')}`, href: v });
   }
   return out;
 }

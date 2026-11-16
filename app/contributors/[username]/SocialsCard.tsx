@@ -77,6 +77,7 @@ export function SocialsCard({ username, initial }: { username: string; initial: 
                   <PlatformIcon platform={l.platform} />
                   <span className="text-ink-soft">{l.label}</span>
                   <span className="truncate max-w-[180px]">{l.display}</span>
+                  {l.verifiedAt && <VerifiedTick at={l.verifiedAt} />}
                 </a>
               ) : (
                 <CopyChip label={l.label} value={l.display} platform={l.platform} />
@@ -92,6 +93,26 @@ export function SocialsCard({ username, initial }: { username: string; initial: 
         )
       )}
     </div>
+  );
+}
+
+function VerifiedTick({ at }: { at: string }) {
+  return (
+    <svg
+      className="w-3.5 h-3.5 shrink-0 text-success-600"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-label={`Account confirmed on ${new Date(at).toLocaleDateString('en-IN')}`}
+      role="img"
+    >
+      <title>{`Account confirmed on ${new Date(at).toLocaleDateString('en-IN')}`}</title>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5 4.5-5" />
+    </svg>
   );
 }
 
@@ -229,7 +250,9 @@ function SocialsForm({
         ))}
       </div>
       <p className="text-[12px] text-ink-soft">
-        Shown publicly on this page. Leave a field empty to hide it. Discord shows your username only.
+        Shown publicly on this page. Leave a field empty to hide it. Before saving, each account is checked with its
+        platform where that is possible (X, YouTube, Telegram, email domain, website); confirmed ones get a tick.
+        Discord shows your username only.
       </p>
       {message && <p className="text-[12.5px] text-error-600">{message}</p>}
       <div className="flex flex-wrap items-center gap-2">
@@ -238,7 +261,7 @@ function SocialsForm({
           disabled={busy}
           className="rounded-lg bg-brand-600 px-3.5 py-2 text-[13px] font-[600] text-white hover:bg-brand-700 disabled:opacity-60 transition-colors"
         >
-          {busy ? 'Saving…' : 'Save'}
+          {busy ? 'Checking accounts…' : 'Save'}
         </button>
         <button type="button" onClick={onCancel} disabled={busy} className="rounded-lg px-3 py-2 text-[13px] font-[550] text-ink-soft hover:text-ink">
           Cancel

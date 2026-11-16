@@ -13,7 +13,24 @@ Only the GitHub account that owns the page can edit it. Nobody else sees an edit
 
 ## What is checked
 
-Links are normalised before they are stored, so the page never renders what was typed: LinkedIn must be a `linkedin.com/in/…` profile, X/Telegram/Instagram/YouTube become canonical profile URLs from the handle, websites must be `http(s)` with a real hostname (no credentials, fragments dropped), emails must look like emails, Discord is the username only (shown with a copy button, since Discord has no profile URL). Each bad field is reported by name.
+Two layers, both on the server when you press Save.
+
+**Format.** Links are normalised before they are stored, so the page never renders what was typed: LinkedIn must be a `linkedin.com/in/…` profile, X/Telegram/Instagram/YouTube become canonical profile URLs from the handle, websites must be `http(s)` with a real hostname (no credentials, fragments dropped), emails must look like emails, Discord is the username only (shown with a copy button, since Discord has no profile URL).
+
+**Existence.** Each account is then checked with its platform, using what the platform exposes without credentials (`lib/socials-verify.ts`). A link that fails is rejected and the field says why; a link that passes is stored with the time it was confirmed and shown with a tick.
+
+| Platform | How it is checked | If it cannot be checked |
+|---|---|---|
+| X | `publish.x.com/oembed` answers 200 for a real handle, 404 for none | rejected as unreachable, try again |
+| YouTube | `youtube.com/@handle` answers 200 or 404 | same |
+| Telegram | `t.me/handle` carries the page-title block only for a real account | same |
+| Email | the domain publishes MX records | same |
+| Website | resolves to a public address and answers HTTP (redirects are not followed, internal addresses are refused) | rejected |
+| LinkedIn | 200 means the profile exists; 999 is LinkedIn's bot wall and proves nothing | shown without a tick |
+| Instagram | answers 200 for everything (login wall) | shown without a tick |
+| Discord | no public lookup | shown without a tick |
+
+Each bad field is reported by name, and nothing is saved until every field passes.
 
 ## For admins
 
