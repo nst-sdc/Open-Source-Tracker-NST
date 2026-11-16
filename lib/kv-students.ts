@@ -12,7 +12,7 @@
  * GitHub id, a rename, or that the account can no longer be found.
  */
 
-import { kvGet, kvSet } from './kv';
+import { kvRead, kvSet } from './kv';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -100,7 +100,7 @@ export function applyUpdates(list: Student[], updates: RosterUpdate[]): { list: 
 /** One read-modify-write for a whole tick's worth of updates. */
 export async function applyRosterUpdates(updates: RosterUpdate[]): Promise<boolean> {
   if (updates.length === 0) return false;
-  const current = await getStudentsKV();
+  const current = await readRosterForWrite();
   const { list, changed } = applyUpdates(current, updates);
   if (changed) await kvSet(KV_KEY, list);
   return changed;
@@ -114,12 +114,13 @@ export function findStudent(list: Student[], login: string): Student | undefined
   );
 }
 
-async function seedFromFile(): Promise<Student[]> {
+/** The roster bundled with the build. Only ever a seed or a read-only stand-in. */
+function readFileRoster(): Student[] {
   try {
     const raw = readFileSync(join(process.cwd(), 'data', 'students.json'), 'utf-8');
     const data = JSON.parse(raw);
     if (!Array.isArray(data)) return [];
-    const list: Student[] = data
+    return data
       .map((s: unknown) => {
         if (typeof s === 'string') return { github: s };
         if (typeof s === 'object' && s !== null && typeof (s as Record<string, unknown>).github === 'string') {
@@ -129,17 +130,61 @@ async function seedFromFile(): Promise<Student[]> {
         return null;
       })
       .filter((s): s is Student => s !== null);
-    await kvSet(KV_KEY, list);
-    return list;
   } catch {
     return [];
   }
 }
 
+/** Last roster the store actually returned in this process. Served while
+ *  the store is unreachable, so an outage shows yesterday's roster rather
+ *  than the bundled file or an empty board. */
+let lastGoodRoster: Student[] | null = null;
+
+export class RosterUnavailableError extends Error {
+  constructor() {
+    super('The roster store did not answer; refusing to change the roster from a possibly stale copy.');
+    this.name = 'RosterUnavailableError';
+  }
+}
+
+/**
+ * Reads the roster for a read-modify-write. Throws when the store did not
+ * answer: a write on top of a fallback copy would replace the live roster
+ * with it, which is exactly how ~250 admin-added students were lost once.
+ */
+async function readRosterForWrite(): Promise<Student[]> {
+  const { ok, value } = await kvRead<Student[]>(KV_KEY);
+  if (!ok) throw new RosterUnavailableError();
+  if (value !== null) {
+    lastGoodRoster = value;
+    return value;
+  }
+  return seedRoster();
+}
+
+/** The store answered "no such key": first boot. Seed it from the file once. */
+async function seedRoster(): Promise<Student[]> {
+  const list = readFileRoster();
+  if (list.length > 0) await kvSet(KV_KEY, list);
+  lastGoodRoster = list;
+  return list;
+}
+
 export async function getStudentsKV(): Promise<Student[]> {
-  const cached = await kvGet<Student[]>(KV_KEY);
-  if (cached !== null) return cached;
-  return seedFromFile();
+  const { ok, value } = await kvRead<Student[]>(KV_KEY);
+  if (ok && value !== null) {
+    lastGoodRoster = value;
+    return value;
+  }
+  if (ok) return seedRoster();
+  // Store unreachable. Read-only fallback, never written back.
+  console.error('[kv-students] roster store unreachable; serving the last known roster read-only');
+  return lastGoodRoster ?? readFileRoster();
+}
+
+/** Test hook. */
+export function _resetRosterMemory(): void {
+  lastGoodRoster = null;
 }
 
 export async function addStudent(
@@ -147,9 +192,9 @@ export async function addStudent(
   year?: '1st year' | '2nd year' | '3rd year' | '4th year',
   campus?: 'Rishihood' | 'ADYPU' | 'SVYASA'
 ): Promise<{ ok: boolean; message?: string }> {
-  const list = await getStudentsKV();
   const lower = github.toLowerCase().trim();
   if (!lower) return { ok: false, message: 'GitHub username cannot be empty' };
+  const list = await readRosterForWrite();
   if (list.some((s) => s.github.toLowerCase() === lower))
     return { ok: false, message: `${github} is already in the list` };
   list.push({ github: github.trim(), year, campus });
@@ -162,7 +207,7 @@ export async function updateStudentDetails(
   year?: '1st year' | '2nd year' | '3rd year' | '4th year',
   campus?: 'Rishihood' | 'ADYPU' | 'SVYASA'
 ): Promise<{ ok: boolean; message?: string }> {
-  const list = await getStudentsKV();
+  const list = await readRosterForWrite();
   const lower = github.toLowerCase().trim();
   const index = list.findIndex((s) => s.github.toLowerCase() === lower);
   if (index === -1) return { ok: false, message: 'Student not found' };
@@ -174,7 +219,7 @@ export async function updateStudentDetails(
 
 /** Admin-only. Nothing automated calls this any more; see the header. */
 export async function removeStudent(github: string): Promise<{ ok: boolean }> {
-  const list = await getStudentsKV();
+  const list = await readRosterForWrite();
   const updated = list.filter((s) => s.github.toLowerCase() !== github.toLowerCase());
   if (updated.length === list.length) return { ok: false };
   await kvSet(KV_KEY, updated);

@@ -55,7 +55,7 @@ function writeDiskKV<T>(key: string, value: T, ttlSeconds?: number): void {
   }
 }
 
-async function executeKVCommand(command: string[]): Promise<{ ok: boolean; result: any }> {
+async function executeKVCommand(command: string[]): Promise<{ ok: boolean; result: unknown }> {
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
   if (!url || !token) return { ok: false, result: null };
@@ -88,25 +88,38 @@ async function executeKVCommand(command: string[]): Promise<{ ok: boolean; resul
   }
 }
 
-export async function kvGet<T>(key: string): Promise<T | null> {
+/**
+ * Like kvGet, but says whether the answer can be trusted. `ok: false` means
+ * the store did not answer (network, auth, 5xx), which is NOT the same as
+ * the key being absent. Callers that would write a default when a key is
+ * missing must use this and refuse to write on `ok: false`: the roster was
+ * once overwritten with the image's bundled file because a failed GET looked
+ * exactly like "no roster yet" (see lib/kv-students.ts).
+ */
+export async function kvRead<T>(key: string): Promise<{ ok: boolean; value: T | null }> {
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
 
   if (url && token) {
-    const { result } = await executeKVCommand(['GET', key]);
-    // If Redis has data, use it
+    const { ok, result } = await executeKVCommand(['GET', key]);
+    if (!ok) return { ok: false, value: null };
     if (result !== null && result !== undefined) {
       try {
-        return JSON.parse(result) as T;
+        return { ok: true, value: JSON.parse(result as string) as T };
       } catch {
-        return result as unknown as T;
+        return { ok: true, value: result as unknown as T };
       }
     }
-    // Redis miss — fall back to disk files (deployed with the project)
-    return readDiskKV<T>(key);
+    // Confirmed miss — fall back to disk files (deployed with the project)
+    return { ok: true, value: readDiskKV<T>(key) };
   }
 
-  return readDiskKV<T>(key);
+  return { ok: true, value: readDiskKV<T>(key) };
+}
+
+export async function kvGet<T>(key: string): Promise<T | null> {
+  // A failed read reads as a miss here; use kvRead to tell them apart.
+  return (await kvRead<T>(key)).value;
 }
 
 /** Deletes a key from Redis (or the disk fallback). Returns true if deleted or absent. */

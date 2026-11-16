@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => true), kvDel: vi.fn(async () => {}) }));
-const { applyUpdates, findStudent } = await import('./kv-students');
+vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvRead: vi.fn(async () => ({ ok: true, value: null })), kvSet: vi.fn(async () => true), kvDel: vi.fn(async () => {}) }));
+const mod = await import('./kv-students');
+const kv = await import('./kv');
+const { applyUpdates, findStudent } = mod;
 import type { Student } from './kv-students';
 
 const roster = (): Student[] => [
@@ -52,5 +54,51 @@ describe('applyUpdates', () => {
     const input = roster();
     applyUpdates(input, [{ type: 'rename', github: 'alice', newLogin: 'x', githubId: 1 }, { type: 'unresolved', github: 'bob' }]);
     expect(input).toEqual(roster());
+  });
+});
+
+describe('roster reads and writes against a flaky store', () => {
+  const kvRead = kv.kvRead as unknown as ReturnType<typeof vi.fn>;
+  const kvSet = kv.kvSet as unknown as ReturnType<typeof vi.fn>;
+
+  it('seeds from the bundled file only when the store confirms the key is absent', async () => {
+    mod._resetRosterMemory();
+    kvSet.mockClear();
+    kvRead.mockResolvedValueOnce({ ok: true, value: null });
+    const list = await mod.getStudentsKV();
+    expect(list.length).toBeGreaterThan(1000);
+    expect(kvSet).toHaveBeenCalledTimes(1);
+    expect(kvSet.mock.calls[0][0]).toBe('students_list');
+  });
+
+  it('never writes when the store did not answer, and serves the last good roster', async () => {
+    mod._resetRosterMemory();
+    kvSet.mockClear();
+    const live = [{ github: 'only-on-live' }, { github: 'added-by-admin' }];
+    kvRead.mockResolvedValueOnce({ ok: true, value: live });
+    expect(await mod.getStudentsKV()).toEqual(live);
+    kvRead.mockResolvedValueOnce({ ok: false, value: null });
+    expect(await mod.getStudentsKV()).toEqual(live);
+    expect(kvSet).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the bundled file read-only when nothing better is known', async () => {
+    mod._resetRosterMemory();
+    kvSet.mockClear();
+    kvRead.mockResolvedValueOnce({ ok: false, value: null });
+    const list = await mod.getStudentsKV();
+    expect(list.length).toBeGreaterThan(1000);
+    expect(kvSet).not.toHaveBeenCalled();
+  });
+
+  it('refuses every mutation while the store is unreachable', async () => {
+    kvSet.mockClear();
+    kvRead.mockResolvedValue({ ok: false, value: null });
+    await expect(mod.addStudent('someone')).rejects.toBeInstanceOf(mod.RosterUnavailableError);
+    await expect(mod.removeStudent('someone')).rejects.toBeInstanceOf(mod.RosterUnavailableError);
+    await expect(mod.updateStudentDetails('someone', '2nd year')).rejects.toBeInstanceOf(mod.RosterUnavailableError);
+    await expect(mod.applyRosterUpdates([{ type: 'unresolved', github: 'someone' }])).rejects.toBeInstanceOf(mod.RosterUnavailableError);
+    expect(kvSet).not.toHaveBeenCalled();
+    kvRead.mockReset();
   });
 });
