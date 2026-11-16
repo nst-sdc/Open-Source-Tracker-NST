@@ -11,13 +11,18 @@
 # everything under the paths it watches, and a GitRepo that applies itself
 # is confusing. deploy/ holds things a human applies once.
 #
-# Watch it: sudo kubectl -n fleet-default get gitrepo opensource-tracker
-# Pause it: sudo kubectl -n fleet-default patch gitrepo opensource-tracker --type=merge -p '{"spec":{"paused":true}}'
+# Namespace matters: the tracker runs on the same cluster as Rancher, which
+# Fleet registers as the cluster "local" in the fleet-local namespace.
+# fleet-default holds downstream clusters (c-xxxxx); a GitRepo there would
+# target those and apply nothing here (0/0 bundle deployments).
+#
+# Watch it: sudo kubectl -n fleet-local get gitrepo opensource-tracker
+# Pause it: sudo kubectl -n fleet-local patch gitrepo opensource-tracker --type=merge -p '{"spec":{"paused":true}}'
 apiVersion: fleet.cattle.io/v1alpha1
 kind: GitRepo
 metadata:
   name: opensource-tracker
-  namespace: fleet-default
+  namespace: fleet-local
 spec:
   repo: https://github.com/nst-sdc/Open-Source-Tracker-NST
   branch: main
@@ -31,7 +36,5 @@ spec:
   # is why 02-deployment.yaml must always pin the tag that should be live.
   correctDrift:
     enabled: true
-  targets:
-    - clusterSelector:
-        matchLabels:
-          management.cattle.io/cluster-display-name: local
+  # No target selector: in fleet-local the only cluster is "local", which is
+  # this one.

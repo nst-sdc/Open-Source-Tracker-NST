@@ -194,7 +194,7 @@ One-time setup (needs cluster access once, and a repository admin once):
 ```bash
 # on nst-n1 — register the GitRepo
 sudo kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/deploy/fleet/gitrepo.yaml
-sudo kubectl -n fleet-default get gitrepo opensource-tracker -w     # READY when the first sync lands
+sudo kubectl -n fleet-local get gitrepo opensource-tracker -w     # READY when the first sync lands
 ```
 
 On GitHub, pick one of two ways for the workflow to push an image:
@@ -208,7 +208,7 @@ Day to day:
 
 - **Release:** merge to `main`. Watch Actions → "Build, push and roll out", then `kubectl -n opensource-tracker rollout status deployment/opensource-tracker`, or just hit `/api/health`.
 - **Roll back:** `git revert` the `chore(deploy): roll out …` commit on `main` (or edit the tag in `02-deployment.yaml`). Fleet applies it. `kubectl rollout undo` also works but Fleet will re-apply git on its next sync, so change git.
-- **Pause GitOps** (for example during an incident): `kubectl -n fleet-default patch gitrepo opensource-tracker --type=merge -p '{"spec":{"paused":true}}'`; set `false` to resume.
+- **Pause GitOps** (for example during an incident): `kubectl -n fleet-local patch gitrepo opensource-tracker --type=merge -p '{"spec":{"paused":true}}'`; set `false` to resume.
 - **Change replicas, resources, env:** edit the manifest, open a PR, merge. That is the deploy.
 
 Anything under `deploy/` is applied by hand exactly once and is deliberately outside Fleet's path.
