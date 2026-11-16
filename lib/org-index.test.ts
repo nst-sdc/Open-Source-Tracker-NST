@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { indexStudentContributions, type OrgIndex } from './org-index';
+import { vi } from 'vitest';
+vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvRead: vi.fn(async () => ({ ok: true, value: null })), kvSet: vi.fn(async () => true), kvDel: vi.fn(async () => {}) }));
+vi.mock('./profile-cache', () => ({ readProfileCache: vi.fn(async () => null) }));
+import { indexStudentContributions, orgIndexLooksIncomplete, rebuildOrgIndex, readOrgIndexForWrite, type OrgIndex } from './org-index';
+import * as kv from './kv';
 
 const pr = (repo: string, n: number) => ({
   number: n,
@@ -74,5 +78,44 @@ describe('org index', () => {
       prs: [{ number: 1, repository_url: 'https://api.github.com/repos/apache/a', pull_request: { merged_at: null } } as never],
     });
     expect(index.apache).toBeUndefined();
+  });
+});
+
+describe('org index self-healing', () => {
+  const sum = (login: string, mergedPRs: number) => ({ profile: { login }, mergedPRs });
+
+  it('calls an index incomplete when it misses students who have merged PRs', () => {
+    const index: OrgIndex = {};
+    indexStudentContributions(index, 'alice', { prs: [pr('apache/kafka', 1)] });
+    const summaries = [sum('Alice', 1), sum('bob', 3), sum('carol', 2), sum('dave', 0)];
+    expect(orgIndexLooksIncomplete(index, summaries)).toBe(true);
+    indexStudentContributions(index, 'bob', { prs: [pr('apache/spark', 2)] });
+    indexStudentContributions(index, 'carol', { prs: [pr('kubeflow/kubeflow', 3)] });
+    expect(orgIndexLooksIncomplete(index, summaries)).toBe(false);
+    expect(orgIndexLooksIncomplete({}, [sum('nobody', 0)])).toBe(false);
+  });
+
+  it('reports a failed read so the caller does not write an empty index back', async () => {
+    (kv.kvRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: false, value: null });
+    expect(await readOrgIndexForWrite()).toEqual({ ok: false, index: {} });
+    (kv.kvRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: true, value: null });
+    expect(await readOrgIndexForWrite()).toEqual({ ok: true, index: {} });
+  });
+
+  it('rebuilds from every profile cache and stamps the time', async () => {
+    const kvSet = kv.kvSet as unknown as ReturnType<typeof vi.fn>;
+    kvSet.mockClear();
+    const profiles: Record<string, { prs: unknown[] }> = {
+      alice: { prs: [pr('apache/kafka', 1), pr('apache/spark', 2)] },
+      bob: { prs: [pr('grafana/grafana', 3)] },
+    };
+    const index = await rebuildOrgIndex(
+      [{ github: 'alice' }, { github: 'bob' }, { github: 'uncached' }],
+      {},
+      async (login) => (profiles[login] as never) ?? null,
+    );
+    expect(index?.apache.contributors).toEqual({ alice: 2 });
+    expect(index?.grafana.contributors).toEqual({ bob: 1 });
+    expect(kvSet.mock.calls.map((c) => c[0])).toEqual(['org_index', 'org_index_rebuilt_at']);
   });
 });
