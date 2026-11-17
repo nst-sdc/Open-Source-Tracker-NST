@@ -59,25 +59,24 @@ jobs:
       - name: Choose registry and tag
         id: image
         env:
-          HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+          # Secrets are mapped into the environment and tested in the shell,
+          # not compared inside a ${{ }} expression: the expression form
+          # silently read as empty on this repository.
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           IMAGE_REPO: ${{ vars.IMAGE_REPO }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.repository }}
         run: |
-          # Say which path we are on, so a wrong secret name is obvious from
-          # the log instead of surfacing as a GHCR 403 two steps later.
-          if [ "$HAS_DOCKERHUB" = "true" ]; then
-            echo "Docker Hub credentials found (DOCKERHUB_TOKEN set, DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME:-<empty>}); pushing to Docker Hub."
-          else
-            echo "::warning::No DOCKERHUB_TOKEN repository secret visible to this run; falling back to GHCR, which the org token cannot push to. Add the secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN under Settings → Secrets and variables → Actions → Repository secrets."
-          fi
-          if [ "$HAS_DOCKERHUB" = "true" ]; then
-            # Default to <docker hub user>/opensource-tracker: a personal access
-            # token can only push under its own account, not under the org name.
+          echo "DOCKERHUB_USERNAME length: ${#DOCKERHUB_USERNAME}, DOCKERHUB_TOKEN length: ${#DOCKERHUB_TOKEN}"
+          if [ -n "$DOCKERHUB_TOKEN" ] && [ -n "$DOCKERHUB_USERNAME" ]; then
+            echo "Docker Hub credentials found; pushing to docker.io/${IMAGE_REPO:-${DOCKERHUB_USERNAME}/opensource-tracker}"
             echo "registry=docker.io" >> "$GITHUB_OUTPUT"
             echo "name=docker.io/${IMAGE_REPO:-${DOCKERHUB_USERNAME}/opensource-tracker}" >> "$GITHUB_OUTPUT"
           else
+            echo "::warning::DOCKERHUB_USERNAME/DOCKERHUB_TOKEN not visible to this run; falling back to GHCR, which the org token cannot push to. Add both under Settings → Secrets and variables → Actions → Repository secrets."
             echo "registry=${REGISTRY}" >> "$GITHUB_OUTPUT"
-            echo "name=${REGISTRY}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+            echo "name=${REGISTRY}/$(echo "$REPO" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
           fi
           echo "tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
