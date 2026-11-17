@@ -23,6 +23,7 @@ import {
 } from '@/lib/org-index';
 import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
 import type { Student } from '@/lib/kv-students';
+import { classifyUnknownOwners } from '@/lib/org-cache';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
@@ -112,6 +113,19 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
           : `[Incremental Refresh] org index is missing ${missing.length} students with merged PRs (e.g. ${missing.slice(0, 3).join(', ')}); rebuilding`,
       );
       await rebuildOrgIndex(students, indexFiltersFor);
+    }
+
+    // The search box only suggests owners GitHub confirms are organisations.
+    // Classify a few unknown ones each tick (most-contributed first) so every
+    // org students work with becomes searchable within hours, not only the
+    // ones somebody once opened by URL.
+    try {
+      const c = await classifyUnknownOwners(15);
+      if (c.checked > 0 || c.stoppedBy) {
+        console.log(`[Incremental Refresh] classified ${c.checked} repo owners (${c.organisations} organisations), ${c.remaining} to go${c.stoppedBy ? `; stopped: ${c.stoppedBy}` : ''}`);
+      }
+    } catch (err) {
+      console.error('[Incremental Refresh] owner classification failed:', err);
     }
   }
 

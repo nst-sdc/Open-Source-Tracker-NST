@@ -5,6 +5,8 @@ import {
   saveOrgCache,
   fuzzyMatchScore,
   getSearchSuggestions,
+  classifyUnknownOwners,
+  unclassifiedOwners,
 } from './org-cache';
 import { indexStudentContributions, writeOrgIndex, type OrgIndex } from './org-index';
 import { readProfileCache } from './profile-cache';
@@ -13,6 +15,7 @@ vi.mock('./kv', () => {
   let memoryKv: Record<string, unknown> = {};
   return {
     kvGet: vi.fn(async (key: string) => memoryKv[key] ?? null),
+    kvRead: vi.fn(async (key: string) => ({ ok: true, value: memoryKv[key] ?? null })),
     kvSet: vi.fn(async (key: string, val: unknown) => {
       memoryKv[key] = val;
     }),
@@ -314,5 +317,62 @@ describe('lib/org-cache', () => {
       expect(cache['notanorg123xyz']).toBeDefined();
       expect(cache['notanorg123xyz'].isOrganization).toBe(false);
     });
+  });
+});
+
+describe('owner classification', () => {
+  const pr = (repo: string, n: number) => ({
+    number: n,
+    repository_url: `https://api.github.com/repos/${repo}`,
+    pull_request: { merged_at: '2026-01-01T00:00:00Z' },
+  });
+  const user = (login: string, type: 'Organization' | 'User') =>
+    new Response(JSON.stringify({ login, name: `${login} name`, type, avatar_url: `https://a/${login}` }), { status: 200 });
+
+  it('orders unknown owners by how many students contribute to them', () => {
+    const index = {
+      tiny: { login: 'tiny', mergedPRs: 1, contributors: { a: 1 } },
+      apache: { login: 'apache', mergedPRs: 9, contributors: { a: 1, b: 2, c: 3 } },
+      known: { login: 'known', mergedPRs: 2, contributors: { a: 1, b: 1 } },
+    };
+    const cache = { known: { login: 'known', type: 'Organization' as const, isOrganization: true, checkedAt: new Date().toISOString() } };
+    expect(unclassifiedOwners(index, cache)).toEqual(['apache', 'tiny']);
+  });
+
+  it('records organisations and users from GitHub, and makes them suggestible', async () => {
+    const index: OrgIndex = {};
+    indexStudentContributions(index, 'alice', { prs: [pr('FOSSASIA/open-event', 1), pr('ghostmkg/junk', 2)] } as never);
+    await writeOrgIndex(index);
+    const seen: string[] = [];
+    const r = await classifyUnknownOwners(10, {
+      fetch: async (url) => {
+        seen.push(url);
+        if (url.endsWith('/users/fossasia')) return user('fossasia', 'Organization');
+        if (url.endsWith('/users/ghostmkg')) return user('ghostmkg', 'User');
+        return new Response('', { status: 404 });
+      },
+    });
+    expect(seen).toHaveLength(2);
+    expect(r).toEqual({ checked: 2, organisations: 1, remaining: 0 });
+    const cache = await getOrgCache();
+    expect(cache.fossasia.isOrganization).toBe(true);
+    expect(cache.ghostmkg.isOrganization).toBe(false);
+    const sugg = await getSearchSuggestions('foss', 5);
+    expect(sugg.organizations.map((o) => o.login)).toEqual(['fossasia']);
+    expect((await getSearchSuggestions('ghost', 5)).organizations).toEqual([]);
+  });
+
+  it('stops at a rate limit and keeps what it learned', async () => {
+    const index: OrgIndex = {};
+    indexStudentContributions(index, 'alice', { prs: [pr('big/x', 1), pr('big/y', 2), pr('small/z', 3)] } as never);
+    await writeOrgIndex(index);
+    let calls = 0;
+    const r = await classifyUnknownOwners(10, {
+      fetch: async () => (calls++ === 0 ? user('big', 'Organization') : new Response('', { status: 403 })),
+    });
+    expect(r.checked).toBe(1);
+    expect(r.remaining).toBe(1);
+    expect(r.stoppedBy).toMatch(/rate limit/);
+    expect((await getOrgCache()).big.isOrganization).toBe(true);
   });
 });

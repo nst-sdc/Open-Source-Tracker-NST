@@ -6,6 +6,7 @@ import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { readOrgIndex, rebuildOrgIndex, studentsMissingFromIndex, orgIndexRebuiltAt, indexedStudents } from '@/lib/org-index';
 import { readSummaryCache } from '@/lib/summary-cache';
+import { classifyUnknownOwners, getOrgCache, unclassifiedOwners } from '@/lib/org-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +19,11 @@ export async function GET() {
     orgIndexRebuiltAt(),
   ]);
   const missing = studentsMissingFromIndex(index, summaries);
+  const unclassified = unclassifiedOwners(index, await getOrgCache());
   return NextResponse.json({
     organisations: Object.keys(index).length,
+    ownersAwaitingClassification: unclassified.length,
+    ownersAwaitingClassificationSample: unclassified.slice(0, 10),
     studentsIndexed: indexedStudents(index).size,
     studentsWithMergedPRs: summaries.filter((s) => s.mergedPRs > 0).length,
     missing,
@@ -44,5 +48,8 @@ export async function POST() {
     };
   });
   if (!index) return NextResponse.json({ error: 'The store did not accept the rebuilt index.' }, { status: 503 });
-  return NextResponse.json({ ok: true, organisations: Object.keys(index).length, studentsIndexed: indexedStudents(index).size });
+  // Then classify every owner the index knows, so the search box can suggest
+  // all of them. ~700 owners is well inside one hour of the system token.
+  const classified = await classifyUnknownOwners(2000);
+  return NextResponse.json({ ok: true, organisations: Object.keys(index).length, studentsIndexed: indexedStudents(index).size, classified });
 }
