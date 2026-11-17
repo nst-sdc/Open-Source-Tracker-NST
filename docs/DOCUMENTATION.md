@@ -477,6 +477,9 @@ Student → /join page → Fill form (github, year, campus)
 | `GET` | `/api/repo-activity` | Repository activity data |
 | `GET` | `/api/user-activity` | User timeline data |
 | `GET` | `/api/weekly-contributors` | Weekly contribution stats |
+| `GET` | `/api/profile/socials?username=x` | A student's contact links (the Connect card) |
+| `PUT` | `/api/profile/socials` | Replace your own contact links; needs the GitHub session, same origin, 20/hour. See docs/PROFILE-SOCIALS.md |
+| `DELETE` | `/api/profile/socials` | Clear your own contact links |
 
 ### Admin Endpoints (require `admin_session` cookie)
 
@@ -501,6 +504,8 @@ Student → /join page → Fill form (github, year, campus)
 | `POST` | `/api/admin/approve` | Approve request → add to students |
 | `GET` | `/api/admin/org-index` | Org-search index health: organisations, students indexed, who is missing, last rebuild |
 | `POST` | `/api/admin/org-index` | Rebuild the org-search index from every profile cache now |
+| `GET` | `/api/admin/socials?github=x` | Inspect a student's contact links |
+| `DELETE` | `/api/admin/socials?github=x` | Moderation: clear a student's contact links |
 
 ---
 
