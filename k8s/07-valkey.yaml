@@ -82,6 +82,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            # Valkey never writes here; the nightly backup CronJob does. The
+            # mount exists so the claim binds at once: local-path volumes bind
+            # on first use, and a claim only the CronJob uses stays Pending
+            # until 02:30, which keeps the Fleet bundle NotReady all day.
+            - name: backups
+              mountPath: /backups
           readinessProbe:
             exec:
               command: [valkey-cli, ping]
@@ -103,6 +109,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: valkey-data
+        - name: backups
+          persistentVolumeClaim:
+            claimName: valkey-backups
 ---
 apiVersion: v1
 kind: Service
