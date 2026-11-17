@@ -1,23 +1,4 @@
-import {
-  getAllStudentSummaries,
-  buildDateQuery,
-  repoFromUrl,
-  StudentSummary,
-  makeRepoMultiplierResolver,
-} from "@/lib/github";
-import { getStudentsKV } from "@/lib/kv-students";
-import { getFlaggedPRIdSet } from "@/lib/flagged";
-import { readSummaryCache, writeSummaryCache, pruneToRoster } from "@/lib/summary-cache";
-import { readProfileCache } from "@/lib/profile-cache";
-import { getRepoCache, prExcludedBy } from "@/lib/repo-cache";
-import {
-  aggregateMergedPRScore,
-  isConcentrated,
-  CONCENTRATED_DECAY,
-  PER_REPO_DECAY,
-} from "@/lib/repo-score";
-import { resolveOrganization, OrgCacheEntry } from "@/lib/org-cache";
-import { readOrgIndex, contributorsForOrg } from "@/lib/org-index";
+import { buildLeaderboard, parseLeaderboardQuery, PAGE_SIZE, type LeaderboardRow } from "@/lib/leaderboard";
 import { getRecognitions } from "@/lib/recognitions";
 import { FilterBar } from "./FilterBar";
 import { ContributorGrid } from "./ContributorGrid";
@@ -38,7 +19,6 @@ export const metadata = {
 /** A summary plus its position on the full leaderboard for the selected
  *  period. Carried through filtering so the number never depends on what is
  *  currently on screen. */
-export type RankedSummary = StudentSummary & { rank: number };
 
 const PERIOD_KICKERS: Record<string, string> = {
   all: "ALL TIME",
@@ -51,10 +31,6 @@ const PERIOD_KICKERS: Record<string, string> = {
   year: "LAST YEAR",
   custom: "CUSTOM RANGE",
 };
-
-function getCacheAgeMs(cachedAt: string): number {
-  return Date.now() - new Date(cachedAt).getTime();
-}
 
 function getMinutesAgo(cachedAt: string): number {
   return Math.max(
@@ -103,7 +79,7 @@ function PodiumCard({
   to,
   org,
 }: {
-  summary: StudentSummary;
+  summary: LeaderboardRow;
   rank: 1 | 2 | 3;
   period: string;
   from?: string;
@@ -144,15 +120,15 @@ function PodiumCard({
 
   return (
     <Link
-      href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}${org ? `&org=${encodeURIComponent(org)}` : ""}`}
+      href={`/contributors/${summary.login}?period=${period}${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}${org ? `&org=${encodeURIComponent(org)}` : ""}`}
       className={`group flex flex-col items-center text-center rounded-2xl p-5 md:p-6 transition-[translate,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none hover:shadow-card-hover ${cardStyle}`}
     >
       <div className="mb-4">{rankBadge}</div>
 
       <div className="relative">
         <Image
-          src={summary.profile.avatar_url}
-          alt={summary.profile.login}
+          src={summary.avatarUrl}
+          alt={summary.login}
           width={avatarSize}
           height={avatarSize}
           unoptimized
@@ -172,10 +148,10 @@ function PodiumCard({
         <h3
           className={`font-[650] text-ink truncate group-hover:text-brand-600 transition-colors ${isFirst ? "text-[16.5px]" : "text-[15px]"}`}
         >
-          {summary.profile.name ?? summary.profile.login}
+          {summary.name ?? summary.login}
         </h3>
         <p className="text-[12.5px] text-ink-soft truncate mt-0.5 font-[450]">
-          @{summary.profile.login}
+          @{summary.login}
         </p>
       </div>
 
@@ -230,19 +206,12 @@ export default async function ContributorsPage({
     campus?: string;
   }>;
 }) {
-  const {
-    period = "all",
-    from,
-    to,
-    search = "",
-    org = "",
-    year = "",
-    campus = "",
-  } = await searchParams;
-  const dateQuery = buildDateQuery(period, from, to);
-  const students = await getStudentsKV();
+  const raw = await searchParams;
+  const query = parseLeaderboardQuery(raw);
+  const { period, from, to, search, year, campus } = query;
+  const [board, recognitions] = await Promise.all([buildLeaderboard(query), getRecognitions()]);
 
-  if (students.length === 0) {
+  if (board.rosterEmpty) {
     return (
       <main className="min-h-screen bg-panel flex items-center justify-center px-4">
         <div className="text-center max-w-md bg-ground border border-line rounded-2xl shadow-card p-8">
@@ -279,281 +248,9 @@ export default async function ContributorsPage({
     );
   }
 
-  const flaggedPRIds = await getFlaggedPRIdSet();
-  const recognitions = await getRecognitions();
-  const repoCache = await getRepoCache();
-
-  // ── Cache-first data loading ──────────────────────────────────────────────
-  const isPredefinedPeriod = [
-    "all",
-    "1day",
-    "week",
-    "month",
-    "2months",
-    "3months",
-    "6months",
-    "year",
-  ].includes(period);
-  const isTimeWindowed = isPredefinedPeriod && period !== "all";
-  const MAX_WINDOW_CACHE_AGE_MS = 60 * 60 * 1000; // 1 hour
-  let allSummaries: StudentSummary[] | null = null;
-  let cachedAt: string | null = null;
-
-  if (isPredefinedPeriod) {
-    const cache = await readSummaryCache(period);
-    if (cache && cache.cachedAt !== "1970-01-01T00:00:00.000Z") {
-      const ageMs = getCacheAgeMs(cache.cachedAt);
-      if (!isTimeWindowed || ageMs < MAX_WINDOW_CACHE_AGE_MS) {
-        allSummaries = cache.summaries;
-        cachedAt = cache.cachedAt;
-      }
-    }
-  }
-
-  if (!allSummaries) {
-    try {
-      allSummaries = await getAllStudentSummaries(dateQuery, flaggedPRIds);
-      if (isPredefinedPeriod) {
-        await writeSummaryCache(allSummaries, period);
-        cachedAt = new Date().toISOString();
-      }
-    } catch (err) {
-      console.error("Failed to fetch student summaries from GitHub API:", err);
-      if (isPredefinedPeriod) {
-        const staleCache = await readSummaryCache(period);
-        if (staleCache) {
-          console.warn(
-            `Falling back to stale summary cache for ${period} (cached at ${staleCache.cachedAt})`,
-          );
-          allSummaries = staleCache.summaries;
-          cachedAt = staleCache.cachedAt;
-        }
-      }
-      if (!allSummaries) {
-        allSummaries = [];
-      }
-    }
-  } else {
-    allSummaries = [...allSummaries].sort(
-      (a, b) => b.scoreMergedPRs - a.scoreMergedPRs,
-    );
-  }
-
-  // The roster is the only source of truth for who is a student; a period
-  // cache may still carry people removed from it.
-  allSummaries = pruneToRoster(allSummaries, students);
-  // "Students" is the size of the roster, full stop. Once someone is added to
-  // the tracker they count, whatever period, year or campus is selected, and
-  // whether or not GitHub can still find their account. The filter's own
-  // headcount is shown underneath when it differs.
-  const studentCount = students.length;
-  const studentsInFilter = students.filter(
-    (s) => (!year || s.year === year) && (!campus || s.campus === campus),
-  ).length;
-
-  const hasActivity = (s: StudentSummary) =>
-    s.totalPRs > 0 || (s.issuesCount ?? 0) > 0;
-
-  // Global immutable leaderboard for the selected period
-  const rankedLeaderboard: RankedSummary[] = allSummaries
-    .filter(hasActivity)
-    .map((summary, i) => ({ ...summary, rank: i + 1 }));
-
-  // ── Organization Search Mode Activation ─────────────────────────────────
-  // Organization mode is activated when an organization is explicitly selected (via org parameter).
-  const cleanOrg = org.trim().replace(/^@/, "");
-  let matchedOrg: OrgCacheEntry | null = null;
-  if (cleanOrg) {
-    matchedOrg = await resolveOrganization(cleanOrg);
-  }
-
-  const isOrgSearch = Boolean(matchedOrg && matchedOrg.isOrganization);
-
-  let realContributors: RankedSummary[] = [];
-  let otherStudents: StudentSummary[] = [];
-  let totalPRs = 0;
-  let totalMerged = 0;
-
-  if (isOrgSearch && matchedOrg) {
-    // ── Organization Search Mode ───────────────────────────────────────────
-    const targetOrgLogin = matchedOrg.login.toLowerCase();
-    const orgSummaries: StudentSummary[] = [];
-
-    // Only students the index says have merged PRs to this org need their
-    // profile opened. For apache that is ~46 reads instead of ~1,890, and the
-    // filtering below (dates, flags, repo validity, year, campus) is unchanged.
-    const orgContributors = contributorsForOrg(await readOrgIndex(), targetOrgLogin);
-
-    await Promise.all(
-      allSummaries
-        .filter((s) => orgContributors.has(s.profile.login.toLowerCase()))
-        .map(async (studentSummary) => {
-        try {
-          const cached = await readProfileCache(studentSummary.profile.login);
-          if (!cached || !cached.prs || cached.prs.length === 0) return;
-
-          let prs = cached.prs;
-          let issues = cached.issues || [];
-
-          // Match any repository belonging to the organization
-          prs = prs.filter((pr) => {
-            if (!pr.repository_url) return false;
-            const repo = repoFromUrl(pr.repository_url);
-            return repo.split("/")[0]?.toLowerCase() === targetOrgLogin;
-          });
-
-          if (prs.length === 0) return;
-
-          // Strip flagged / invalid contributions
-          prs = prs.filter((pr) => {
-            const repo = repoFromUrl(pr.repository_url);
-            const key = `${repo}#${pr.number}`;
-            if (flaggedPRIds.has(key)) return false;
-            if (prExcludedBy(repoCache[repo], pr.pull_request?.merged_at)) return false;
-            return true;
-          });
-
-          // Filter by dateQuery if active
-          if (dateQuery) {
-            const gtMatch = dateQuery.match(/created:>([0-9-]{10})/);
-            const rangeMatch = dateQuery.match(
-              /created:([0-9-]{10})\.\.([0-9-]{10})/,
-            );
-            if (gtMatch) {
-              const minDate = new Date(gtMatch[1]);
-              prs = prs.filter((pr) => new Date(pr.created_at) > minDate);
-              issues = issues.filter((is) => new Date(is.created_at) > minDate);
-            } else if (rangeMatch) {
-              const minDate = new Date(rangeMatch[1]);
-              const maxDate = new Date(rangeMatch[2]);
-              minDate.setHours(0, 0, 0, 0);
-              maxDate.setHours(23, 59, 59, 999);
-              prs = prs.filter((pr) => {
-                const d = new Date(pr.created_at);
-                return d >= minDate && d <= maxDate;
-              });
-              issues = issues.filter((is) => {
-                const d = new Date(is.created_at);
-                return d >= minDate && d <= maxDate;
-              });
-            }
-          }
-
-          // Requirement 5: Only count merged PR contributions
-          const mergedPRList = prs.filter((pr) =>
-            Boolean(pr.pull_request?.merged_at),
-          );
-          if (mergedPRList.length === 0) return;
-
-          // Filter by year & campus if selected
-          if (year && studentSummary.year !== year) return;
-          if (campus && studentSummary.campus !== campus) return;
-
-          const studentTotalPRs = prs.length;
-          const studentMergedPRs = mergedPRList.length;
-          const openPRs = prs.filter((pr) => pr.state === "open").length;
-          const closedPRs = prs.filter(
-            (pr) => pr.state === "closed" && !pr.pull_request?.merged_at,
-          ).length;
-
-          const orgIssues = issues.filter((is) => {
-            if (!is.repository_url) return false;
-            return (
-              repoFromUrl(is.repository_url).split("/")[0]?.toLowerCase() ===
-              targetOrgLogin
-            );
-          });
-
-          // Same resolver and decay as the leaderboard, so the org view cannot drift.
-          const repoMultiplierFor = makeRepoMultiplierResolver(
-            repoCache,
-            studentSummary.profile.login,
-            new Set(),
-            // eslint-disable-next-line react-hooks/purity -- async Server Component, see b35811b
-            Date.now(),
-          );
-          const orgScore = aggregateMergedPRScore(
-            mergedPRList,
-            (pr) => (pr.repository_url ? repoFromUrl(pr.repository_url) : null),
-            repoMultiplierFor,
-            (repo, count) =>
-              repo && isConcentrated(count, repoCache[repo]?.signals) ? CONCENTRATED_DECAY : PER_REPO_DECAY,
-          );
-
-          orgSummaries.push({
-            profile: studentSummary.profile,
-            totalPRs: studentTotalPRs,
-            mergedPRs: studentMergedPRs,
-            openPRs,
-            closedPRs,
-            scoreMergedPRs: orgScore,
-            issuesCount: orgIssues.length,
-            year: studentSummary.year,
-            campus: studentSummary.campus,
-            organizations: [matchedOrg.login],
-          });
-        } catch (err) {
-          console.error(
-            `Error processing org contributions for ${studentSummary.profile.login}:`,
-            err,
-          );
-        }
-      }),
-    );
-
-    // Requirement 6: Rank contributors using organization-specific contributions
-    // 1. Number of merged PRs in organization — descending
-    // 2. aggregateMergedPRScore() on org merged PRs — descending
-    // 3. Total PRs in organization — descending
-    // 4. Alphabetical by login
-    orgSummaries.sort((a, b) => {
-      if (b.mergedPRs !== a.mergedPRs) return b.mergedPRs - a.mergedPRs;
-      if (b.scoreMergedPRs !== a.scoreMergedPRs)
-        return b.scoreMergedPRs - a.scoreMergedPRs;
-      if (b.totalPRs !== a.totalPRs) return b.totalPRs - a.totalPRs;
-      return a.profile.login.localeCompare(b.profile.login);
-    });
-
-    realContributors = orgSummaries.map((c, i) => ({
-      ...c,
-      rank: i + 1, // Organization-specific rank
-    }));
-
-    otherStudents = [];
-    totalPRs = realContributors.reduce((s, c) => s + c.totalPRs, 0);
-    totalMerged = realContributors.reduce((s, c) => s + c.mergedPRs, 0);
-  } else {
-    // ── Normal Contributor Search Mode ─────────────────────────────────────
-    const matchesFilters = (s: StudentSummary) => {
-      if (search) {
-        const q = search.toLowerCase();
-        const matchesText =
-          s.profile.login.toLowerCase().includes(q) ||
-          (s.profile.name ?? "").toLowerCase().includes(q) ||
-          (s.year ?? "").toLowerCase().includes(q) ||
-          (s.campus ?? "").toLowerCase().includes(q);
-        if (!matchesText) return false;
-      }
-      if (year && s.year !== year) return false;
-      if (campus && s.campus !== campus) return false;
-      return true;
-    };
-
-    const summaries = allSummaries.filter(matchesFilters);
-    totalPRs = summaries.reduce((s, c) => s + c.totalPRs, 0);
-    totalMerged = summaries.reduce((s, c) => s + c.mergedPRs, 0);
-
-    realContributors = rankedLeaderboard.filter(matchesFilters);
-    otherStudents = summaries.filter((s) => !hasActivity(s));
-  }
-
-  // In org-search mode, podium shows the organization-specific top 3 contributors.
-  // In normal mode, podium shows global top 3, but is hidden if text/year/campus filter is active.
-  const podium = isOrgSearch
-    ? realContributors.slice(0, 3)
-    : search || year || campus
-      ? []
-      : rankedLeaderboard.slice(0, 3);
+  const isOrgSearch = board.org !== null;
+  const matchedOrg = board.org;
+  const { podium, totals, cachedAt } = board;
   const kicker = PERIOD_KICKERS[period] ?? "ALL TIME";
 
   const refreshedAgo = cachedAt ? getMinutesAgo(cachedAt) : null;
@@ -696,26 +393,26 @@ export default async function ContributorsPage({
             {[
               {
                 label: "Students",
-                value: studentCount,
+                value: totals.students,
                 num: "text-ink",
                 sub:
-                  studentsInFilter !== studentCount
-                    ? `${studentsInFilter.toLocaleString("en-IN")} in this filter`
+                  totals.studentsInFilter !== totals.students
+                    ? `${totals.studentsInFilter.toLocaleString("en-IN")} in this filter`
                     : undefined,
               },
               {
                 label: "Contributors",
-                value: realContributors.length,
+                value: totals.contributors,
                 num: "text-brand-600",
               },
               {
                 label: "Pull requests",
-                value: totalPRs,
+                value: totals.totalPRs,
                 num: "text-ink",
               },
               {
                 label: "Merged PRs",
-                value: totalMerged,
+                value: totals.totalMerged,
                 num: "text-success-600",
               },
             ].map((s, i) => (
@@ -743,11 +440,8 @@ export default async function ContributorsPage({
         <BootstrapBanner
           // A fetched profile carries GitHub's numeric avatar URL (/u/<id>);
           // the zero-PR placeholder for a not-yet-fetched student does not.
-          populated={
-            allSummaries.filter((s) => /\/u\/\d+/.test(s.profile.avatar_url)).length +
-            students.filter((s) => s.unresolvedSince).length
-          }
-          total={students.length}
+          populated={board.bootstrap.populated}
+          total={board.bootstrap.total}
         />
       )}
       <Suspense fallback={<FilterBarSkeleton />}>
@@ -758,8 +452,8 @@ export default async function ContributorsPage({
                   name: matchedOrg.name || matchedOrg.login,
                   login: matchedOrg.login,
                   avatarUrl: matchedOrg.avatarUrl,
-                  contributorsCount: realContributors.length,
-                  mergedPRs: totalMerged,
+                  contributorsCount: totals.contributors,
+                  mergedPRs: totals.totalMerged,
                 }
               : undefined
           }
@@ -769,8 +463,11 @@ export default async function ContributorsPage({
       {/* Ranked table + other members */}
       <ContributorGrid
         recognitions={recognitions}
-        realContributors={realContributors}
-        otherStudents={otherStudents}
+        active={board.active.slice(0, PAGE_SIZE)}
+        activeTotal={board.active.length}
+        other={board.other.slice(0, PAGE_SIZE)}
+        otherTotal={board.other.length}
+        query={query}
         period={period}
         periodLabel={kicker.toLowerCase()}
         from={from}

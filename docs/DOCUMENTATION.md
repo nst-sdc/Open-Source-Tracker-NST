@@ -477,6 +477,7 @@ Student → /join page → Fill form (github, year, campus)
 | `GET` | `/api/repo-activity` | Repository activity data |
 | `GET` | `/api/user-activity` | User timeline data |
 | `GET` | `/api/weekly-contributors` | Weekly contribution stats |
+| `GET` | `/api/leaderboard?section=active\|other&offset=50&limit=50&…filters` | Next page of the leaderboard for the same filters as `/contributors` (period, from, to, search, org, year, campus); 50 slim rows, cached 30s |
 | `GET` | `/api/profile/socials?username=x` | A student's contact links (the Connect card) |
 | `PUT` | `/api/profile/socials` | Replace your own contact links; needs the GitHub session, same origin, 20/hour. See docs/PROFILE-SOCIALS.md |
 | `DELETE` | `/api/profile/socials` | Clear your own contact links |
