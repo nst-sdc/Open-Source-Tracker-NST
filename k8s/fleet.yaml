@@ -2,3 +2,9 @@
 # Every manifest here names its namespace explicitly; this just makes the
 # default match so nothing can land in "default" by accident.
 defaultNamespace: opensource-tracker
+# These resources were first created by hand with kubectl, long before Fleet.
+# Fleet deploys through Helm, and Helm refuses to adopt objects it did not
+# create ("invalid ownership metadata") unless told to. Without this the
+# bundle sits at NotReady forever and nothing ever rolls out.
+helm:
+  takeOwnership: true
