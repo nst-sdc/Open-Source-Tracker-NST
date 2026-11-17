@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { KIND_LABEL, type Recognition, type RecognitionMap } from '@/lib/recognition-types';
 import Image from 'next/image';
-import { StudentSummary } from '@/lib/github';
-import type { RankedSummary } from './page';
+import type { LeaderboardRow, LeaderboardQuery } from '@/lib/leaderboard';
 
 // Display-only rescale: avgScore is a repo multiplier average in [0.15, 3.0]
 // (see lib/repo-score.ts MULTIPLIER_MIN/MAX) — accurate, but an odd range to
@@ -15,22 +14,77 @@ import type { RankedSummary } from './page';
 const IMPACT_DISPLAY_FACTOR = 10 / 3;
 
 interface GridProps {
-  /** Already carries each contributor's position on the full leaderboard for
-   *  this period, so filtering the list never renumbers anyone. */
-  realContributors: RankedSummary[];
-  otherStudents: StudentSummary[];
+  /** First page of ranked contributors; each row already carries its
+   *  position on the full leaderboard, so filtering never renumbers anyone. */
+  active: LeaderboardRow[];
+  activeTotal: number;
+  /** First page of registered-but-inactive students (empty in org mode). */
+  other: LeaderboardRow[];
+  otherTotal: number;
+  /** The filters the page was rendered with, re-sent for further pages. */
+  query: LeaderboardQuery;
   period: string;
-  /** Organisation currently filtered on, carried into profile links so the
-   *  context survives the click. */
   /** Human-readable form of the selected period, e.g. "last 24 hours". */
   periodLabel: string;
   from?: string;
   to?: string;
+  /** Organisation currently filtered on, carried into profile links so the
+   *  context survives the click. */
   orgContext?: {
     name: string;
     login: string;
   };
   recognitions?: RecognitionMap;
+}
+
+/**
+ * Pulls further pages from /api/leaderboard as the reader scrolls. The
+ * sentinel element sits under the list; when it comes into view the next 50
+ * rows are fetched. A button does the same for keyboards and for browsers
+ * without IntersectionObserver.
+ */
+function usePagedRows(section: 'active' | 'other', initial: LeaderboardRow[], total: number, query: LeaderboardQuery) {
+  const [rows, setRows] = useState(initial);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const hasMore = rows.length < total;
+
+  const loadMore = useCallback(async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) if (v) params.set(k, String(v));
+      params.set('section', section);
+      params.set('offset', String(rows.length));
+      const res = await fetch(`/api/leaderboard?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { rows: LeaderboardRow[] };
+      setRows((r) => {
+        const seen = new Set(r.map((x) => x.login.toLowerCase()));
+        return [...r, ...data.rows.filter((x) => !seen.has(x.login.toLowerCase()))];
+      });
+    } catch {
+      setError('Could not load more right now.');
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, hasMore, query, section, rows.length]);
+
+  // The sentinel is attached through a state-backed callback ref, so the
+  // observer is (re)created when the element mounts, not read during render.
+  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!sentinelEl || !hasMore || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) void loadMore();
+    }, { rootMargin: '600px 0px' });
+    io.observe(sentinelEl);
+    return () => io.disconnect();
+  }, [sentinelEl, hasMore, loadMore]);
+
+  return { rows, hasMore, loading, error, loadMore, sentinel: setSentinelEl };
 }
 
 function CrownIcon({ className }: { className?: string }) {
@@ -153,7 +207,7 @@ function ContributorRow({
   org,
   recognition,
 }: {
-  summary: StudentSummary;
+  summary: LeaderboardRow;
   rank: number;
   period: string;
   from?: string;
@@ -165,14 +219,14 @@ function ContributorRow({
   const highlight = rank === 1 ? 'bg-gold-0/40' : '';
   return (
     <Link
-      href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}${org ? `&org=${encodeURIComponent(org)}` : ''}`}
+      href={`/contributors/${summary.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}${org ? `&org=${encodeURIComponent(org)}` : ''}`}
       className={`${ROW_GRID} px-3 md:px-5 py-3 border-t border-panel hover:bg-panel/60 transition-colors group ${highlight}`}
     >
       <span><RankCell rank={rank} recognition={recognition} /></span>
 
       <span className="flex items-center gap-2.5 md:gap-3 min-w-0">
         <Image
-          src={summary.profile.avatar_url}
+          src={summary.avatarUrl}
           alt=""
           width={38}
           height={38}
@@ -181,9 +235,9 @@ function ContributorRow({
         />
         <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-[550] text-ink truncate group-hover:text-brand-600 transition-colors">
-            {summary.profile.name ?? summary.profile.login}
+            {summary.name ?? summary.login}
           </span>
-          <span className="block text-[12px] text-ink-soft truncate">@{summary.profile.login}</span>
+          <span className="block text-[12px] text-ink-soft truncate">@{summary.login}</span>
         </span>
       </span>
 
@@ -229,8 +283,11 @@ function ContributorRow({
 }
 
 export function ContributorGrid({
-  realContributors,
-  otherStudents,
+  active,
+  activeTotal,
+  other,
+  otherTotal,
+  query,
   periodLabel,
   period,
   from,
@@ -238,18 +295,18 @@ export function ContributorGrid({
   orgContext,
   recognitions,
 }: GridProps) {
-  const [visibleActiveCount, setVisibleActiveCount] = useState(50);
-  const [visibleOtherCount, setVisibleOtherCount] = useState(50);
-
   const isOrgView = Boolean(orgContext);
+  // Destructured on purpose: a `ref` prop fed from a hook's return object
+  // makes the React Compiler treat every field of that object as a ref.
+  const { rows: activeRows, hasMore: activeHasMore, loading: activeLoading, error: activeError, loadMore: loadMoreActive, sentinel: activeSentinel } =
+    usePagedRows('active', active, activeTotal, query);
+  const { rows: otherRows, hasMore: otherHasMore, loading: otherLoading, error: otherError, loadMore: loadMoreOther, sentinel: otherSentinel } =
+    usePagedRows('other', other, otherTotal, query);
 
   const otherStudentsHeading =
     period === 'all'
       ? 'Registered, not contributing yet'
       : `No activity in the ${periodLabel}`;
-
-  const activePage = realContributors.slice(0, visibleActiveCount);
-  const otherPage = otherStudents.slice(0, visibleOtherCount);
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 pb-20 mt-6 space-y-10">
@@ -270,17 +327,17 @@ export function ContributorGrid({
           <span className="hidden md:block" />
         </div>
 
-        {activePage.length > 0 ? (
-          activePage.map((summary) => (
+        {activeRows.length > 0 ? (
+          activeRows.map((summary) => (
             <ContributorRow
-              key={summary.profile.login}
+              key={summary.login}
               summary={summary}
               rank={summary.rank}
               period={period}
               from={from}
               to={to}
               org={orgContext?.login}
-              recognition={recognitions?.[summary.profile.login.toLowerCase()]}
+              recognition={recognitions?.[summary.login.toLowerCase()]}
             />
           ))
         ) : (
@@ -303,19 +360,22 @@ export function ContributorGrid({
           </div>
         )}
 
-        {realContributors.length > visibleActiveCount && (
+        {activeHasMore && (
           <div className="flex items-center justify-center gap-3 py-4 border-t border-panel">
             <span className="text-[12.5px] text-ink-soft">
-              Showing {activePage.length} of {realContributors.length}
+              Showing {activeRows.length} of {activeTotal}
             </span>
             <button
-              onClick={() => setVisibleActiveCount((c) => c + 50)}
-              className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
+              onClick={() => void loadMoreActive()}
+              disabled={activeLoading}
+              className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel disabled:opacity-60 transition-colors"
             >
-              Load more
+              {activeLoading ? 'Loading…' : 'Load more'}
             </button>
+            {activeError && <span className="text-[12.5px] text-error-600">{activeError}</span>}
           </div>
         )}
+        <div ref={activeSentinel} aria-hidden="true" />
       </div>
 
       {/* Other registered members (only shown in global leaderboard mode) */}
@@ -324,21 +384,21 @@ export function ContributorGrid({
           <div className="flex items-center gap-2.5 mb-4">
             <h2 className="text-[15px] font-[650] text-ink">{otherStudentsHeading}</h2>
             <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
-              {otherStudents.length}
+              {otherTotal}
             </span>
           </div>
 
-          {otherPage.length > 0 ? (
+          {otherRows.length > 0 ? (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {otherPage.map((summary) => (
+                {otherRows.map((summary) => (
                   <Link
-                    key={summary.profile.login}
-                    href={`/contributors/${summary.profile.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}${orgContext ? `&org=${encodeURIComponent(orgContext.login)}` : ''}`}
+                    key={summary.login}
+                    href={`/contributors/${summary.login}?period=${period}${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}${orgContext ? `&org=${encodeURIComponent(orgContext.login)}` : ''}`}
                     className="flex items-center gap-3 bg-ground border border-line rounded-xl px-4 py-3 card-hover group"
                   >
                     <Image
-                      src={summary.profile.avatar_url}
+                      src={summary.avatarUrl}
                       alt=""
                       width={34}
                       height={34}
@@ -347,10 +407,10 @@ export function ContributorGrid({
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13.5px] font-[550] text-ink truncate group-hover:text-brand-600 transition-colors">
-                        {summary.profile.name ?? summary.profile.login}
+                        {summary.name ?? summary.login}
                       </span>
                       <span className="block text-[11.5px] text-ink-soft truncate">
-                        @{summary.profile.login}
+                        @{summary.login}
                         {summary.campus ? ` · ${summary.campus}` : ''}
                       </span>
                     </span>
@@ -360,16 +420,19 @@ export function ContributorGrid({
                   </Link>
                 ))}
               </div>
-              {otherStudents.length > visibleOtherCount && (
-                <div className="flex justify-center">
+              {otherHasMore && (
+                <div className="flex flex-col items-center gap-2">
                   <button
-                    onClick={() => setVisibleOtherCount((c) => c + 50)}
-                    className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel transition-colors"
+                    onClick={() => void loadMoreOther()}
+                    disabled={otherLoading}
+                    className="h-9 px-4 rounded-[10px] text-[13px] font-[550] border border-line-strong bg-ground text-ink hover:bg-panel disabled:opacity-60 transition-colors"
                   >
-                    Load more members
+                    {otherLoading ? 'Loading…' : `Load more members (${otherRows.length} of ${otherTotal})`}
                   </button>
+                  {otherError && <span className="text-[12.5px] text-error-600">{otherError}</span>}
                 </div>
               )}
+              <div ref={otherSentinel} aria-hidden="true" />
             </div>
           ) : (
             <div className="text-center py-8 text-ink-soft text-sm bg-ground border border-line rounded-2xl">
