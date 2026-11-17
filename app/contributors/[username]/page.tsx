@@ -19,6 +19,8 @@ import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
 import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION, MIN_STARS, type ExclusionReason } from '@/lib/repo-score';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
+import { SocialsCard } from './SocialsCard';
+import { getSocials } from '@/lib/socials';
 import { getBadges } from '@/lib/badges';
 import { getRecognitions, recognitionFor } from '@/lib/recognitions';
 import { KIND_LABEL } from '@/lib/recognition-types';
@@ -333,6 +335,10 @@ export default async function ContributorPage({
     }
   }
 
+  // Contact links the student chose to share (lib/socials.ts). Public; the
+  // owner edits them in place on this page.
+  const socials = await getSocials(profile.login);
+
   return (
     <main className="min-h-screen bg-panel">
       {/* Back nav */}
@@ -458,6 +464,8 @@ export default async function ContributorPage({
                   GitHub profile
                 </a>
               </div>
+
+              <SocialsCard username={profile.login} initial={socials} />
 
               {/* Actions: Share + Refresh */}
               <div className="mt-5 flex flex-wrap items-center gap-3 justify-center sm:justify-start">
