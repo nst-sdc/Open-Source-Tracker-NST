@@ -23,7 +23,7 @@ metadata:
   labels:
     app: kv-rest
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: kv-rest
@@ -56,13 +56,17 @@ spec:
               port: http
             initialDelaySeconds: 3
             periodSeconds: 10
+          # The proxy buffers whole values: the leaderboard cache alone is ~3.3 MB,
+          # and three app pods read profiles in bursts of fifty. At a 256Mi limit
+          # it was OOM-killed every minute after the cut-over, which turned
+          # every page into a 120s timeout. Size it for the burst, not the idle.
           resources:
             requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              cpu: 300m
+              cpu: 100m
               memory: 256Mi
+            limits:
+              cpu: '1'
+              memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
