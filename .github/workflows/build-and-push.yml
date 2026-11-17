@@ -63,6 +63,13 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           IMAGE_REPO: ${{ vars.IMAGE_REPO }}
         run: |
+          # Say which path we are on, so a wrong secret name is obvious from
+          # the log instead of surfacing as a GHCR 403 two steps later.
+          if [ "$HAS_DOCKERHUB" = "true" ]; then
+            echo "Docker Hub credentials found (DOCKERHUB_TOKEN set, DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME:-<empty>}); pushing to Docker Hub."
+          else
+            echo "::warning::No DOCKERHUB_TOKEN repository secret visible to this run; falling back to GHCR, which the org token cannot push to. Add the secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN under Settings → Secrets and variables → Actions → Repository secrets."
+          fi
           if [ "$HAS_DOCKERHUB" = "true" ]; then
             # Default to <docker hub user>/opensource-tracker: a personal access
             # token can only push under its own account, not under the org name.
