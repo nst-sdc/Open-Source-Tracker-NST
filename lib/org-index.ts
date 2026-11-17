@@ -71,6 +71,12 @@ export interface IndexFilters {
   flaggedPRIds?: Set<string>;
   /** Repos that failed star/activity validation; their PRs do not count. */
   isRepoValid?: (repoFullName: string) => boolean;
+  /**
+   * The summary's own rule (lib/repo-cache.ts prExcludedBy plus admin
+   * own-repo exceptions). When given, the index agrees with the leaderboard
+   * exactly, which is what lets orgIndexLooksIncomplete be strict.
+   */
+  excludesPR?: (repoFullName: string, mergedAt: string | null | undefined) => boolean;
 }
 
 export function indexStudentContributions(
@@ -96,6 +102,7 @@ export function indexStudentContributions(
     // self-merges into the students' own org and are filtered on render.
     if (filters.flaggedPRIds?.has(`${repo}#${pr.number}`)) continue;
     if (filters.isRepoValid && !filters.isRepoValid(repo)) continue;
+    if (filters.excludesPR?.(repo, pr.pull_request.merged_at)) continue;
 
     const owner = ownerOf(pr.repository_url);
     if (!owner) continue;
@@ -146,30 +153,41 @@ export function indexedStudents(index: OrgIndex): Set<string> {
 }
 
 /**
- * Does the index cover the students who, per the summary cache, have merged
- * PRs? The two are built from the same profiles and only the index's
- * flagged/invalid-repo filters should separate them, so a large gap means
- * the index was wiped or never backfilled. Pure, so it is testable.
+ * Students who, per the summary cache, have counted merged PRs but are
+ * missing from the index. Both are built from the same profiles with the
+ * same exclusion rule, so this should be empty; anyone listed means the
+ * index was wiped, never backfilled, or a read failed. Pure, so testable.
  */
+export function studentsMissingFromIndex(
+  index: OrgIndex,
+  summaries: Array<{ profile: { login: string }; mergedPRs: number }>,
+): string[] {
+  const known = indexedStudents(index);
+  return summaries
+    .filter((s) => s.mergedPRs > 0 && !known.has(s.profile.login.toLowerCase()))
+    .map((s) => s.profile.login);
+}
+
 export function orgIndexLooksIncomplete(
   index: OrgIndex,
   summaries: Array<{ profile: { login: string }; mergedPRs: number }>,
-  minCoverage = 0.9,
 ): boolean {
-  const withMerged = summaries.filter((s) => s.mergedPRs > 0).map((s) => s.profile.login.toLowerCase());
-  if (withMerged.length === 0) return false;
-  const known = indexedStudents(index);
-  const covered = withMerged.filter((l) => known.has(l)).length;
-  return covered / withMerged.length < minCoverage;
+  return studentsMissingFromIndex(index, summaries).length > 0;
 }
 
 const REBUILT_AT_KEY = 'org_index_rebuilt_at';
 export const REBUILD_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
+/** When the last full rebuild ran, or null if never (e.g. first tick after this shipped). */
+export async function orgIndexRebuiltAt(): Promise<Date | null> {
+  const at = await kvGet<string>(REBUILT_AT_KEY);
+  return typeof at === 'string' && !Number.isNaN(Date.parse(at)) ? new Date(at) : null;
+}
+
 /** True if a full rebuild ran recently enough that another would be waste. */
 export async function orgIndexRebuiltRecently(nowMs = Date.now()): Promise<boolean> {
-  const at = await kvGet<string>(REBUILT_AT_KEY);
-  return typeof at === 'string' && nowMs - new Date(at).getTime() < REBUILD_MIN_INTERVAL_MS;
+  const at = await orgIndexRebuiltAt();
+  return at !== null && nowMs - at.getTime() < REBUILD_MIN_INTERVAL_MS;
 }
 
 /**
@@ -180,21 +198,37 @@ export async function orgIndexRebuiltRecently(nowMs = Date.now()): Promise<boole
  */
 export async function rebuildOrgIndex(
   students: Student[],
-  filters: IndexFilters,
+  filtersFor: IndexFilters | ((student: Student) => IndexFilters),
   readProfile: (login: string) => Promise<Pick<ProfileCacheEntry, 'prs'> | null> = readProfileCache,
 ): Promise<OrgIndex | null> {
   const index: OrgIndex = {};
   const BATCH = 50;
   let read = 0;
+  let failed = 0;
+  // One retry per failed read: a burst of 50 concurrent reads loses a few
+  // under load, and a lost read here would silently drop a student from
+  // every org search until the next rebuild.
+  const readOnce = async (login: string) => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await readProfile(login);
+      } catch {
+        if (attempt === 1) failed++;
+      }
+    }
+    return null;
+  };
   for (let i = 0; i < students.length; i += BATCH) {
     const batch = students.slice(i, i + BATCH);
-    const profiles = await Promise.all(batch.map((s) => readProfile(s.github).catch(() => null)));
+    const profiles = await Promise.all(batch.map((s) => readOnce(s.github)));
     profiles.forEach((profile, j) => {
       if (!profile) return;
       read++;
+      const filters = typeof filtersFor === 'function' ? filtersFor(batch[j]) : filtersFor;
       indexStudentContributions(index, batch[j].github, profile, filters);
     });
   }
+  if (failed > 0) console.warn(`[org-index] ${failed} profile reads failed twice during rebuild`);
   const written = await kvSet(KV_KEY, index);
   if (!written) return null;
   await kvSet(REBUILT_AT_KEY, new Date().toISOString());

@@ -15,11 +15,15 @@ import {
   readOrgIndexForWrite,
   writeOrgIndex,
   indexStudentContributions,
-  orgIndexLooksIncomplete,
-  orgIndexRebuiltRecently,
+  studentsMissingFromIndex,
+  orgIndexRebuiltAt,
   rebuildOrgIndex,
+  REBUILD_MIN_INTERVAL_MS,
+  type IndexFilters,
 } from '@/lib/org-index';
-import { getRepoCache } from '@/lib/repo-cache';
+import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
+import type { Student } from '@/lib/kv-students';
+import { classifyUnknownOwners } from '@/lib/org-cache';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
@@ -67,9 +71,15 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
   // here rather than per request: no extra GitHub calls, no extra KV reads, and
   // it populates whether or not anyone has searched -- which is what the
   // previous lazy-write approach could never do.
-  const indexFilters = {
-    flaggedPRIds,
-    isRepoValid: (repo: string) => repoCache[repo]?.valid !== false,
+  // The index must apply the SAME exclusion rule as getSummaryFromCache
+  // (flagged PRs, admin own-repo exceptions, prExcludedBy), or the org page
+  // and the index disagree about who contributed where.
+  const indexFiltersFor = (student: Student): IndexFilters => {
+    const own = ownRepoExceptionMap.get(student.github.toLowerCase()) ?? EMPTY_REPO_SET;
+    return {
+      flaggedPRIds,
+      excludesPR: (repo, mergedAt) => !own.has(repo.toLowerCase()) && prExcludedBy(repoCache[repo], mergedAt) !== null,
+    };
   };
   const { ok: indexReadOk, index: orgIndex } = await readOrgIndexForWrite();
   if (!indexReadOk) {
@@ -80,20 +90,42 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     console.error('[Incremental Refresh] org index unreadable this tick; leaving it untouched');
   } else {
     for (const [lowerName, profile] of profiles) {
-      const login = students.find(s => s.github.toLowerCase() === lowerName)?.github ?? lowerName;
-      indexStudentContributions(orgIndex, login, profile, indexFilters);
+      const student = students.find(s => s.github.toLowerCase() === lowerName);
+      indexStudentContributions(orgIndex, student?.github ?? lowerName, profile, indexFiltersFor(student ?? { github: lowerName }));
     }
     await writeOrgIndex(orgIndex);
     console.log(`[Incremental Refresh] org index covers ${Object.keys(orgIndex).length} organisations`);
 
-    // Self-heal: the index only ever learns about students as they are
-    // refreshed, so after a wipe (or on a store seeded from elsewhere) it
-    // stays partial for weeks. Compare it with the summary cache and rebuild
-    // from every profile when it is clearly missing people.
+    // Self-heal. The index only learns about a student when they are
+    // refreshed, so after a wipe it stays partial for weeks. Rebuild from
+    // every profile when anyone with counted merged PRs is missing from it,
+    // at most every REBUILD_MIN_INTERVAL_MS -- and once unconditionally the
+    // first time this code runs, so a deploy repairs an index built under
+    // the old, weaker rule.
     const allSummaries = (await readSummaryCache('all'))?.summaries ?? [];
-    if (orgIndexLooksIncomplete(orgIndex, allSummaries) && !(await orgIndexRebuiltRecently())) {
-      console.warn('[Incremental Refresh] org index is missing students with merged PRs; rebuilding from all profiles');
-      await rebuildOrgIndex(students, indexFilters);
+    const missing = studentsMissingFromIndex(orgIndex, allSummaries);
+    const lastRebuild = await orgIndexRebuiltAt();
+    const dueForRebuild = lastRebuild === null || Date.now() - lastRebuild.getTime() >= REBUILD_MIN_INTERVAL_MS;
+    if ((lastRebuild === null || missing.length > 0) && dueForRebuild) {
+      console.warn(
+        lastRebuild === null
+          ? '[Incremental Refresh] first tick with exact org indexing; rebuilding the org index from all profiles'
+          : `[Incremental Refresh] org index is missing ${missing.length} students with merged PRs (e.g. ${missing.slice(0, 3).join(', ')}); rebuilding`,
+      );
+      await rebuildOrgIndex(students, indexFiltersFor);
+    }
+
+    // The search box only suggests owners GitHub confirms are organisations.
+    // Classify a few unknown ones each tick (most-contributed first) so every
+    // org students work with becomes searchable within hours, not only the
+    // ones somebody once opened by URL.
+    try {
+      const c = await classifyUnknownOwners(15);
+      if (c.checked > 0 || c.stoppedBy) {
+        console.log(`[Incremental Refresh] classified ${c.checked} repo owners (${c.organisations} organisations), ${c.remaining} to go${c.stoppedBy ? `; stopped: ${c.stoppedBy}` : ''}`);
+      }
+    } catch (err) {
+      console.error('[Incremental Refresh] owner classification failed:', err);
     }
   }
 

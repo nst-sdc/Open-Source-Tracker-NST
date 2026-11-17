@@ -1,4 +1,4 @@
-import { kvGet, kvSet } from './kv';
+import { kvGet, kvRead, kvSet } from './kv';
 import { getGitHubHeaders } from './github';
 import { readSummaryCache } from './summary-cache';
 import { readOrgIndex } from './org-index';
@@ -27,6 +27,99 @@ export async function saveOrgCache(map: OrgCacheMap): Promise<void> {
   await kvSet(KV_KEY, map);
 }
 
+/** For read-modify-write: `ok: false` means the store did not answer, and
+ *  writing the (empty) map back would erase every organisation we know. */
+export async function getOrgCacheForWrite(): Promise<{ ok: boolean; map: OrgCacheMap }> {
+  const { ok, value } = await kvRead<OrgCacheMap>(KV_KEY);
+  return { ok, map: value || {} };
+}
+
+/** Owners that contributors' merged PRs point at but nobody has classified
+ *  yet. The owner's GitHub account type decides whether the search box may
+ *  suggest it as an organisation. Oldest knowledge first: unknown, then
+ *  entries older than `maxAgeMs`. Ordered by contributor count so the
+ *  organisations students actually work with are classified first. */
+export function unclassifiedOwners(
+  index: Record<string, { contributors: Record<string, number> }>,
+  cache: OrgCacheMap,
+  nowMs = Date.now(),
+  maxAgeMs = 30 * 24 * 60 * 60 * 1000,
+): string[] {
+  const known = new Map(Object.entries(cache).map(([k, v]) => [k.toLowerCase(), v]));
+  return Object.entries(index)
+    .filter(([key]) => {
+      const e = known.get(key.toLowerCase());
+      return !e || nowMs - new Date(e.checkedAt).getTime() > maxAgeMs;
+    })
+    .sort((a, b) => Object.keys(b[1].contributors).length - Object.keys(a[1].contributors).length)
+    .map(([key]) => key);
+}
+
+export interface ClassifyDeps {
+  fetch?: (url: string, init?: RequestInit) => Promise<Response>;
+  now?: () => Date;
+}
+
+/**
+ * Classifies up to `limit` unknown owners by asking GitHub what kind of
+ * account each is, and records the answer in org_cache_map. Run by the
+ * refresh tick a few at a time, and by the admin rebuild all at once, so the
+ * search box can suggest every organisation students contribute to without
+ * anyone having to open its page by URL first. One GitHub call per owner;
+ * stops early on a rate limit and reports what it got through.
+ */
+export async function classifyUnknownOwners(
+  limit: number,
+  deps: ClassifyDeps = {},
+): Promise<{ checked: number; organisations: number; remaining: number; stoppedBy?: string }> {
+  const f = deps.fetch ?? ((u: string, i?: RequestInit) => fetch(u, i));
+  const now = deps.now ?? (() => new Date());
+  const [index, { ok, map }] = await Promise.all([readOrgIndex(), getOrgCacheForWrite()]);
+  if (!ok) return { checked: 0, organisations: 0, remaining: -1, stoppedBy: 'org cache unreadable' };
+  const todo = unclassifiedOwners(index, map, now().getTime());
+  let checked = 0;
+  let organisations = 0;
+  let stoppedBy: string | undefined;
+  const headers = await getGitHubHeaders();
+  for (const owner of todo.slice(0, Math.max(0, limit))) {
+    let res: Response;
+    try {
+      res = await f(`https://api.github.com/users/${encodeURIComponent(owner)}`, { headers, cache: 'no-store' });
+    } catch (err) {
+      stoppedBy = `network: ${err instanceof Error ? err.message : String(err)}`;
+      break;
+    }
+    if (res.status === 403 || res.status === 429) {
+      stoppedBy = `GitHub rate limit (${res.status})`;
+      break;
+    }
+    const at = now().toISOString();
+    if (res.ok) {
+      const data = (await res.json()) as { login?: string; name?: string | null; type?: string; public_repos?: number; description?: string | null; avatar_url?: string };
+      const isOrg = data.type === 'Organization';
+      const login = data.login || owner;
+      map[login.toLowerCase()] = {
+        login,
+        name: data.name || login,
+        type: isOrg ? 'Organization' : 'User',
+        isOrganization: isOrg,
+        publicRepos: data.public_repos ?? 0,
+        description: data.description ?? undefined,
+        avatarUrl: data.avatar_url ?? undefined,
+        checkedAt: at,
+      };
+      if (isOrg) organisations++;
+    } else if (res.status === 404) {
+      map[owner.toLowerCase()] = { login: owner, type: 'User', isOrganization: false, checkedAt: at };
+    } else {
+      continue; // transient; leave unclassified for a later pass
+    }
+    checked++;
+  }
+  if (checked > 0) await saveOrgCache(map);
+  return { checked, organisations, remaining: Math.max(0, todo.length - checked), ...(stoppedBy ? { stoppedBy } : {}) };
+}
+
 /**
  * Validates whether a given query or username represents a legitimate GitHub Organization.
  * Uses KV caching to avoid hitting GitHub API rate limits.
@@ -40,7 +133,7 @@ export async function resolveOrganization(
   }
 
   const lower = clean.toLowerCase();
-  const cacheMap = await getOrgCache();
+  const { ok: cacheReadable, map: cacheMap } = await getOrgCacheForWrite();
 
   // Check cache by login or name
   const existingKey = Object.keys(cacheMap).find(
@@ -80,7 +173,9 @@ export async function resolveOrganization(
       };
 
       cacheMap[entry.login.toLowerCase()] = entry;
-      await saveOrgCache(cacheMap);
+      // Never write over a map we could not read: that erased every known
+      // organisation once, and with it every search-box suggestion.
+      if (cacheReadable) await saveOrgCache(cacheMap);
       return entry.isOrganization ? entry : null;
     } else if (res.status === 404) {
       // 404 on /orgs/ means it is not a GitHub organization (might be a user account or non-existent)
@@ -91,7 +186,7 @@ export async function resolveOrganization(
         checkedAt: new Date().toISOString(),
       };
       cacheMap[lower] = negativeEntry;
-      await saveOrgCache(cacheMap);
+      if (cacheReadable) await saveOrgCache(cacheMap);
       return null;
     }
   } catch (err) {

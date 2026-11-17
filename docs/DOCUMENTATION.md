@@ -502,6 +502,8 @@ Student → /join page → Fill form (github, year, campus)
 | `GET` | `/api/admin/join-requests` | List join requests |
 | `PATCH` | `/api/admin/join-requests` | Update request status |
 | `POST` | `/api/admin/approve` | Approve request → add to students |
+| `GET` | `/api/admin/org-index` | Org-search index health: organisations, students indexed, who is missing, last rebuild |
+| `POST` | `/api/admin/org-index` | Rebuild the org-search index from every profile cache now |
 | `GET` | `/api/admin/socials?github=x` | Inspect a student's contact links |
 | `DELETE` | `/api/admin/socials?github=x` | Moderation: clear a student's contact links |
 
