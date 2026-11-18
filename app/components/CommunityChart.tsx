@@ -152,7 +152,9 @@ export function CommunityChart({
     setHover(best);
   };
 
-  const hovered = hover !== null ? series[hover] : null;
+  // The crosshair and the stat card, like the supporting series, appear only
+  // while the pointer (or keyboard focus) is on the merged line.
+  const hovered = onLine && hover !== null ? series[hover] : null;
   const tipLeftPct = hover !== null ? (xFor(hover) / width) * 100 : 0;
 
   const svg = (
@@ -220,7 +222,7 @@ export function CommunityChart({
       {!compact && (
         <>
           {series.map((b, i) => (
-            <text key={b.month} x={xFor(i)} y={baseline + 16} textAnchor="middle" fontSize="10.5" fill={hover === i ? 'var(--color-ink)' : 'var(--color-ink-soft)'} fontWeight={hover === i ? 650 : 450}>
+            <text key={b.month} x={xFor(i)} y={baseline + 16} textAnchor="middle" fontSize="10.5" fill={hovered && hover === i ? 'var(--color-ink)' : 'var(--color-ink-soft)'} fontWeight={hovered && hover === i ? 650 : 450}>
               {monthLabel(b.month)}
             </text>
           ))}
@@ -233,7 +235,7 @@ export function CommunityChart({
       )}
 
       {/* Crosshair + points for the hovered month */}
-      {hover !== null && hovered && (
+      {hovered && hover !== null && (
         <g>
           <line x1={xFor(hover)} y1={padTop} x2={xFor(hover)} y2={baseline} stroke="var(--color-ink-faint)" strokeWidth="1" strokeDasharray="3 3" />
           {visible.map((s) => (
@@ -244,7 +246,7 @@ export function CommunityChart({
 
       {/* Invisible hit strips so touch and keyboard users can land on a month */}
       {series.map((b, i) => (
-        <rect key={`hit${b.month}`} x={i === 0 ? padLeft : (xFor(i - 1) + xFor(i)) / 2} y={0} width={i === 0 ? (xFor(1) ?? xFor(0)) / 2 - padLeft + (n === 1 ? plotW : 0) : (xFor(Math.min(n - 1, i + 1)) - xFor(i - 1)) / 2} height={height} fill="transparent" onPointerEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={compact ? -1 : 0} aria-label={`${monthLabel(b.month, true)}: ${b.merged} merged, ${b.opened} opened, ${b.closed} closed unmerged, ${b.issues} issues, ${b.contributors} students with a merge`} />
+        <rect key={`hit${b.month}`} x={i === 0 ? padLeft : (xFor(i - 1) + xFor(i)) / 2} y={0} width={i === 0 ? (xFor(1) ?? xFor(0)) / 2 - padLeft + (n === 1 ? plotW : 0) : (xFor(Math.min(n - 1, i + 1)) - xFor(i - 1)) / 2} height={height} fill="transparent" onPointerEnter={() => setHover(i)} onFocus={() => { setHover(i); setOnLine(true); }} onBlur={() => setOnLine(false)} tabIndex={compact ? -1 : 0} aria-label={`${monthLabel(b.month, true)}: ${b.merged} merged, ${b.opened} opened, ${b.closed} closed unmerged, ${b.issues} issues, ${b.contributors} students with a merge`} />
       ))}
       {/* Wide, invisible stroke over the merged line: the hover target that
           reveals the other series. Drawn above the month hit strips so it
