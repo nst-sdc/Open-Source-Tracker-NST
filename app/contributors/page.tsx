@@ -461,7 +461,11 @@ export default async function ContributorsPage({
       </Suspense>
 
       {/* Ranked table + other members */}
+      {/* Keyed by the filters: the grid keeps the pages it has loaded in
+          client state, so a filter change must give it a fresh instance or it
+          would keep showing the previous filter's rows. */}
       <ContributorGrid
+        key={JSON.stringify(query)}
         recognitions={recognitions}
         active={board.active.slice(0, PAGE_SIZE)}
         activeTotal={board.active.length}
