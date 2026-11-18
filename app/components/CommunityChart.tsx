@@ -196,7 +196,7 @@ export function CommunityChart({
 
       {/* Merged is the headline and always drawn in full; the other series
           are invisible until the pointer rests on the merged line itself,
-          then appear at three-quarter opacity so merged still leads. The
+          then appear at a quarter opacity so merged still leads. The
           legend keeps their totals visible at all times. */}
       {paths.map((p) => (
         <path
@@ -208,7 +208,7 @@ export function CommunityChart({
           strokeLinejoin="round"
           strokeLinecap="round"
           strokeDasharray={p.key === 'issues' ? '5 4' : undefined}
-          opacity={p.key === 'merged' ? 1 : onLine ? 0.75 : 0}
+          opacity={p.key === 'merged' ? 1 : onLine ? 0.25 : 0}
           style={{ transition: 'opacity 180ms ease' }}
         />
       ))}
