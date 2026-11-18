@@ -25,6 +25,7 @@ import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
 import { StoreUnavailableError } from '@/lib/kv';
 import type { Student } from '@/lib/kv-students';
 import { classifyUnknownOwners } from '@/lib/org-cache';
+import { buildCommunityTimeline, readCommunityTimeline, writeCommunityTimeline, timelineIsStale } from '@/lib/community-timeline';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
@@ -138,6 +139,18 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     // Classify a few unknown ones each tick (most-contributed first) so every
     // org students work with becomes searchable within hours, not only the
     // ones somebody once opened by URL.
+    // The community chart's monthly series, rebuilt from every profile every
+    // few hours with the same exclusion rule as the leaderboard.
+    try {
+      if (timelineIsStale(await readCommunityTimeline())) {
+        const t = await buildCommunityTimeline(students, indexFiltersFor);
+        await writeCommunityTimeline(t);
+        console.log(`[Incremental Refresh] community timeline rebuilt from ${t.studentsCounted} profiles`);
+      }
+    } catch (err) {
+      console.error('[Incremental Refresh] community timeline rebuild failed:', err);
+    }
+
     try {
       const c = await classifyUnknownOwners(15);
       if (c.checked > 0 || c.stoppedBy) {

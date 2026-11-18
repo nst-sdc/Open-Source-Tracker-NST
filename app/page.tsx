@@ -4,6 +4,8 @@ import { getEventsKV } from '@/lib/kv-events';
 import { UpcomingEvents } from './components/UpcomingEvents';
 import { readSummaryCache } from '@/lib/summary-cache';
 import { getStudentsKV } from '@/lib/kv-students';
+import { readCommunityTimeline, seriesFor } from '@/lib/community-timeline';
+import { CommunityChart } from './components/CommunityChart';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,10 +55,11 @@ function RankChip({ rank }: { rank: number }) {
 export default async function Home() {
   const events = await getEventsKV();
   const achievers = await getAchieversKV();
-  const [cache, weeklyCache, students] = await Promise.all([
+  const [cache, weeklyCache, students, timeline] = await Promise.all([
     readSummaryCache(),
     readSummaryCache("week"),
     getStudentsKV(),
+    readCommunityTimeline(),
   ]);
 
   // Stats from achievers
@@ -221,6 +224,13 @@ export default async function Home() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Momentum: merged PRs per month for the whole community */}
+      {timeline && (
+        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-4">
+          <CommunityChart series={seriesFor(timeline, {}, 12)} compact />
         </div>
       )}
 

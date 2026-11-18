@@ -503,6 +503,8 @@ Student → /join page → Fill form (github, year, campus)
 | `GET` | `/api/admin/join-requests` | List join requests |
 | `PATCH` | `/api/admin/join-requests` | Update request status |
 | `POST` | `/api/admin/approve` | Approve request → add to students |
+| `GET` | `/api/admin/community-timeline` | When the community chart's monthly series was built, and the last 12 months |
+| `POST` | `/api/admin/community-timeline` | Rebuild that series from every profile cache now (the refresh tick does it every 6 h) |
 | `GET` | `/api/admin/org-index` | Org-search index health: organisations, students indexed, who is missing, last rebuild |
 | `POST` | `/api/admin/org-index` | Rebuild the org-search index from every profile cache now |
 | `GET` | `/api/admin/socials?github=x` | Inspect a student's contact links |
