@@ -240,7 +240,7 @@ export default function RepoActivityPage() {
               { id: 'month',   label: 'Month' },
               { id: '2months', label: '2 Months' },
               { id: '3months', label: '3 Months' },
-              { id: 'all',     label: 'All Time' },
+              { id: 'all',     label: '12 months' },
             ] as const).map((p) => (
               <button
                 key={p.id}

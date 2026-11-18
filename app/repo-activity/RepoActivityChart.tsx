@@ -53,7 +53,7 @@ export function RepoActivityChart({ monthly, since, truncated }: { monthly: Repo
         <h2 className="text-ink text-sm font-[650]">Contributors per month</h2>
         <p className="text-ink-soft text-xs">
           {since ? `since ${new Date(since).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}
-          {truncated ? ' · newest 500 pull requests only' : ''}
+          {truncated ? ' · very busy repository: the newest 1,500 pull requests only' : ''}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 mb-1 text-[11.5px] text-ink-mid">

@@ -22,15 +22,24 @@ interface GhIssue { number: number; title?: string; html_url?: string; state?: s
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
 
+/** "All time" reads back twelve months: enough for the monthly chart, and a
+ *  bound on how many pages a busy repository costs. */
+const ALL_TIME_MONTHS = 12;
+
 function getFilterDate(period: string): Date {
   const now = new Date();
   switch (period) {
+    case 'all': {
+      const d = new Date(now);
+      d.setUTCMonth(d.getUTCMonth() - ALL_TIME_MONTHS);
+      return d;
+    }
     case '1day':    return new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
     case 'week':    return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     case 'month':   return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     case '2months': return new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
     case '3months': return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    default:        return new Date(0); // All time
+    default:        return new Date(0);
   }
 }
 
@@ -121,7 +130,10 @@ export async function GET(request: Request) {
     }
 
     // 3. Paginated Pull Requests fetching in parallel
-    const MAX_PAGES = 5;
+    // Pages are 100 items. Five cover a quiet repo's year; a busy one needs
+    // more to reach twelve months, up to a bound that keeps one request from
+    // costing more than ~30 GitHub calls.
+    const MAX_PAGES = period === 'all' ? 15 : 5;
     const prPromises = Array.from({ length: MAX_PAGES }, (_, i) => {
       const pageNum = i + 1;
       return fetch(`https://api.github.com/repos/${owner}/${repoName}/pulls?state=all&per_page=100&page=${pageNum}&sort=created&direction=desc`, {
@@ -331,11 +343,12 @@ export async function GET(request: Request) {
       monthly,
       maintainerSignals: { mergers: mergers === null ? 'unavailable (no token)' : mergers.size, publicMembers: publicMembers.length },
       window: {
-        // The list endpoints are read newest-first, MAX_PAGES pages deep, so a
-        // busy repo's "all time" is really "the newest N pull requests".
+        // Newest-first, MAX_PAGES deep, so a very busy repo's twelve months
+        // may still be cut short; the page says so when that happens.
         since: oldestPR,
         prsFetched: pullRequests.length,
-        truncated: prsPages.every((p) => Array.isArray(p) && p.length === 100) && period === 'all',
+        months: ALL_TIME_MONTHS,
+        truncated: period === 'all' && prsPages.every((p) => Array.isArray(p) && p.length === 100),
       },
     };
 
