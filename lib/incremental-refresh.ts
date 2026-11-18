@@ -22,9 +22,11 @@ import {
   type IndexFilters,
 } from '@/lib/org-index';
 import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
+import { StoreUnavailableError } from '@/lib/kv';
 import type { Student } from '@/lib/kv-students';
 import { classifyUnknownOwners } from '@/lib/org-cache';
 import { primeVouchedOrgs } from '@/lib/kv-vouched-orgs';
+import { buildCommunityTimeline, readCommunityTimeline, writeCommunityTimeline, timelineIsStale } from '@/lib/community-timeline';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
@@ -51,10 +53,28 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
   // 2. Patch ONLY the updated students in every summary cache period (O(n) where n=updated.length)
   //    This avoids reading all 1914+ profiles on every cron run.
   console.log('[Incremental Refresh] Patching summary caches for updated users...');
-  const flaggedPRIds = await getFlaggedPRIdSet();
-  const repoCache = await getRepoCache();
+  // All three are required to compute a summary correctly. Their readers
+  // throw StoreUnavailableError when the store did not answer and nothing is
+  // remembered; a tick that went on without them would write summaries that
+  // count junk PRs (it happened: totals doubled overnight), so stop here and
+  // let the next tick try again.
+  let flaggedPRIds: Set<string>;
+  let repoCache: Awaited<ReturnType<typeof getRepoCache>>;
+  let ownRepoExceptionMap: ReturnType<typeof buildOwnRepoExceptionMap>;
+  try {
+    [flaggedPRIds, repoCache, ownRepoExceptionMap] = await Promise.all([
+      getFlaggedPRIdSet(),
+      getRepoCache(),
+      getOwnRepoExceptions().then(buildOwnRepoExceptionMap),
+    ]);
+  } catch (err) {
+    if (err instanceof StoreUnavailableError) {
+      console.error('[Incremental Refresh] stopping: ' + err.message);
+      return { ok: true, updatedUsers: [], attemptedUsers: attempted, message: `Skipped summary update: ${err.message}` };
+    }
+    throw err;
+  }
   const students = await getStudentsKV();
-  const ownRepoExceptionMap = buildOwnRepoExceptionMap(await getOwnRepoExceptions());
   const periods = ['all', 'week', 'month'];
 
   // Every period is derived from the SAME profile cache -- getSummaryFromCache
@@ -121,6 +141,18 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     // Classify a few unknown ones each tick (most-contributed first) so every
     // org students work with becomes searchable within hours, not only the
     // ones somebody once opened by URL.
+    // The community chart's monthly series, rebuilt from every profile every
+    // few hours with the same exclusion rule as the leaderboard.
+    try {
+      if (timelineIsStale(await readCommunityTimeline())) {
+        const t = await buildCommunityTimeline(students, indexFiltersFor);
+        await writeCommunityTimeline(t);
+        console.log(`[Incremental Refresh] community timeline rebuilt from ${t.studentsCounted} profiles`);
+      }
+    } catch (err) {
+      console.error('[Incremental Refresh] community timeline rebuild failed:', err);
+    }
+
     try {
       const c = await classifyUnknownOwners(15);
       if (c.checked > 0 || c.stoppedBy) {

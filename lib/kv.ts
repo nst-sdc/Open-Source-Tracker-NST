@@ -117,6 +117,19 @@ export async function kvRead<T>(key: string): Promise<{ ok: boolean; value: T | 
   return { ok: true, value: readDiskKV<T>(key) };
 }
 
+/**
+ * Thrown by readers of data the app must not compute without (the repo
+ * validity cache, flagged PRs, own-repo exceptions) when the store did not
+ * answer and nothing is remembered in this process. Summaries built without
+ * that data count every junk PR, which doubled the site's totals once.
+ */
+export class StoreUnavailableError extends Error {
+  constructor(what: string) {
+    super(`${what} could not be read from the store and nothing is remembered yet; refusing to continue without it.`);
+    this.name = 'StoreUnavailableError';
+  }
+}
+
 export async function kvGet<T>(key: string): Promise<T | null> {
   // A failed read reads as a miss here; use kvRead to tell them apart.
   return (await kvRead<T>(key)).value;

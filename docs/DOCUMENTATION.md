@@ -506,6 +506,8 @@ Student → /join page → Fill form (github, year, campus)
 | `GET` | `/api/admin/vouched-orgs` | Organisations an admin vouched for (every repo under them passes the validity gate) |
 | `POST` | `/api/admin/vouched-orgs` | Vouch for `{ login, note? }` and re-gate that org's cached repos at once |
 | `DELETE` | `/api/admin/vouched-orgs?login=x` | Un-vouch and re-gate |
+| `GET` | `/api/admin/community-timeline` | When the community chart's monthly series was built, and the last 12 months |
+| `POST` | `/api/admin/community-timeline` | Rebuild that series from every profile cache now (the refresh tick does it every 6 h) |
 | `GET` | `/api/admin/org-index` | Org-search index health: organisations, students indexed, who is missing, last rebuild |
 | `POST` | `/api/admin/org-index` | Rebuild the org-search index from every profile cache now |
 | `GET` | `/api/admin/socials?github=x` | Inspect a student's contact links |
