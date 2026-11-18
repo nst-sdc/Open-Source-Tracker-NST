@@ -192,8 +192,9 @@ export function CommunityChart({
       {mergedArea && <path d={mergedArea} fill={`url(#${gradId})`} />}
 
       {/* Merged is the headline and always drawn in full; the other series
-          sit back at reduced opacity until the pointer is over the chart,
-          when everything comes forward together. */}
+          are invisible until the pointer is over the chart, then appear at
+          three-quarter opacity so merged still leads. The legend keeps their
+          totals visible at all times. */}
       {paths.map((p) => (
         <path
           key={p.key}
@@ -204,7 +205,7 @@ export function CommunityChart({
           strokeLinejoin="round"
           strokeLinecap="round"
           strokeDasharray={p.key === 'issues' ? '5 4' : undefined}
-          opacity={p.key === 'merged' || hover !== null ? 1 : 0.32}
+          opacity={p.key === 'merged' ? 1 : hover !== null ? 0.75 : 0}
           style={{ transition: 'opacity 180ms ease' }}
         />
       ))}
@@ -324,7 +325,7 @@ export function CommunityChart({
             </button>
           );
         })}
-        <span className="text-[11px] text-ink-faint ml-auto">hover for all series · issues on the right axis · numbers under the months: students with a merge</span>
+        <span className="text-[11px] text-ink-faint ml-auto">hover to reveal opened, closed and issues · issues on the right axis · numbers under the months: students with a merge</span>
       </div>
       <div className="relative">
         {svg}
