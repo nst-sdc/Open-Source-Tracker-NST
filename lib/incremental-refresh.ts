@@ -22,6 +22,7 @@ import {
   type IndexFilters,
 } from '@/lib/org-index';
 import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
+import { StoreUnavailableError } from '@/lib/kv';
 import type { Student } from '@/lib/kv-students';
 import { classifyUnknownOwners } from '@/lib/org-cache';
 import { getStudentsKV } from '@/lib/kv-students';
@@ -49,10 +50,28 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
   // 2. Patch ONLY the updated students in every summary cache period (O(n) where n=updated.length)
   //    This avoids reading all 1914+ profiles on every cron run.
   console.log('[Incremental Refresh] Patching summary caches for updated users...');
-  const flaggedPRIds = await getFlaggedPRIdSet();
-  const repoCache = await getRepoCache();
+  // All three are required to compute a summary correctly. Their readers
+  // throw StoreUnavailableError when the store did not answer and nothing is
+  // remembered; a tick that went on without them would write summaries that
+  // count junk PRs (it happened: totals doubled overnight), so stop here and
+  // let the next tick try again.
+  let flaggedPRIds: Set<string>;
+  let repoCache: Awaited<ReturnType<typeof getRepoCache>>;
+  let ownRepoExceptionMap: ReturnType<typeof buildOwnRepoExceptionMap>;
+  try {
+    [flaggedPRIds, repoCache, ownRepoExceptionMap] = await Promise.all([
+      getFlaggedPRIdSet(),
+      getRepoCache(),
+      getOwnRepoExceptions().then(buildOwnRepoExceptionMap),
+    ]);
+  } catch (err) {
+    if (err instanceof StoreUnavailableError) {
+      console.error('[Incremental Refresh] stopping: ' + err.message);
+      return { ok: true, updatedUsers: [], attemptedUsers: attempted, message: `Skipped summary update: ${err.message}` };
+    }
+    throw err;
+  }
   const students = await getStudentsKV();
-  const ownRepoExceptionMap = buildOwnRepoExceptionMap(await getOwnRepoExceptions());
   const periods = ['all', 'week', 'month'];
 
   // Every period is derived from the SAME profile cache -- getSummaryFromCache
