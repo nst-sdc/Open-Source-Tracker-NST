@@ -77,6 +77,9 @@ export function CommunityChart({
 }) {
   const gradId = useId().replace(/:/g, '');
   const [hover, setHover] = useState<number | null>(null);
+  // True while the pointer is on the merged line itself (not just inside the
+  // chart); that is what reveals the supporting series.
+  const [onLine, setOnLine] = useState(false);
   const [hidden, setHidden] = useState<Set<SeriesKey>>(() => new Set());
   const visible = SERIES.filter((s) => !hidden.has(s.key));
 
@@ -159,7 +162,7 @@ export function CommunityChart({
       role="img"
       aria-label={`Community activity by month${scopeLabel ? ` for ${scopeLabel}` : ''}: ${totals.merged} pull requests merged, ${totals.opened} opened, ${totals.closed} closed without merging and ${totals.issues} issues opened across ${series.length} months.`}
       onPointerMove={onMove}
-      onPointerLeave={() => setHover(null)}
+      onPointerLeave={() => { setHover(null); setOnLine(false); }}
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -192,9 +195,9 @@ export function CommunityChart({
       {mergedArea && <path d={mergedArea} fill={`url(#${gradId})`} />}
 
       {/* Merged is the headline and always drawn in full; the other series
-          are invisible until the pointer is over the chart, then appear at
-          three-quarter opacity so merged still leads. The legend keeps their
-          totals visible at all times. */}
+          are invisible until the pointer rests on the merged line itself,
+          then appear at three-quarter opacity so merged still leads. The
+          legend keeps their totals visible at all times. */}
       {paths.map((p) => (
         <path
           key={p.key}
@@ -205,7 +208,7 @@ export function CommunityChart({
           strokeLinejoin="round"
           strokeLinecap="round"
           strokeDasharray={p.key === 'issues' ? '5 4' : undefined}
-          opacity={p.key === 'merged' ? 1 : hover !== null ? 0.75 : 0}
+          opacity={p.key === 'merged' ? 1 : onLine ? 0.75 : 0}
           style={{ transition: 'opacity 180ms ease' }}
         />
       ))}
@@ -243,6 +246,22 @@ export function CommunityChart({
       {series.map((b, i) => (
         <rect key={`hit${b.month}`} x={i === 0 ? padLeft : (xFor(i - 1) + xFor(i)) / 2} y={0} width={i === 0 ? (xFor(1) ?? xFor(0)) / 2 - padLeft + (n === 1 ? plotW : 0) : (xFor(Math.min(n - 1, i + 1)) - xFor(i - 1)) / 2} height={height} fill="transparent" onPointerEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={compact ? -1 : 0} aria-label={`${monthLabel(b.month, true)}: ${b.merged} merged, ${b.opened} opened, ${b.closed} closed unmerged, ${b.issues} issues, ${b.contributors} students with a merge`} />
       ))}
+      {/* Wide, invisible stroke over the merged line: the hover target that
+          reveals the other series. Drawn above the month hit strips so it
+          wins the pointer. */}
+      {!hidden.has('merged') && (
+        <path
+          d={straightPath(pointsFor('merged'))}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={compact ? 14 : 22}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          style={{ pointerEvents: 'stroke', cursor: 'crosshair' }}
+          onPointerEnter={() => setOnLine(true)}
+          onPointerLeave={() => setOnLine(false)}
+        />
+      )}
     </svg>
   );
 
@@ -325,7 +344,7 @@ export function CommunityChart({
             </button>
           );
         })}
-        <span className="text-[11px] text-ink-faint ml-auto">hover to reveal opened, closed and issues · issues on the right axis · numbers under the months: students with a merge</span>
+        <span className="text-[11px] text-ink-faint ml-auto">hover the merged line to reveal opened, closed and issues · issues on the right axis · numbers under the months: students with a merge</span>
       </div>
       <div className="relative">
         {svg}
