@@ -121,12 +121,17 @@ export function CommunityChart({
     );
   }
 
+  // Merged is drawn as points joined by straight segments, so each month's
+  // value is a visible dot and the line reads as data, not a trend; the
+  // supporting series are smoothed so they sit back visually.
+  const straightPath = (pts: Array<[number, number]>) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const pointsFor = (key: SeriesKey) => series.map((b, i) => [xFor(i), yFor(key, b[key])] as [number, number]);
   const paths = visible.map((s) => ({
     ...s,
-    d: smoothPath(series.map((b, i) => [xFor(i), yFor(s.key, b[s.key])] as [number, number])),
+    d: s.key === 'merged' ? straightPath(pointsFor('merged')) : smoothPath(pointsFor(s.key)),
   }));
   const mergedArea = !hidden.has('merged')
-    ? `${smoothPath(series.map((b, i) => [xFor(i), yLeft(b.merged)] as [number, number]))} L${xFor(n - 1).toFixed(1)},${baseline} L${xFor(0).toFixed(1)},${baseline} Z`
+    ? `${straightPath(pointsFor('merged'))} L${xFor(n - 1).toFixed(1)},${baseline} L${xFor(0).toFixed(1)},${baseline} Z`
     : '';
 
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -174,6 +179,11 @@ export function CommunityChart({
           </g>
         ))}
 
+      {/* Slight vertical grid, one line per month */}
+      {!compact && series.map((b, i) => (
+        <line key={`g${b.month}`} x1={xFor(i)} y1={padTop} x2={xFor(i)} y2={baseline} stroke="var(--color-line)" strokeWidth="1" opacity="0.6" />
+      ))}
+
       {/* Running month shading */}
       {!compact && last?.partial && n > 1 && (
         <rect x={(xFor(n - 2) + xFor(n - 1)) / 2} y={padTop} width={xFor(n - 1) - (xFor(n - 2) + xFor(n - 1)) / 2 + 2} height={plotH} fill="var(--color-panel)" opacity="0.7" />
@@ -181,8 +191,26 @@ export function CommunityChart({
 
       {mergedArea && <path d={mergedArea} fill={`url(#${gradId})`} />}
 
+      {/* Merged is the headline and always drawn in full; the other series
+          sit back at reduced opacity until the pointer is over the chart,
+          when everything comes forward together. */}
       {paths.map((p) => (
-        <path key={p.key} d={p.d} fill="none" stroke={p.color} strokeWidth={compact && p.key === 'merged' ? 2 : p.width} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={p.key === 'issues' ? '5 4' : undefined} opacity={hover !== null ? 0.9 : 1} />
+        <path
+          key={p.key}
+          d={p.d}
+          fill="none"
+          stroke={p.color}
+          strokeWidth={p.key === 'merged' ? (compact ? 2 : 2.5) : p.width}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          strokeDasharray={p.key === 'issues' ? '5 4' : undefined}
+          opacity={p.key === 'merged' || hover !== null ? 1 : 0.32}
+          style={{ transition: 'opacity 180ms ease' }}
+        />
+      ))}
+
+      {!hidden.has('merged') && series.map((b, i) => (
+        <circle key={`m${b.month}`} cx={xFor(i)} cy={yLeft(b.merged)} r={compact ? 2 : 3.5} fill="var(--color-ground)" stroke="var(--color-success-500)" strokeWidth={compact ? 1.5 : 2} />
       ))}
 
       {!compact && (
@@ -205,7 +233,7 @@ export function CommunityChart({
         <g>
           <line x1={xFor(hover)} y1={padTop} x2={xFor(hover)} y2={baseline} stroke="var(--color-ink-faint)" strokeWidth="1" strokeDasharray="3 3" />
           {visible.map((s) => (
-            <circle key={s.key} cx={xFor(hover)} cy={yFor(s.key, hovered[s.key])} r={compact ? 3 : 4} fill="var(--color-ground)" stroke={s.color} strokeWidth="2" />
+            <circle key={s.key} cx={xFor(hover)} cy={yFor(s.key, hovered[s.key])} r={s.key === 'merged' ? (compact ? 3.5 : 5) : compact ? 3 : 4} fill="var(--color-ground)" stroke={s.color} strokeWidth={s.key === 'merged' ? 2.5 : 2} />
           ))}
         </g>
       )}
@@ -296,7 +324,7 @@ export function CommunityChart({
             </button>
           );
         })}
-        <span className="text-[11px] text-ink-faint ml-auto">issues on the right axis · numbers under the months: students with a merge</span>
+        <span className="text-[11px] text-ink-faint ml-auto">hover for all series · issues on the right axis · numbers under the months: students with a merge</span>
       </div>
       <div className="relative">
         {svg}
