@@ -23,6 +23,8 @@ export const MONTHS_KEPT = 24;
 export interface Counts {
   opened: number;
   merged: number;
+  /** Closed without being merged, by the month it was closed. */
+  closed: number;
   issues: number;
   /** Students with at least one merged PR that month. */
   contributors: number;
@@ -95,7 +97,7 @@ export function foldStudent(
   const bump = (month: string, field: keyof Counts, by = 1) => {
     if (!keepMonths.has(month)) return;
     const row = (months[month] ??= {});
-    const c = (row[seg] ??= { opened: 0, merged: 0, issues: 0, contributors: 0 });
+    const c = (row[seg] ??= { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 });
     c[field] += by;
   };
   const mergedMonths = new Set<string>();
@@ -109,6 +111,8 @@ export function foldStudent(
       const m = monthOf(mergedAt);
       bump(m, 'merged');
       if (keepMonths.has(m)) mergedMonths.add(m);
+    } else if (pr.state === 'closed' && pr.closed_at) {
+      bump(monthOf(pr.closed_at), 'closed');
     }
   }
   for (const is of profile.issues ?? []) if (is.created_at) bump(monthOf(is.created_at), 'issues');
@@ -173,11 +177,12 @@ export function seriesFor(
   const keys = lastMonths(n, nowMs);
   const current = keys[keys.length - 1];
   return keys.map((month) => {
-    const acc: Counts = { opened: 0, merged: 0, issues: 0, contributors: 0 };
+    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 };
     for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
       if (!segmentMatches(seg, filters)) continue;
       acc.opened += c.opened;
       acc.merged += c.merged;
+      acc.closed += c.closed ?? 0; // records built before this field existed
       acc.issues += c.issues;
       acc.contributors += c.contributors;
     }

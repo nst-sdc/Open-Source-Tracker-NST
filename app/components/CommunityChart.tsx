@@ -1,13 +1,68 @@
+'use client';
+
 import Link from 'next/link';
+import { useId, useMemo, useState } from 'react';
 import type { MonthBucket } from '@/lib/community-timeline';
 
 /**
- * The community's activity by month, drawn server-side as inline SVG like
- * the per-contributor chart: bars for merged pull requests, a line for pull
- * requests opened, and the number of students who had a merge under each
- * month. `compact` is the home-page sparkline: bars only, one headline
- * number, and a link to the full chart.
+ * The community's activity by month: four thin lines (merged, opened, and
+ * closed-without-merge pull requests on the left axis; issues opened on the
+ * right axis, because issue volume runs several times PR volume and would
+ * flatten the rest), a soft area under merged, and a hover crosshair with a
+ * card that reads out every series for the month under the pointer. Legend
+ * entries toggle their series. `compact` is the home-page version.
  */
+type SeriesKey = 'merged' | 'opened' | 'closed' | 'issues';
+
+const SERIES: Array<{ key: SeriesKey; label: string; color: string; axis: 'left' | 'right'; width: number }> = [
+  { key: 'merged', label: 'Merged PRs', color: 'var(--color-success-500)', axis: 'left', width: 2.25 },
+  { key: 'opened', label: 'PRs opened', color: 'var(--color-brand-500)', axis: 'left', width: 1.5 },
+  { key: 'closed', label: 'Closed unmerged', color: 'var(--color-warning-600)', axis: 'left', width: 1.5 },
+  { key: 'issues', label: 'Issues opened', color: 'var(--color-violet-500)', axis: 'right', width: 1.5 },
+];
+
+const monthLabel = (m: string, long = false) =>
+  new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', ...(long ? { year: 'numeric' } : {}), timeZone: 'UTC' });
+
+function niceCeil(v: number): number {
+  if (v <= 0) return 1;
+  const pow = 10 ** Math.floor(Math.log10(v));
+  for (const k of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (k * pow >= v) return k * pow;
+  return v;
+}
+
+/** Monotone cubic path through the points, so the line never overshoots a value. */
+function smoothPath(pts: Array<[number, number]>): string {
+  if (pts.length < 2) return pts.length ? `M${pts[0][0]},${pts[0][1]}` : '';
+  const n = pts.length;
+  const dx = pts.slice(1).map((p, i) => p[0] - pts[i][0]);
+  const dy = pts.slice(1).map((p, i) => p[1] - pts[i][1]);
+  const m = dx.map((d, i) => dy[i] / d);
+  const t: number[] = [m[0]];
+  for (let i = 1; i < n - 1; i++) t.push(m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2);
+  t.push(m[n - 2]);
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) {
+      t[i] = 0;
+      t[i + 1] = 0;
+      continue;
+    }
+    const a = t[i] / m[i];
+    const b = t[i + 1] / m[i];
+    const h = Math.hypot(a, b);
+    if (h > 3) {
+      t[i] = (3 * a) / h * m[i];
+      t[i + 1] = (3 * b) / h * m[i];
+    }
+  }
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i];
+    d += ` C${(pts[i][0] + h / 3).toFixed(1)},${(pts[i][1] + (t[i] * h) / 3).toFixed(1)} ${(pts[i + 1][0] - h / 3).toFixed(1)},${(pts[i + 1][1] - (t[i + 1] * h) / 3).toFixed(1)} ${pts[i + 1][0].toFixed(1)},${pts[i + 1][1].toFixed(1)}`;
+  }
+  return d;
+}
+
 export function CommunityChart({
   series,
   compact = false,
@@ -20,40 +75,43 @@ export function CommunityChart({
   scopeLabel?: string;
   href?: string;
 }) {
-  const totals = series.reduce(
-    (a, b) => ({ opened: a.opened + b.opened, merged: a.merged + b.merged, issues: a.issues + b.issues }),
-    { opened: 0, merged: 0, issues: 0 },
+  const gradId = useId().replace(/:/g, '');
+  const [hover, setHover] = useState<number | null>(null);
+  const [hidden, setHidden] = useState<Set<SeriesKey>>(() => new Set());
+  const visible = SERIES.filter((s) => !hidden.has(s.key));
+
+  const totals = useMemo(
+    () =>
+      series.reduce(
+        (a, b) => ({ opened: a.opened + b.opened, merged: a.merged + b.merged, closed: a.closed + b.closed, issues: a.issues + b.issues }),
+        { opened: 0, merged: 0, closed: 0, issues: 0 },
+      ),
+    [series],
   );
-  const monthLabel = (m: string, long = false) =>
-    new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', ...(long ? { year: 'numeric' } : {}), timeZone: 'UTC' });
-  const span = series.length ? `${monthLabel(series[0].month, true)} – ${monthLabel(series[series.length - 1].month, true)}` : '';
   const last = series[series.length - 1];
   const prev = series[series.length - 2];
+  const span = series.length ? `${monthLabel(series[0].month, true)} – ${monthLabel(last.month, true)}` : '';
 
   // ── Geometry ──────────────────────────────────────────────────────────────
-  const width = 680;
-  const height = compact ? 72 : 220;
-  const padLeft = compact ? 0 : 34;
-  const padRight = compact ? 0 : 8;
-  const padTop = compact ? 4 : 10;
-  const padBottom = compact ? 4 : 44;
+  const width = 720;
+  const height = compact ? 64 : 240;
+  const padLeft = compact ? 0 : 40;
+  const padRight = compact ? 0 : 44;
+  const padTop = compact ? 6 : 12;
+  const padBottom = compact ? 2 : 40;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
   const baseline = padTop + plotH;
-  const slot = plotW / Math.max(1, series.length);
-  const barW = Math.max(6, Math.min(36, slot * 0.58));
-  const centerOf = (i: number) => padLeft + slot * i + slot / 2;
-  const maxVal = Math.max(1, ...series.map((b) => Math.max(b.merged, b.opened)));
-  const niceMax = (() => {
-    const pow = 10 ** Math.floor(Math.log10(maxVal));
-    for (const k of [1, 2, 2.5, 5, 10]) if (k * pow >= maxVal) return k * pow;
-    return maxVal;
-  })();
-  const yFor = (v: number) => baseline - (v / niceMax) * plotH;
-  const ticks = compact ? [] : [0, niceMax / 2, niceMax].map((v) => Math.round(v));
-  const linePath = series.map((b, i) => `${i === 0 ? 'M' : 'L'}${centerOf(i).toFixed(1)},${yFor(b.opened).toFixed(1)}`).join(' ');
+  const n = Math.max(1, series.length);
+  const xFor = (i: number) => padLeft + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+  const leftMax = niceCeil(Math.max(0, ...series.flatMap((b) => [hidden.has('merged') ? 0 : b.merged, hidden.has('opened') ? 0 : b.opened, hidden.has('closed') ? 0 : b.closed])));
+  const rightMax = niceCeil(Math.max(0, ...series.map((b) => (hidden.has('issues') ? 0 : b.issues))));
+  const yLeft = (v: number) => baseline - (v / leftMax) * plotH;
+  const yRight = (v: number) => baseline - (v / rightMax) * plotH;
+  const yFor = (key: SeriesKey, v: number) => (key === 'issues' ? yRight(v) : yLeft(v));
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
 
-  if (totals.opened === 0 && totals.merged === 0) {
+  if (totals.opened === 0 && totals.merged === 0 && totals.issues === 0) {
     if (compact) return null;
     return (
       <div className="bg-ground border border-line rounded-2xl shadow-card p-5">
@@ -63,56 +121,137 @@ export function CommunityChart({
     );
   }
 
+  const paths = visible.map((s) => ({
+    ...s,
+    d: smoothPath(series.map((b, i) => [xFor(i), yFor(s.key, b[s.key])] as [number, number])),
+  }));
+  const mergedArea = !hidden.has('merged')
+    ? `${smoothPath(series.map((b, i) => [xFor(i), yLeft(b.merged)] as [number, number]))} L${xFor(n - 1).toFixed(1)},${baseline} L${xFor(0).toFixed(1)},${baseline} Z`
+    : '';
+
+  const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * width;
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < n; i++) {
+      const d = Math.abs(xFor(i) - x);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    setHover(best);
+  };
+
+  const hovered = hover !== null ? series[hover] : null;
+  const tipLeftPct = hover !== null ? (xFor(hover) / width) * 100 : 0;
+
   const svg = (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="h-auto w-full overflow-visible"
+      className="h-auto w-full overflow-visible touch-none select-none"
       role="img"
-      aria-label={`Community activity by month${scopeLabel ? ` for ${scopeLabel}` : ''}: ${totals.merged} pull requests merged and ${totals.opened} opened across ${series.length} months.`}
+      aria-label={`Community activity by month${scopeLabel ? ` for ${scopeLabel}` : ''}: ${totals.merged} pull requests merged, ${totals.opened} opened, ${totals.closed} closed without merging and ${totals.issues} issues opened across ${series.length} months.`}
+      onPointerMove={onMove}
+      onPointerLeave={() => setHover(null)}
     >
-      {ticks.map((v) => (
-        <g key={v}>
-          <line x1={padLeft} y1={yFor(v)} x2={width - padRight} y2={yFor(v)} stroke={v === 0 ? 'var(--color-line-strong)' : 'var(--color-line)'} strokeWidth="1" />
-          <text x={padLeft - 8} y={yFor(v) + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{v}</text>
-        </g>
-      ))}
-      {series.map((b, i) => {
-        const h = b.merged ? Math.max(2, (b.merged / niceMax) * plotH) : 0;
-        return (
-          <g key={b.month} opacity={b.partial ? 0.5 : 1}>
-            <title>{`${monthLabel(b.month, true)}${b.partial ? ' (so far)' : ''}: ${b.merged} merged, ${b.opened} opened, ${b.issues} issues, ${b.contributors} students with a merge`}</title>
-            {h > 0 && <rect x={centerOf(i) - barW / 2} y={baseline - h} width={barW} height={h} rx={compact ? 2 : 4} fill="var(--color-success-500)" />}
-            {!compact && (
-              <>
-                <text x={centerOf(i)} y={baseline + 14} textAnchor="middle" fontSize="10.5" fill="var(--color-ink-soft)">{monthLabel(b.month)}</text>
-                <text x={centerOf(i)} y={baseline + 28} textAnchor="middle" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{b.contributors ? `${b.contributors}` : '·'}</text>
-              </>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--color-success-500)" stopOpacity={compact ? 0.35 : 0.22} />
+          <stop offset="100%" stopColor="var(--color-success-500)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {!compact &&
+        ticks.map((t) => (
+          <g key={t}>
+            <line x1={padLeft} y1={baseline - t * plotH} x2={width - padRight} y2={baseline - t * plotH} stroke={t === 0 ? 'var(--color-line-strong)' : 'var(--color-line)'} strokeWidth="1" strokeDasharray={t === 0 ? undefined : '2 4'} />
+            <text x={padLeft - 8} y={baseline - t * plotH + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(t * leftMax)}</text>
+            {!hidden.has('issues') && (
+              <text x={width - padRight + 8} y={baseline - t * plotH + 3.5} textAnchor="start" fontSize="10" fill="var(--color-violet-500)" className="tabular-nums" opacity="0.8">{Math.round(t * rightMax)}</text>
             )}
           </g>
-        );
-      })}
+        ))}
+
+      {/* Running month shading */}
+      {!compact && last?.partial && n > 1 && (
+        <rect x={(xFor(n - 2) + xFor(n - 1)) / 2} y={padTop} width={xFor(n - 1) - (xFor(n - 2) + xFor(n - 1)) / 2 + 2} height={plotH} fill="var(--color-panel)" opacity="0.7" />
+      )}
+
+      {mergedArea && <path d={mergedArea} fill={`url(#${gradId})`} />}
+
+      {paths.map((p) => (
+        <path key={p.key} d={p.d} fill="none" stroke={p.color} strokeWidth={compact && p.key === 'merged' ? 2 : p.width} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={p.key === 'issues' ? '5 4' : undefined} opacity={hover !== null ? 0.9 : 1} />
+      ))}
+
       {!compact && (
         <>
-          <path d={linePath} fill="none" stroke="var(--color-brand-500)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
           {series.map((b, i) => (
-            <circle key={b.month} cx={centerOf(i)} cy={yFor(b.opened)} r="3" fill="var(--color-ground)" stroke="var(--color-brand-500)" strokeWidth="2" />
+            <text key={b.month} x={xFor(i)} y={baseline + 16} textAnchor="middle" fontSize="10.5" fill={hover === i ? 'var(--color-ink)' : 'var(--color-ink-soft)'} fontWeight={hover === i ? 650 : 450}>
+              {monthLabel(b.month)}
+            </text>
           ))}
-          <text x={padLeft} y={height - 2} fontSize="9.5" fill="var(--color-ink-faint)">students with a merge, per month ↑</text>
+          {series.map((b, i) => (
+            <text key={`c${b.month}`} x={xFor(i)} y={baseline + 30} textAnchor="middle" fontSize="9.5" fill="var(--color-ink-faint)" className="tabular-nums">
+              {b.contributors || '·'}
+            </text>
+          ))}
         </>
       )}
+
+      {/* Crosshair + points for the hovered month */}
+      {hover !== null && hovered && (
+        <g>
+          <line x1={xFor(hover)} y1={padTop} x2={xFor(hover)} y2={baseline} stroke="var(--color-ink-faint)" strokeWidth="1" strokeDasharray="3 3" />
+          {visible.map((s) => (
+            <circle key={s.key} cx={xFor(hover)} cy={yFor(s.key, hovered[s.key])} r={compact ? 3 : 4} fill="var(--color-ground)" stroke={s.color} strokeWidth="2" />
+          ))}
+        </g>
+      )}
+
+      {/* Invisible hit strips so touch and keyboard users can land on a month */}
+      {series.map((b, i) => (
+        <rect key={`hit${b.month}`} x={i === 0 ? padLeft : (xFor(i - 1) + xFor(i)) / 2} y={0} width={i === 0 ? (xFor(1) ?? xFor(0)) / 2 - padLeft + (n === 1 ? plotW : 0) : (xFor(Math.min(n - 1, i + 1)) - xFor(i - 1)) / 2} height={height} fill="transparent" onPointerEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={compact ? -1 : 0} aria-label={`${monthLabel(b.month, true)}: ${b.merged} merged, ${b.opened} opened, ${b.closed} closed unmerged, ${b.issues} issues, ${b.contributors} students with a merge`} />
+      ))}
     </svg>
+  );
+
+  const tooltip = hovered && (
+    <div
+      className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-xl border border-line bg-ground/95 backdrop-blur px-3 py-2.5 shadow-pop text-[12px] min-w-[190px]"
+      style={{ left: `clamp(100px, ${tipLeftPct}%, calc(100% - 100px))` }}
+    >
+      <div className="font-[650] text-ink mb-1.5">
+        {monthLabel(hovered.month, true)}
+        {hovered.partial && <span className="ml-1.5 text-[10.5px] font-[550] text-ink-soft">so far</span>}
+      </div>
+      {SERIES.map((s) => (
+        <div key={s.key} className={`flex items-center justify-between gap-4 leading-6 ${hidden.has(s.key) ? 'opacity-40' : ''}`}>
+          <span className="inline-flex items-center gap-1.5 text-ink-mid">
+            <span className="w-2.5 h-[3px] rounded" style={{ backgroundColor: s.color }} />
+            {s.label}
+          </span>
+          <span className="tabular-nums font-[600] text-ink">{hovered[s.key].toLocaleString('en-IN')}</span>
+        </div>
+      ))}
+      <div className="flex items-center justify-between gap-4 leading-6 border-t border-line mt-1 pt-1 text-ink-mid">
+        <span>Students with a merge</span>
+        <span className="tabular-nums font-[600] text-ink">{hovered.contributors.toLocaleString('en-IN')}</span>
+      </div>
+    </div>
   );
 
   if (compact) {
     const delta = last && prev ? last.merged - prev.merged : 0;
     return (
-      <Link href={href} className="block bg-ground border border-line rounded-2xl shadow-card p-5 hover:border-brand-400 transition-colors group">
-        <div className="flex items-baseline justify-between gap-3">
+      <div className="bg-ground border border-line rounded-2xl shadow-card p-5">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
           <div>
             <div className="text-[11.5px] font-[650] uppercase tracking-wider text-ink-soft">Merged PRs per month</div>
             <div className="mt-1 text-[22px] leading-none font-[650] tabular-nums text-success-600">
-              {last?.merged.toLocaleString('en-IN') ?? 0}
-              <span className="ml-2 text-[12px] font-[550] text-ink-soft">this month so far</span>
+              {(hovered ?? last)?.merged.toLocaleString('en-IN') ?? 0}
+              <span className="ml-2 text-[12px] font-[550] text-ink-soft">{hovered ? monthLabel(hovered.month, true) : 'this month so far'}</span>
             </div>
           </div>
           <div className="text-right text-[12px] text-ink-soft">
@@ -120,25 +259,49 @@ export function CommunityChart({
             {prev && <div className={delta >= 0 ? 'text-success-600' : 'text-ink-soft'}>{delta >= 0 ? '+' : ''}{delta} vs last month</div>}
           </div>
         </div>
-        <div className="mt-3">{svg}</div>
-        <div className="mt-2 text-[12px] font-[550] text-brand-600 group-hover:text-brand-500">See the full community chart →</div>
-      </Link>
+        <div className="relative mt-3">{svg}{tooltip}</div>
+        <Link href={href} className="mt-2 inline-block text-[12px] font-[550] text-brand-600 hover:text-brand-500">See the full community chart →</Link>
+      </div>
     );
   }
 
   return (
     <div className="bg-ground border border-line rounded-2xl shadow-card p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-ink text-sm font-[650]">Community activity{scopeLabel ? <span className="text-ink-soft font-[500]"> · {scopeLabel}</span> : ''}</h2>
+        <h2 className="text-ink text-sm font-[650]">
+          Community activity{scopeLabel ? <span className="text-ink-soft font-[500]"> · {scopeLabel}</span> : ''}
+        </h2>
         <p className="text-ink-soft text-xs">By month <span className="text-ink-faint">· {span}</span></p>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2.5 mb-1 text-[11.5px] text-ink-mid">
-        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: 'var(--color-success-500)' }} />Merged <span className="tabular-nums text-ink-soft">{totals.merged.toLocaleString('en-IN')}</span></span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-0.5 rounded" style={{ backgroundColor: 'var(--color-brand-500)' }} />Opened <span className="tabular-nums text-ink-soft">{totals.opened.toLocaleString('en-IN')}</span></span>
-        <span className="inline-flex items-center gap-1.5 text-ink-soft">Issues <span className="tabular-nums">{totals.issues.toLocaleString('en-IN')}</span></span>
-        <span className="text-ink-faint">· the running month is drawn lighter</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-2.5 mb-1">
+        {SERIES.map((s) => {
+          const off = hidden.has(s.key);
+          return (
+            <button
+              key={s.key}
+              type="button"
+              aria-pressed={!off}
+              onClick={() => setHidden((h) => {
+                const next = new Set(h);
+                if (next.has(s.key)) next.delete(s.key);
+                else if (next.size < SERIES.length - 1) next.add(s.key);
+                return next;
+              })}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] transition-colors ${off ? 'border-line text-ink-faint line-through' : 'border-line bg-panel text-ink-mid hover:border-line-strong'}`}
+              title={off ? `Show ${s.label}` : `Hide ${s.label}`}
+            >
+              <span className="w-3 h-[3px] rounded" style={{ backgroundColor: s.color, opacity: off ? 0.4 : 1 }} />
+              {s.label}
+              <span className="tabular-nums text-ink-soft">{totals[s.key].toLocaleString('en-IN')}</span>
+            </button>
+          );
+        })}
+        <span className="text-[11px] text-ink-faint ml-auto">issues on the right axis · numbers under the months: students with a merge</span>
       </div>
-      {svg}
+      <div className="relative">
+        {svg}
+        {tooltip}
+      </div>
     </div>
   );
 }

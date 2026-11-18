@@ -4,8 +4,8 @@ vi.mock('./profile-cache', () => ({ readProfileCache: vi.fn(async () => null) })
 import { foldStudent, lastMonths, seriesFor, segmentKey, buildCommunityTimeline, timelineIsStale, type CommunityTimeline } from './community-timeline';
 
 const NOW = Date.UTC(2026, 10, 18); // 2026-11-18
-const pr = (repo: string, n: number, created: string, merged?: string) =>
-  ({ number: n, repository_url: `https://api.github.com/repos/${repo}`, created_at: created, state: merged ? 'closed' : 'open', pull_request: { merged_at: merged ?? null } }) as never;
+const pr = (repo: string, n: number, created: string, merged?: string, closed?: string) =>
+  ({ number: n, repository_url: `https://api.github.com/repos/${repo}`, created_at: created, state: merged || closed ? 'closed' : 'open', closed_at: merged ?? closed ?? null, pull_request: { merged_at: merged ?? null } }) as never;
 
 describe('lastMonths', () => {
   it('ends at the current month and crosses a year boundary', () => {
@@ -29,6 +29,7 @@ describe('foldStudent', () => {
           pr('tiny/repo', 3, '2026-10-06T00:00:00Z', '2026-10-07T00:00:00Z'),
           pr('apache/spark', 4, '2026-10-08T00:00:00Z'),
           pr('old/one', 5, '2024-01-01T00:00:00Z', '2024-01-02T00:00:00Z'),
+          pr('apache/beam', 6, '2026-09-20T00:00:00Z', undefined, '2026-10-03T00:00:00Z'),
         ],
         issues: [{ created_at: '2026-10-01T00:00:00Z' } as never],
       },
@@ -36,8 +37,8 @@ describe('foldStudent', () => {
       keep,
     );
     const seg = segmentKey(alice);
-    expect(months['2026-09'][seg]).toEqual({ opened: 1, merged: 0, issues: 0, contributors: 0 });
-    expect(months['2026-10'][seg]).toEqual({ opened: 1, merged: 2, issues: 1, contributors: 1 });
+    expect(months['2026-09'][seg]).toEqual({ opened: 2, merged: 0, closed: 0, issues: 0, contributors: 0 });
+    expect(months['2026-10'][seg]).toEqual({ opened: 1, merged: 2, closed: 1, issues: 1, contributors: 1 });
     expect(months['2024-01']).toBeUndefined();
   });
 });
@@ -48,8 +49,8 @@ describe('seriesFor', () => {
       builtAt: new Date(NOW).toISOString(),
       studentsCounted: 3,
       months: {
-        '2026-10': { 'ADYPU|2nd year': { opened: 3, merged: 2, issues: 1, contributors: 2 }, 'Rishihood|3rd year': { opened: 5, merged: 4, issues: 0, contributors: 3 } },
-        '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, issues: 0, contributors: 1 } },
+        '2026-10': { 'ADYPU|2nd year': { opened: 3, merged: 2, closed: 1, issues: 1, contributors: 2 }, 'Rishihood|3rd year': { opened: 5, merged: 4, closed: 0, issues: 0, contributors: 3 } },
+        '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, closed: 0, issues: 0, contributors: 1 } },
       },
     };
     const all = seriesFor(t, {}, 3, NOW);
