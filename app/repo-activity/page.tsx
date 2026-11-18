@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { RepoActivityChart, type RepoMonth } from './RepoActivityChart';
 
 interface Contributor {
   username: string;
@@ -11,9 +12,14 @@ interface Contributor {
   closedPRs: number;
   issuesCount: number;
   isMaintainer: boolean;
+  isBot?: boolean;
   prs: Array<{ number: number; title: string; url: string; state: string; createdAt: string; mergedAt: string | null }>;
   issues: Array<{ number: number; title: string; url: string; state: string; createdAt: string }>;
 }
+
+interface UserActivityRepo { repoName: string; totalPRs: number; mergedPRs: number; openPRs: number; closedPRs: number }
+interface UserActivityPR { number?: number; title: string; url: string; state: string; createdAt: string; mergedAt: string | null; repoName: string }
+interface UserActivity { repositories: UserActivityRepo[]; pullRequests: UserActivityPR[] }
 
 interface RepoInfo {
   fullName: string;
@@ -30,8 +36,13 @@ export default function RepoActivityPage() {
   const [error, setError] = useState('');
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [contributors, setContributors] = useState<Contributor[]>([]);
+  const [monthly, setMonthly] = useState<RepoMonth[]>([]);
+  const [window_, setWindow] = useState<{ since: string | null; truncated: boolean }>({ since: null, truncated: false });
+  // Maintainers (merge access) and bots are left out of the ranking by
+  // default: they top every list and say nothing about who is contributing.
+  const [showAll, setShowAll] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [userActivity, setUserActivity] = useState<any | null>(null);
+  const [userActivity, setUserActivity] = useState<UserActivity | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
   const [userError, setUserError] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'prs' | 'issues'>('all');
@@ -79,6 +90,8 @@ export default function RepoActivityPage() {
       if (res.ok) {
         setRepoInfo(data.repoInfo);
         setContributors(data.contributors);
+        setMonthly(data.monthly ?? []);
+        setWindow({ since: data.window?.since ?? null, truncated: Boolean(data.window?.truncated) });
       } else {
         setError(data.error ?? 'Failed to fetch repository activity.');
       }
@@ -98,6 +111,7 @@ export default function RepoActivityPage() {
     }
     setRepoInfo(null);
     setContributors([]);
+    setMonthly([]);
     await performSearch(parsed, period);
   }
 
@@ -129,7 +143,9 @@ export default function RepoActivityPage() {
   }
 
   // Filter contributors based on selected type
+  const hiddenCount = contributors.filter((c) => c.isMaintainer || c.isBot).length;
   const activeContributors = contributors.filter((c) => {
+    if (!showAll && (c.isMaintainer || c.isBot)) return false;
     if (filterType === 'prs') return c.prsCount > 0;
     if (filterType === 'issues') return c.issuesCount > 0;
     return c.prsCount > 0 || c.issuesCount > 0;
@@ -224,7 +240,7 @@ export default function RepoActivityPage() {
               { id: 'month',   label: 'Month' },
               { id: '2months', label: '2 Months' },
               { id: '3months', label: '3 Months' },
-              { id: 'all',     label: 'All Time' },
+              { id: 'all',     label: '12 months' },
             ] as const).map((p) => (
               <button
                 key={p.id}
@@ -306,15 +322,30 @@ export default function RepoActivityPage() {
                   </div>
                 ))}
               </div>
+              <RepoActivityChart monthly={monthly} since={window_.since} truncated={window_.truncated} />
+
                  {/* Leaderboard Section */}
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-[650] text-ink">Top Contributors</h2>
-                  <p className="text-ink-soft text-xs mt-0.5">Rankings based on active contributions in the selected period.</p>
+                  <p className="text-ink-soft text-xs mt-0.5">
+                    Community contributors in the selected period.{' '}
+                    {hiddenCount > 0 && !showAll && `${hiddenCount} maintainer${hiddenCount === 1 ? '' : 's'} and bots hidden.`}
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2.5">
+                  {hiddenCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAll((v) => !v)}
+                      aria-pressed={showAll}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-[550] border transition-all ${showAll ? 'bg-violet-0 border-violet-100 text-violet-600' : 'bg-ground border-line text-ink-soft hover:text-ink'}`}
+                    >
+                      {showAll ? 'Hide maintainers & bots' : `Show maintainers & bots (${hiddenCount})`}
+                    </button>
+                  )}
                   {/* Filter Tabs */}
                   <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0">
                     {([
@@ -383,11 +414,18 @@ export default function RepoActivityPage() {
                               <span className="text-ink font-[650] block truncate text-base group-hover:text-violet-600 transition-colors">
                                 @{c.username}
                               </span>
-                              {c.isMaintainer && (
+                              {(c.isMaintainer || c.isBot) && (
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">
-                                    Maintainer
-                                  </span>
+                                  {c.isMaintainer && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">
+                                      Maintainer
+                                    </span>
+                                  )}
+                                  {c.isBot && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-panel-2 text-ink-mid border border-line">
+                                      Bot
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -518,7 +556,7 @@ export default function RepoActivityPage() {
                       <p className="text-sm text-ink-soft italic">No pull requests found in this period.</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {userActivity.repositories.map((repo: any) => (
+                        {userActivity.repositories.map((repo) => (
                           <div key={repo.repoName} className="bg-ground border border-line rounded-2xl p-4 space-y-3">
                             <div className="font-[650] text-sm text-ink truncate" title={repo.repoName}>
                               {repo.repoName}
@@ -554,7 +592,7 @@ export default function RepoActivityPage() {
                       <p className="text-sm text-ink-soft italic">No recent work to display.</p>
                     ) : (
                       <div className="space-y-2">
-                        {userActivity.pullRequests.map((pr: any) => (
+                        {userActivity.pullRequests.map((pr) => (
                           <a
                             key={pr.url}
                             href={pr.url}
