@@ -97,7 +97,7 @@ export function CommunityChart({
 
   // ── Geometry ──────────────────────────────────────────────────────────────
   const width = 720;
-  const height = compact ? 64 : 240;
+  const height = compact ? 88 : 240;
   const padLeft = compact ? 0 : 40;
   const padRight = compact ? 0 : 44;
   const padTop = compact ? 6 : 12;
@@ -107,9 +107,24 @@ export function CommunityChart({
   const baseline = padTop + plotH;
   const n = Math.max(1, series.length);
   const xFor = (i: number) => padLeft + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
-  const leftMax = niceCeil(Math.max(0, ...series.flatMap((b) => [hidden.has('merged') ? 0 : b.merged, hidden.has('opened') ? 0 : b.opened, hidden.has('closed') ? 0 : b.closed])));
+  // Compact (home) draws merged only and stretches the scale to the range the
+  // data actually occupies, so month-to-month movement is visible instead of
+  // a flat line pinned near zero. The full chart keeps a zero baseline.
+  const mergedVals = series.map((b) => b.merged);
+  // The full chart lifts its floor a little too (half of the lowest visible
+  // left-axis value), enough to open up the month-to-month movement while
+  // keeping the axis honest; the ticks label the real values.
+  const leftVisibleMin = Math.min(
+    ...series.flatMap((b) => [hidden.has('merged') ? Infinity : b.merged, hidden.has('opened') ? Infinity : b.opened, hidden.has('closed') ? Infinity : b.closed]),
+  );
+  const leftMin = compact
+    ? Math.max(0, Math.floor(Math.min(...mergedVals) * 0.85))
+    : Number.isFinite(leftVisibleMin) ? Math.max(0, Math.floor(leftVisibleMin * 0.5)) : 0;
+  const leftMax = compact
+    ? Math.max(leftMin + 1, Math.ceil(Math.max(...mergedVals) * 1.05))
+    : niceCeil(Math.max(0, ...series.flatMap((b) => [hidden.has('merged') ? 0 : b.merged, hidden.has('opened') ? 0 : b.opened, hidden.has('closed') ? 0 : b.closed])));
   const rightMax = niceCeil(Math.max(0, ...series.map((b) => (hidden.has('issues') ? 0 : b.issues))));
-  const yLeft = (v: number) => baseline - (v / leftMax) * plotH;
+  const yLeft = (v: number) => baseline - ((v - leftMin) / (leftMax - leftMin)) * plotH;
   const yRight = (v: number) => baseline - (v / rightMax) * plotH;
   const yFor = (key: SeriesKey, v: number) => (key === 'issues' ? yRight(v) : yLeft(v));
   const ticks = [0, 0.25, 0.5, 0.75, 1];
@@ -129,7 +144,7 @@ export function CommunityChart({
   // supporting series are smoothed so they sit back visually.
   const straightPath = (pts: Array<[number, number]>) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
   const pointsFor = (key: SeriesKey) => series.map((b, i) => [xFor(i), yFor(key, b[key])] as [number, number]);
-  const paths = visible.map((s) => ({
+  const paths = (compact ? visible.filter((s) => s.key === 'merged') : visible).map((s) => ({
     ...s,
     d: s.key === 'merged' ? straightPath(pointsFor('merged')) : smoothPath(pointsFor(s.key)),
   }));
@@ -177,7 +192,7 @@ export function CommunityChart({
         ticks.map((t) => (
           <g key={t}>
             <line x1={padLeft} y1={baseline - t * plotH} x2={width - padRight} y2={baseline - t * plotH} stroke={t === 0 ? 'var(--color-line-strong)' : 'var(--color-line)'} strokeWidth="1" strokeDasharray={t === 0 ? undefined : '2 4'} />
-            <text x={padLeft - 8} y={baseline - t * plotH + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(t * leftMax)}</text>
+            <text x={padLeft - 8} y={baseline - t * plotH + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(leftMin + t * (leftMax - leftMin))}</text>
             {!hidden.has('issues') && (
               <text x={width - padRight + 8} y={baseline - t * plotH + 3.5} textAnchor="start" fontSize="10" fill="var(--color-violet-500)" className="tabular-nums" opacity="0.8">{Math.round(t * rightMax)}</text>
             )}
