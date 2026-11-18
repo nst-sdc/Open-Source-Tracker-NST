@@ -1,4 +1,5 @@
 import { getStudentsKV, applyRosterUpdates, type RosterUpdate, type Student } from "./kv-students";
+import { primeVouchedOrgs } from "./kv-vouched-orgs";
 import {
   getExceptionRepoSetForUser,
   getOwnRepoExceptions,
@@ -511,6 +512,7 @@ export async function validateNewRepos(
   token?: string,
 ): Promise<{ updated: boolean; map: import("./repo-cache").RepoCacheMap }> {
   let updated = false;
+  await primeVouchedOrgs();
   const priorFor = buildOrgPriors(repoCacheMap);
 
   // Collect repos needing a fetch: never seen, or written by an older schema.

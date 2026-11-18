@@ -24,6 +24,7 @@ import {
 import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
 import type { Student } from '@/lib/kv-students';
 import { classifyUnknownOwners } from '@/lib/org-cache';
+import { primeVouchedOrgs } from '@/lib/kv-vouched-orgs';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
@@ -38,6 +39,7 @@ export interface IncrementalRefreshResult {
 export async function performIncrementalRefresh(): Promise<IncrementalRefreshResult> {
   // 1. Refresh stale profiles — batch size auto-scales with how many GitHub
   //    tokens are currently available (cursor-based round-robin, O(1) KV reads)
+  await primeVouchedOrgs();
   console.log('[Incremental Refresh] Starting stale profile updates...');
   const { updated, attempted } = await updateStaleProfiles();
   console.log('[Incremental Refresh] Updated users:', updated, 'Attempted users:', attempted);

@@ -29,6 +29,7 @@ import { getRepoCache, prExcludedBy } from './repo-cache';
 import { aggregateMergedPRScore, isConcentrated, CONCENTRATED_DECAY, PER_REPO_DECAY } from './repo-score';
 import { resolveOrganization } from './org-cache';
 import { readOrgIndex, contributorsForOrg } from './org-index';
+import { primeVouchedOrgs } from './kv-vouched-orgs';
 
 export const PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
@@ -193,7 +194,7 @@ function applyDateWindow<T extends { created_at: string }>(items: T[], dateQuery
 }
 
 export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard> {
-  const students = await getStudentsKV();
+  const [students] = await Promise.all([getStudentsKV(), primeVouchedOrgs()]);
   const empty: Leaderboard = {
     rosterEmpty: true,
     active: [],

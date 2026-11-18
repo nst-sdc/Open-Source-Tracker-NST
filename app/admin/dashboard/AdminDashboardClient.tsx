@@ -435,7 +435,7 @@ interface Props {
   students: string[];
 }
 
-type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos';
+type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'vouchedOrgs';
 
 export default function AdminDashboardClient({ flaggedPRs: initialFlagged, reviewedPRIds: initialReviewed, students }: Props) {
   const router = useRouter();
@@ -617,6 +617,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             { id: 'events',   label: 'Events',   badge: null },
             { id: 'achievers',label: 'Achievers',badge: null },
             { id: 'ownRepos', label: 'Own-Repo PRs', badge: null },
+            { id: 'vouchedOrgs', label: 'Vouched orgs', badge: null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
               className={`relative px-4 py-2 rounded-lg text-sm font-[500] transition-all ${
@@ -861,6 +862,8 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
         {/* ── Own-Repo Exceptions Tab ── */}
         {tab === 'ownRepos' && <OwnReposTab />}
+
+        {tab === 'vouchedOrgs' && <VouchedOrgsTab />}
       </div>
 
       {/* Flag modal */}
@@ -1232,6 +1235,128 @@ interface OwnRepoException {
   repo: string;
   addedAt: string;
   note?: string;
+}
+
+interface VouchedOrg { login: string; addedAt: string; note?: string }
+
+function VouchedOrgsTab() {
+  const [orgs, setOrgs] = useState<VouchedOrg[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [login, setLogin] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const res = await fetch('/api/admin/vouched-orgs');
+    if (res.ok) setOrgs(await res.json());
+    setLoading(false);
+  }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+  useEffect(() => { load(); }, []);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!login.trim()) return;
+    setBusy(true); setError(''); setSuccess('');
+    const res = await fetch('/api/admin/vouched-orgs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: login.trim(), note: note.trim() || undefined }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      const r = data.revalidated ?? {};
+      setSuccess(`Vouched for ${login.trim()} — ${r.repos ?? 0} cached repos re-checked, ${r.changed ?? 0} changed, ${r.nowValid ?? 0} now count. The leaderboard refreshes on the next view.`);
+      setLogin(''); setNote('');
+      await load();
+    } else {
+      setError(data.error ?? 'Failed to add organisation');
+    }
+    setBusy(false);
+  }
+
+  async function executeRemove(name: string) {
+    setConfirmRemove(null); setError(''); setSuccess('');
+    const res = await fetch(`/api/admin/vouched-orgs?login=${encodeURIComponent(name)}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) { const r = data.revalidated ?? {}; setSuccess(`Removed ${name} — ${r.changed ?? 0} repos changed.`); await load(); }
+    else setError(data.error ?? 'Failed to remove organisation');
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-ink font-[550]">Vouched organisations</h2>
+        <p className="text-ink-soft text-sm mt-0.5">
+          Every repository under an organisation listed here passes the validity gate, however few stars it has, the same
+          way GSoC, LFX, CNCF, Apache, Eclipse and NumFOCUS organisations do automatically. Use it for a project&apos;s second
+          org (jenkins-infra beside jenkinsci) or a community whose repos are real but small. Look first: an org is free to
+          create, and this list is a statement that someone did.
+        </p>
+      </div>
+
+      <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-3 mb-6">
+        <input type="text" value={login} onChange={(e) => setLogin(e.target.value)}
+          placeholder="Organisation login (e.g. jenkins-infra)" id="new-vouched-org"
+          className="flex-1 bg-ground border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
+        <input type="text" value={note} onChange={(e) => setNote(e.target.value)}
+          placeholder="Why (optional, shown here only)" id="new-vouched-note"
+          className="flex-1 bg-ground border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
+        <button type="submit" disabled={busy || !login.trim()} id="add-vouched-org-btn"
+          className="bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-40 text-white font-[550] px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer whitespace-nowrap">
+          {busy ? 'Checking…' : '+ Vouch'}
+        </button>
+      </form>
+
+      {error && <div className="mb-4 text-error-600 text-sm bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</div>}
+      {success && <div className="mb-4 text-success-600 text-sm bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</div>}
+
+      {loading ? (
+        <div className="text-ink-soft text-sm py-8 text-center">Loading…</div>
+      ) : orgs.length === 0 ? (
+        <div className="text-ink-soft text-sm py-12 text-center border border-line rounded-2xl bg-ground">
+          No organisations vouched for yet. The program-org list still applies automatically.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {orgs.map((o) => (
+            <div key={o.login} className="flex items-center justify-between gap-4 bg-ground border border-line rounded-xl px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <img src={`https://github.com/${o.login}.png?size=64`} alt="" className="w-8 h-8 rounded-lg ring-1 ring-line" />
+                <div className="min-w-0">
+                  <a href={`https://github.com/${o.login}`} target="_blank" rel="noopener noreferrer" className="text-sm font-[550] text-ink hover:text-violet-600">{o.login}</a>
+                  {o.note && <div className="text-ink-soft text-xs mt-0.5">{o.note}</div>}
+                  <div className="text-ink-soft text-[10px] mt-0.5">Added {new Date(o.addedAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+              {confirmRemove === o.login ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => executeRemove(o.login)}
+                    className="text-error-600 text-xs font-[550] px-3 py-1.5 rounded-lg bg-error-0 hover:bg-error-500/20 transition-all cursor-pointer">
+                    Confirm remove
+                  </button>
+                  <button onClick={() => setConfirmRemove(null)}
+                    className="text-ink-soft hover:text-ink-mid text-xs px-3 py-1.5 rounded-lg hover:bg-panel transition-all cursor-pointer">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmRemove(o.login)}
+                  className="text-ink-soft hover:text-error-600 text-xs px-3 py-1.5 rounded-lg hover:bg-error-0 transition-all cursor-pointer shrink-0">
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function OwnReposTab() {
