@@ -1,5 +1,7 @@
 import { buildLeaderboard, parseLeaderboardQuery, PAGE_SIZE, type LeaderboardRow } from "@/lib/leaderboard";
 import { getRecognitions } from "@/lib/recognitions";
+import { readCommunityTimeline, seriesFor } from "@/lib/community-timeline";
+import { CommunityChart } from "../components/CommunityChart";
 import { FilterBar } from "./FilterBar";
 import { ContributorGrid } from "./ContributorGrid";
 import { BootstrapBanner } from "./BootstrapBanner";
@@ -209,7 +211,7 @@ export default async function ContributorsPage({
   const raw = await searchParams;
   const query = parseLeaderboardQuery(raw);
   const { period, from, to, search, year, campus } = query;
-  const [board, recognitions] = await Promise.all([buildLeaderboard(query), getRecognitions()]);
+  const [board, recognitions, timeline] = await Promise.all([buildLeaderboard(query), getRecognitions(), readCommunityTimeline()]);
 
   if (board.rosterEmpty) {
     return (
@@ -460,6 +462,16 @@ export default async function ContributorsPage({
         />
       </Suspense>
 
+      {/* Community activity by month, for the campus/year in view. Org mode
+          has its own numbers in the filter bar, so the chart steps aside. */}
+      {!isOrgSearch && (
+        <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
+          <CommunityChart
+            series={seriesFor(timeline, { campus, year })}
+            scopeLabel={[campus, year].filter(Boolean).join(" · ") || undefined}
+          />
+        </div>
+      )}
       {/* Ranked table + other members */}
       {/* Keyed by the filters: the grid keeps the pages it has loaded in
           client state, so a filter change must give it a fresh instance or it
