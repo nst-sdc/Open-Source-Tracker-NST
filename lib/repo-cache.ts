@@ -1,4 +1,4 @@
-import { kvGet, kvSet } from './kv';
+import { kvRead, kvSet, StoreUnavailableError } from './kv';
 import type { RepoSignals } from './repo-score';
 import {
   REPO_SCHEMA_VERSION,
@@ -68,9 +68,33 @@ export function isEntryStale(entry: RepoCacheEntry | undefined, nowMs: number = 
 /**
  * Get the full map of cached repositories.
  */
+let lastGoodRepoCache: RepoCacheMap | null = null;
+
+/**
+ * A failed read used to come back as {}. Every summary computed in that
+ * state counted PRs into 1-star and dead repos as real, and
+ * validateNewRepos then saved a map holding only the current student's
+ * repos, wiping the rest. Now: a confirmed miss is {} (first boot), a failed
+ * read serves the last map this process saw, and with nothing to serve it
+ * throws so the caller skips rather than miscounts.
+ */
 export async function getRepoCache(): Promise<RepoCacheMap> {
-  const cached = await kvGet<RepoCacheMap>(KV_KEY);
-  return cached || {};
+  const { ok, value } = await kvRead<RepoCacheMap>(KV_KEY);
+  if (ok) {
+    const map = value || {};
+    lastGoodRepoCache = map;
+    return map;
+  }
+  if (lastGoodRepoCache) {
+    console.warn('[repo-cache] store unreachable; using the last repo cache read in this process');
+    return lastGoodRepoCache;
+  }
+  throw new StoreUnavailableError('The repository validity cache');
+}
+
+/** Test hook. */
+export function _resetRepoCacheMemory(): void {
+  lastGoodRepoCache = null;
 }
 
 /**

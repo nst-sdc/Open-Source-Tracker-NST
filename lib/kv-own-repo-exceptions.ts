@@ -16,7 +16,7 @@
  * this way.
  */
 
-import { kvGet, kvSet } from './kv';
+import { kvRead, kvSet, StoreUnavailableError } from './kv';
 
 const KV_KEY = 'own_repo_exceptions';
 
@@ -35,8 +35,16 @@ function normalize(s: string): string {
   return s.trim().toLowerCase();
 }
 
+let lastGood: OwnRepoException[] | null = null;
+
 export async function getOwnRepoExceptions(): Promise<OwnRepoException[]> {
-  return (await kvGet<OwnRepoException[]>(KV_KEY)) || [];
+  const { ok, value } = await kvRead<OwnRepoException[]>(KV_KEY);
+  if (ok) {
+    lastGood = value || [];
+    return lastGood;
+  }
+  if (lastGood) return lastGood;
+  throw new StoreUnavailableError('The own-repo exceptions list');
 }
 
 async function saveOwnRepoExceptions(list: OwnRepoException[]): Promise<void> {

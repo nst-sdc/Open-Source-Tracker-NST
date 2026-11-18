@@ -5,7 +5,7 @@
  * Previously used writeFileSync which was wiped on every Vercel deploy.
  */
 
-import { kvGet, kvSet } from './kv';
+import { kvRead, kvSet, StoreUnavailableError } from './kv';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -31,9 +31,20 @@ export interface FlaggedPR {
 }
 
 /** Read all flagged PRs from KV. Falls back to seeding from the committed JSON file. */
+let lastGoodFlags: FlaggedPR[] | null = null;
+
 export async function getFlaggedPRs(): Promise<FlaggedPR[]> {
-  const cached = await kvGet<FlaggedPR[]>(KV_KEY);
-  if (cached !== null) return cached;
+  const { ok, value } = await kvRead<FlaggedPR[]>(KV_KEY);
+  if (ok && value !== null) {
+    lastGoodFlags = value;
+    return value;
+  }
+  if (!ok) {
+    // Never seed over a failed read: that replaced the admins' flags with the
+    // committed file once. Serve what this process last saw, or refuse.
+    if (lastGoodFlags) return lastGoodFlags;
+    throw new StoreUnavailableError('The flagged-PR list');
+  }
 
   // First-time seed: read from the committed JSON file if KV has nothing yet
   try {

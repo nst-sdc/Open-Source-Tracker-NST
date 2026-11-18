@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => true), kvDel: vi.fn(async () => {}) }));
+vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvRead: vi.fn(async () => ({ ok: true, value: null })), kvSet: vi.fn(async () => true), kvDel: vi.fn(async () => {}) }));
 const { pruneToRoster } = await import('./summary-cache');
 
 const sum = (login: string) => ({ profile: { login }, scoreMergedPRs: 0 });
