@@ -16,6 +16,20 @@ export const PROGRAM_ORGS: ReadonlySet<string> = new Set(
     .map((o) => o.toLowerCase()),
 );
 
+/** Organisations an admin vouched for from the dashboard (lib/kv-vouched-orgs.ts),
+ *  loaded here so the synchronous scorer can consult them. Empty until primed. */
+let vouchedOrgs: ReadonlySet<string> = new Set();
+
+export function setVouchedOrgs(orgs: ReadonlySet<string>): void {
+  vouchedOrgs = orgs;
+}
+
+export function isVouchedOrg(ownerLogin: string): boolean {
+  return vouchedOrgs.has(ownerLogin.toLowerCase());
+}
+
+/** True for a program org or an admin-vouched one: both get the same treatment. */
 export function isProgramOrg(ownerLogin: string): boolean {
-  return PROGRAM_ORGS.has(ownerLogin.toLowerCase());
+  const lower = ownerLogin.toLowerCase();
+  return PROGRAM_ORGS.has(lower) || vouchedOrgs.has(lower);
 }

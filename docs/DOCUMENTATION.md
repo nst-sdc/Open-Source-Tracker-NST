@@ -503,6 +503,9 @@ Student → /join page → Fill form (github, year, campus)
 | `GET` | `/api/admin/join-requests` | List join requests |
 | `PATCH` | `/api/admin/join-requests` | Update request status |
 | `POST` | `/api/admin/approve` | Approve request → add to students |
+| `GET` | `/api/admin/vouched-orgs` | Organisations an admin vouched for (every repo under them passes the validity gate) |
+| `POST` | `/api/admin/vouched-orgs` | Vouch for `{ login, note? }` and re-gate that org's cached repos at once |
+| `DELETE` | `/api/admin/vouched-orgs?login=x` | Un-vouch and re-gate |
 | `GET` | `/api/admin/community-timeline` | When the community chart's monthly series was built, and the last 12 months |
 | `POST` | `/api/admin/community-timeline` | Rebuild that series from every profile cache now (the refresh tick does it every 6 h) |
 | `GET` | `/api/admin/org-index` | Org-search index health: organisations, students indexed, who is missing, last rebuild |
@@ -599,6 +602,12 @@ scoreMergedPRs = mergedPRs - flaggedMergedPRs
 3. Flagged PRs still appear in the profile but don't count toward the score
 
 ---
+
+### Vouched organisations
+
+The validity gate (`lib/repo-score.ts` `isRepoValid`) needs a repo to be a non-fork with at least `MIN_STARS` stars and either an audience ratio of `VALIDITY_MIN_AUDIENCE` or a release, unless its owner vouches for it. Two kinds of owner do: organisations on `data/program-orgs.json` (GSoC, LFX, CNCF, Apache, Eclipse, NumFOCUS, applied automatically) and organisations an admin adds under **Vouched orgs** in the dashboard. Both get the same treatment: every repo under the org passes the gate and is priced no lower than `PROGRAM_ORG_FLOOR`.
+
+Use the admin list for what the program list cannot know, for example a project's second org (`jenkins-infra` beside `jenkinsci`) or a community whose repos are real but small. It is deliberately not "every org passes": measured on the roster, an org-only gate would mostly re-admit the students' own club repos. Adding or removing an org re-decides the gate for that org's cached repos immediately and marks the summary caches stale, so the next page view reflects it.
 
 ## 12. Flagging Queue System
 
