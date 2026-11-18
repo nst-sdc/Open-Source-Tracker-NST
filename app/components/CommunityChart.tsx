@@ -111,7 +111,15 @@ export function CommunityChart({
   // data actually occupies, so month-to-month movement is visible instead of
   // a flat line pinned near zero. The full chart keeps a zero baseline.
   const mergedVals = series.map((b) => b.merged);
-  const leftMin = compact ? Math.max(0, Math.floor(Math.min(...mergedVals) * 0.85)) : 0;
+  // The full chart lifts its floor a little too (half of the lowest visible
+  // left-axis value), enough to open up the month-to-month movement while
+  // keeping the axis honest; the ticks label the real values.
+  const leftVisibleMin = Math.min(
+    ...series.flatMap((b) => [hidden.has('merged') ? Infinity : b.merged, hidden.has('opened') ? Infinity : b.opened, hidden.has('closed') ? Infinity : b.closed]),
+  );
+  const leftMin = compact
+    ? Math.max(0, Math.floor(Math.min(...mergedVals) * 0.85))
+    : Number.isFinite(leftVisibleMin) ? Math.max(0, Math.floor(leftVisibleMin * 0.5)) : 0;
   const leftMax = compact
     ? Math.max(leftMin + 1, Math.ceil(Math.max(...mergedVals) * 1.05))
     : niceCeil(Math.max(0, ...series.flatMap((b) => [hidden.has('merged') ? 0 : b.merged, hidden.has('opened') ? 0 : b.opened, hidden.has('closed') ? 0 : b.closed])));
@@ -184,7 +192,7 @@ export function CommunityChart({
         ticks.map((t) => (
           <g key={t}>
             <line x1={padLeft} y1={baseline - t * plotH} x2={width - padRight} y2={baseline - t * plotH} stroke={t === 0 ? 'var(--color-line-strong)' : 'var(--color-line)'} strokeWidth="1" strokeDasharray={t === 0 ? undefined : '2 4'} />
-            <text x={padLeft - 8} y={baseline - t * plotH + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(t * leftMax)}</text>
+            <text x={padLeft - 8} y={baseline - t * plotH + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(leftMin + t * (leftMax - leftMin))}</text>
             {!hidden.has('issues') && (
               <text x={width - padRight + 8} y={baseline - t * plotH + 3.5} textAnchor="start" fontSize="10" fill="var(--color-violet-500)" className="tabular-nums" opacity="0.8">{Math.round(t * rightMax)}</text>
             )}
