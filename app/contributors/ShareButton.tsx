@@ -27,12 +27,10 @@ export function ShareButton({
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [origin, setOrigin] = useState('');
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
-
+  // Read at render, not in an effect: the URL is only used inside the modal
+  // (closed at hydration) and in click handlers, so the server's empty
+  // origin never reaches the DOM and nothing can mismatch.
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
   const profileUrl = `${origin}/contributors/${username}`;
 
   // Close modal on Escape key press
