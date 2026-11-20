@@ -53,6 +53,7 @@ describe('prValue', () => {
   it('rewards tests, new code, breadth and reviews', () => {
     const base = prValue(input([f('src/a.ts', 15, 5)])).value;
     const tests = prValue(input([f('src/a.ts', 15, 5), f('tests/a.test.ts', 30, 0)]));
+    expect(prValue(input([f('src/a.ts', 15, 5), f('tests/a.test.ts', 2, 0)])).reasons).not.toContain('tests added'); // two lines is a tweak, not a test
     expect(tests.value).toBeGreaterThan(base + PR_VALUE_RULES.testsBonus); // more lines too
     expect(tests.reasons).toContain('tests added');
     const fresh = prValue(input([f('src/new.ts', 15, 5, 'ADDED')]));
@@ -145,5 +146,32 @@ describe('reading the diff', () => {
     const v = prValue({ additions: 60, deletions: 0, changedFiles: 1, files: [{ path: 'src/big.ts', additions: 60, deletions: 0 }] });
     expect(v.codeLines).toBe(60);
     expect(v.kind).toBe('code');
+  });
+});
+
+describe('moves and small test edits', () => {
+  const patch = (lines: string[]) => ['@@ -1,3 +1,3 @@', ...lines].join('\n');
+  it('counts a moved line as code, not formatting: swapping two calls is a real fix', () => {
+    const p = patch([
+      '-        document.execCommand("createLink", false, url)',
+      '-',
+      '         this.save(selection.getRangeAt(0))',
+      '+        document.execCommand("createLink", false, url)',
+    ]);
+    expect(lineMix(p, 'ui/src/editor.js')).toEqual({ code: 2, comment: 0, blank: 1, formatting: 0 });
+    const v = prValue({ additions: 1, deletions: 2, changedFiles: 1, files: [{ path: 'ui/src/editor.js', additions: 1, deletions: 2, patch: p }] });
+    expect(v.kind).toBe('code');
+    expect(v.value).toBeGreaterThan(PR_VALUE_RULES.contentCap);
+  });
+  it('still treats a re-indented line as formatting', () => {
+    expect(lineMix(patch(['-  const a = 1;', '+const a = 1;']), 'src/a.ts')).toEqual({ code: 0, comment: 0, blank: 0, formatting: 2 });
+  });
+  it('does not call a typo fix in a test comment "tests added"', () => {
+    const v = prValue({ additions: 1, deletions: 1, changedFiles: 1, files: [{ path: 'test/a.test.ts', additions: 1, deletions: 1, patch: patch(['-// recieve', '+// receive']) }] });
+    expect(v.reasons).not.toContain('tests added');
+    expect(v.kind).toBe('comments');
+    const real = prValue({ additions: 4, deletions: 0, changedFiles: 1, files: [{ path: 'test/a.test.ts', additions: 4, deletions: 0, patch: patch(['+it("x", () => {', '+  expect(f()).toBe(1);', '+  expect(g()).toBe(2);', '+});']) }] });
+    expect(real.reasons).toContain('tests added');
+    expect(real.kind).toBe('tests');
   });
 });
