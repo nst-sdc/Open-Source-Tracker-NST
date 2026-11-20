@@ -1,10 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { RepoActivityChart, type RepoMonth } from './RepoActivityChart';
 
 /** Marks a GitHub account that belongs to one of our students. */
+type SectionId = 'contributors' | 'maintainers';
+const FIRST_SECTION_KEY = 'repo-activity:first-section';
+
+const PeopleIcon = (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+const WrenchIcon = (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+/** Index 0 is the community list, index 1 the maintainers list. */
+const SECTION_TABS: ReadonlyArray<{ id: SectionId; label: string; icon: ReactNode }> = [
+  { id: 'contributors', label: 'Contributors', icon: PeopleIcon },
+  { id: 'maintainers', label: 'Maintainers & bots', icon: WrenchIcon },
+];
+
 function TrackedBadge({ tracked }: { tracked: { login: string; campus: string; year: string } }) {
   return (
     <span
@@ -60,6 +82,23 @@ export default function RepoActivityPage() {
   const [userError, setUserError] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'prs' | 'issues'>('all');
   const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month' | '2months' | '3months'>('1day');
+  // Which list leads. Someone checking who maintains a repo should not have
+  // to scroll past the whole community ranking every time, so the choice is
+  // one click and remembered in this browser.
+  // Read lazily, not in an effect: the lists only render after a scan, so the
+  // server HTML never depends on this value and there is nothing to mismatch.
+  const [firstSection, setFirstSection] = useState<SectionId>(() => {
+    if (typeof window === 'undefined') return 'contributors';
+    try {
+      const saved = localStorage.getItem(FIRST_SECTION_KEY);
+      return saved === 'maintainers' ? 'maintainers' : 'contributors';
+    } catch { return 'contributors'; /* private window or storage blocked */ }
+  });
+  const chooseFirstSection = (id: SectionId) => {
+    setFirstSection(id);
+    try { localStorage.setItem(FIRST_SECTION_KEY, id); } catch { /* ignore */ }
+  };
+  const sectionOrder: SectionId[] = firstSection === 'maintainers' ? ['maintainers', 'contributors'] : ['contributors', 'maintainers'];
 
   // Lock background body scroll when contributor details modal is open
   useEffect(() => {
@@ -334,22 +373,36 @@ export default function RepoActivityPage() {
               </div>
               <RepoActivityChart monthly={monthly} since={window_.since} truncated={window_.truncated} />
 
-                 {/* Leaderboard Section */}
+            {/* People: two lists, in the order the visitor prefers */}
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2.5">
-                    <h2 className="text-lg font-[650] text-ink">Contributors</h2>
-                    <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
-                      {sortedContributors.length}
-                    </span>
-                  </div>
-                  <p className="text-ink-soft text-xs mt-0.5">
-                    Community contributors in the selected period. Maintainers and bots are listed separately below.
-                  </p>
-                </div>
+                <p className="text-ink-soft text-xs">
+                  Two lists for the selected period: community contributors ranked by merged PRs, and the repository&apos;s maintainers and bots. Choose which comes first.
+                </p>
 
                 <div className="flex flex-wrap gap-2.5">
+                  {/* Section order */}
+                  <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0" role="radiogroup" aria-label="Which list comes first">
+                    {SECTION_TABS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={firstSection === t.id}
+                        title={`Show ${t.label.toLowerCase()} first`}
+                        onClick={() => chooseFirstSection(t.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-[550] transition-all ${
+                          firstSection === t.id
+                            ? 'bg-panel text-ink shadow-sm'
+                            : 'text-ink-soft hover:text-ink-mid'
+                        }`}
+                      >
+                        {t.icon}
+                        <span className="hidden sm:inline">{t.label}</span>
+                        <span className="sr-only sm:hidden">{t.label} first</span>
+                      </button>
+                    ))}
+                  </div>
                   {/* Filter Tabs */}
                   <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0">
                     {([
@@ -376,6 +429,18 @@ export default function RepoActivityPage() {
                 </div>
               </div>
 
+              {sectionOrder.map((id) => id === 'contributors' ? (
+              <div key="contributors" id="contributors">
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  {SECTION_TABS[0].icon}
+                  <h2 className="text-lg font-[650] text-ink">Contributors</h2>
+                  <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
+                    {sortedContributors.length}
+                  </span>
+                </div>
+                <p className="text-ink-soft text-xs mb-4">
+                  Community contributors, most merged PRs first. Maintainers and bots are listed in their own section.
+                </p>
               {/* Leaderboard Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sortedContributors.map((c, index) => {
@@ -479,12 +544,14 @@ export default function RepoActivityPage() {
                   </div>
                 )}
               </div>
-
-              {/* Maintainers & bots: the same split the contributors page makes
-                  between the ranking and "registered, not contributing yet". */}
-              <div className="pt-4">
+              </div>
+              ) : (
+              /* Maintainers & bots: the same split the contributors page makes
+                 between the ranking and "registered, not contributing yet". */
+              <div key="maintainers" id="maintainers">
                 <div className="flex items-center gap-2.5 mb-1.5">
-                  <h2 className="text-[15px] font-[650] text-ink">Maintainers &amp; bots</h2>
+                  {SECTION_TABS[1].icon}
+                  <h2 className="text-lg font-[650] text-ink">Maintainers &amp; bots</h2>
                   <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
                     {maintainersAndBots.length}
                   </span>
@@ -531,7 +598,8 @@ export default function RepoActivityPage() {
                   </div>
                 )}
               </div>
-              </div>
+              ))}
+            </div>
             </div>
           </div>
         )}
