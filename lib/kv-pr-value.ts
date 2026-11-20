@@ -5,7 +5,7 @@
  * in KV and primed into the synchronous scorer the way vouched orgs are.
  */
 import { kvRead, kvSet } from './kv';
-import { setPrValueWeighting } from './pr-value';
+import { setPrValueWeighting, PR_VALUE_WEIGHTING_DEFAULT } from './pr-value';
 
 export const PR_VALUE_SETTING_KEY = 'pr_value_weighting';
 const PRIME_TTL_MS = 60_000;
@@ -24,8 +24,9 @@ export async function getPrValueSetting(): Promise<PrValueSetting> {
     lastGood = value;
     return value;
   }
-  // The store did not answer: keep what this process last saw, else off.
-  return lastGood ?? { enabled: false };
+  // Nothing stored, or the store did not answer: what this process last
+  // saw, else the default (on).
+  return lastGood ?? { enabled: PR_VALUE_WEIGHTING_DEFAULT };
 }
 
 export async function setPrValueSetting(enabled: boolean): Promise<boolean> {
@@ -48,5 +49,5 @@ export async function primePrValueWeighting(force = false): Promise<void> {
 export function _resetPrValueMemory(): void {
   primedAt = 0;
   lastGood = null;
-  setPrValueWeighting(false);
+  setPrValueWeighting(PR_VALUE_WEIGHTING_DEFAULT);
 }

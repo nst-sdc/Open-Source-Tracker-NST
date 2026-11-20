@@ -81,14 +81,14 @@ describe('prValue', () => {
 });
 
 describe('valueOfPR', () => {
-  afterEach(() => setPrValueWeighting(false));
-  it('is neutral while the switch is off or the PR is unmeasured', () => {
+  afterEach(() => setPrValueWeighting(true));
+  it('counts a measured PR by default, is neutral for an unmeasured one or when switched off', () => {
     const measured = { contribution: { value: 1.6, kind: 'code' as const, codeLines: 200, files: 4, reasons: [], at: '', v: 1 } };
-    expect(valueOfPR(measured)).toBe(1);
-    setPrValueWeighting(true);
-    expect(valueOfPR(measured)).toBe(1.6);
+    expect(valueOfPR(measured)).toBe(1.6); // on by default
     expect(valueOfPR({})).toBe(1);
     expect(valueOfPR({ contribution: { ...measured.contribution, value: 9 } })).toBe(PR_VALUE_MAX);
+    setPrValueWeighting(false);
+    expect(valueOfPR(measured)).toBe(1);
   });
 });
 

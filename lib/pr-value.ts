@@ -323,14 +323,16 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
 /* ── the switch ───────────────────────────────────────────────────────────
    Scoring is synchronous and runs in several places; like vouched orgs, the
    setting is primed from KV into this module (lib/kv-pr-value.ts) and read
-   here. Off by default: PRs score as before until an admin turns it on. */
-let weighting = false;
+   here. ON by default: a measured PR counts for what it did; an admin can
+   turn it off from the dashboard. */
+export const PR_VALUE_WEIGHTING_DEFAULT = true;
+let weighting = PR_VALUE_WEIGHTING_DEFAULT;
 export function setPrValueWeighting(on: boolean): void { weighting = on; }
 export function isPrValueWeighting(): boolean { return weighting; }
 
-/** The effort term for a PR: its stored value when weighting is on and the
- *  PR has been measured, otherwise 1 (neutral) so unmeasured PRs are never
- *  penalised while the data fills in. */
+/** The effort term for a PR: its stored value when weighting is on (the
+ *  default) and the PR has been measured, otherwise 1 (neutral) so unmeasured
+ *  PRs are never penalised while the data fills in. */
 export function valueOfPR(pr: { contribution?: PRContribution | null } | null | undefined): number {
   if (!weighting) return PR_VALUE_NEUTRAL;
   const v = pr?.contribution?.value;

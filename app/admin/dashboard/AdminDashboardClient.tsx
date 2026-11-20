@@ -1391,7 +1391,7 @@ function PrValueCard() {
       <div>
         <h3 className="text-base font-[650] text-ink">Contribution value of each pull request</h3>
         <p className="text-sm text-ink-soft mt-1">
-          Off: a merged PR scores by the project it went into, as always. On: the PR&apos;s own value multiplies that. Shown out of 10, a typical twenty-line code change is 5 and the most substantial change 10; a 10 doubles the PR&apos;s points, a 2 (the floor) cuts them to 40%.
+          On (the default): a merged PR&apos;s own value multiplies the project term. Shown out of 10, a typical twenty-line code change is 5 and the most substantial change 10; a 10 doubles the PR&apos;s points, a 2 (the floor) cuts them to 40%. Off: every PR scores by its project alone, as before.
           Docs-only PRs stay at or below 3.5, images, data and config at or below 2.5; added tests give +1.5, new code +1, six or more code files +1, two or more reviews +0.5.
           Values are measured from the diff of each merged PR, during the normal refresh, so they fill in over a day or two; an unmeasured PR counts as 5 (neutral) meanwhile. Only lines with logic count: comment lines, blank lines and re-indentation are set aside, so 50 code lines with 50 comment lines scores the same as 50 code lines, and a PR of comments or formatting alone is capped like docs or config.
         </p>
