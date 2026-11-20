@@ -35,6 +35,8 @@ export interface LineMix {
   blank: number;
   /** A removed line that comes back identical except for whitespace: re-indenting, reformatting. */
   formatting: number;
+  /** Lines that came back with a few characters changed (a typo, a rename, a one-character fix); each counted once. */
+  tweak: number;
 }
 
 export interface PRValueInput {
@@ -43,11 +45,13 @@ export interface PRValueInput {
   changedFiles: number;
   files: PRFileChange[];
   labels?: string[];
+  /** The PR title: "docs:" / "typo" in it is treated like a documentation label. */
+  title?: string;
   /** Review threads/approvals before merge (GraphQL reviews.totalCount). */
   reviews?: number;
 }
 
-export type PRKind = 'code' | 'tests' | 'docs' | 'content' | 'mixed' | 'comments' | 'formatting';
+export type PRKind = 'code' | 'tests' | 'docs' | 'content' | 'mixed' | 'comments' | 'formatting' | 'tweaks';
 
 /** Stored on the cached PR; small on purpose (every PR of every student carries one). */
 export interface PRContribution {
@@ -69,7 +73,7 @@ export interface PRContribution {
   v: number;
 }
 
-export const PR_VALUE_VERSION = 3;
+export const PR_VALUE_VERSION = 4;
 export const PR_VALUE_MIN = 0.4;
 export const PR_VALUE_MAX = 2.0;
 export const PR_VALUE_NEUTRAL = 1.0;
@@ -88,6 +92,11 @@ export const PR_VALUE_RULES = {
   testsBonus: 0.3,
   /** Test code lines needed before the bonus applies. */
   testsMinLines: 3,
+  /** A tweaked line (typo, rename, one-character fix) counts this much of a code line. */
+  tweakWeight: 0.25,
+  /** Up to this many differing characters (and at most tweakRatio of the line) is a tweak, not a rewrite. */
+  tweakMaxChars: 4,
+  tweakRatio: 0.15,
   /** New code files, or additions far outweighing deletions on a real change. */
   newCodeBonus: 0.2,
   /** Six or more code files touched. */
@@ -156,9 +165,37 @@ function commentSyntax(path: string): CommentSyntax {
 const PUNCT_ONLY = /^[\s{}()[\];,.:]*$/;
 const squash = (s: string) => s.replace(/\s+/g, '');
 
+/** Levenshtein distance with an early exit once it exceeds `max`. */
+function editDistance(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      const v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      cur.push(v);
+      if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+/** True when `a` is `b` with only a few characters changed: a typo fix, a
+ *  rename of one identifier, a one-character operator fix. */
+export function isTweak(a: string, b: string): boolean {
+  const x = a.trim();
+  const y = b.trim();
+  if (x === y) return false;
+  const max = Math.min(PR_VALUE_RULES.tweakMaxChars, Math.max(1, Math.floor(Math.max(x.length, y.length) * PR_VALUE_RULES.tweakRatio)));
+  return editDistance(x, y, max) <= max;
+}
+
 /** Classifies the added and removed lines of one file's unified diff. Pure. */
 export function lineMix(patch: string, path: string): LineMix {
-  const mix: LineMix = { code: 0, comment: 0, blank: 0, formatting: 0 };
+  const mix: LineMix = { code: 0, comment: 0, blank: 0, formatting: 0, tweak: 0 };
   const syn = commentSyntax(path);
   const removed: string[] = [];
   const added: string[] = [];
@@ -195,6 +232,20 @@ export function lineMix(patch: string, path: string): LineMix {
       keepRemoved.push(r);
     }
   }
+  // Tweaks: a removed line that comes back with a few characters changed
+  // (dependant → dependent, acutal → actual, < → <=). Each pair is counted
+  // once as a tweak instead of as two code lines; a sweep that touches forty
+  // such lines is not forty lines of work.
+  const unmatchedRemoved: string[] = [];
+  const removedPool = keepRemoved.filter((r) => squash(r));
+  const addedAfterTweaks: string[] = [];
+  for (const a of keepAdded) {
+    if (!squash(a)) { addedAfterTweaks.push(a); continue; }
+    const idx = removedPool.findIndex((r) => isTweak(a, r));
+    if (idx >= 0) { removedPool.splice(idx, 1); mix.tweak += 1; } // one changed line, counted once
+    else addedAfterTweaks.push(a);
+  }
+  unmatchedRemoved.push(...removedPool, ...keepRemoved.filter((r) => !squash(r)));
   let inBlock = false;
   let inDoc = false;
   const classify = (line: string) => {
@@ -219,9 +270,9 @@ export function lineMix(patch: string, path: string): LineMix {
     if (syn.blockOpen === '/*' && t.startsWith('*')) { mix.comment++; return; } // continuation of a block
     mix.code++;
   };
-  for (const l of keepAdded) classify(l);
+  for (const l of addedAfterTweaks) classify(l);
   inBlock = false; inDoc = false;
-  for (const l of keepRemoved) classify(l);
+  for (const l of unmatchedRemoved) classify(l);
   return mix;
 }
 
@@ -234,6 +285,8 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
   let codeLines = 0;
   let commentLines = 0;
   let formattingLines = 0;
+  let tweakLines = 0;
+  let filesWithCode = 0;
   let rawCodeLines = 0;
   let testAdditions = 0;
   /** Code lines in test files when the diff was read; typo fixes in a test's comments are not "tests added". */
@@ -255,10 +308,13 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
         codeLines += mix.code;
         commentLines += mix.comment;
         formattingLines += mix.formatting;
+        tweakLines += mix.tweak;
+        if (mix.code > 0) filesWithCode++;
         readDiff = true;
         if (k === 'test') { testCodeLines += mix.code; testDiffRead = true; }
       } else {
         codeLines += f.additions + f.deletions;
+        filesWithCode++;
       }
     }
     if (k === 'test') testAdditions += f.additions;
@@ -277,30 +333,39 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
   const docsAndContent = codeish === 0 && kinds.docs > 0 && kinds.content > 0;
   // Code files whose diff turned out to hold no logic: comments alone, or
   // whitespace and reformatting alone.
-  const commentsOnly = readDiff && codeish > 0 && codeLines === 0 && commentLines > 0;
-  const formattingOnly = readDiff && codeish > 0 && codeLines === 0 && commentLines === 0 && rawCodeLines > 0;
+  const tweaksOnly = readDiff && codeish > 0 && codeLines === 0 && tweakLines > 0;
+  const commentsOnly = readDiff && codeish > 0 && codeLines === 0 && tweakLines === 0 && commentLines > 0;
+  const formattingOnly = readDiff && codeish > 0 && codeLines === 0 && tweakLines === 0 && commentLines === 0 && rawCodeLines > 0;
   const labels = (input.labels ?? []).map((l) => l.toLowerCase());
-  const docsLabel = labels.some((l) => DOCS_LABELS.some((d) => l.includes(d)));
+  const title = (input.title ?? '').toLowerCase();
+  // A documentation label, or a title the project itself wrote as docs /
+  // typo work ("docs: fix various typos in source"), is docs work.
+  const docsLabel = labels.some((l) => DOCS_LABELS.some((d) => l.includes(d))) || /^docs?\b|\btypos?\b/.test(title);
+  // Tweaked lines count a quarter each: a sweep over forty misspellings is
+  // real but small work, and the same weight keeps a one-character bug fix
+  // from reading as a rewrite.
+  const weightedCode = codeLines + tweakLines * R.tweakWeight;
 
   // Size: log-scaled substantive lines in code and test files.
   const nonCode = docsOnly || contentOnly || docsAndContent;
-  const lines = nonCode ? input.additions + input.deletions : commentsOnly ? commentLines : formattingOnly ? rawCodeLines : codeLines;
+  const lines = nonCode ? input.additions + input.deletions : tweaksOnly ? tweakLines : commentsOnly ? commentLines : formattingOnly ? rawCodeLines : weightedCode;
   const t = Math.log(1 + Math.min(Math.max(0, lines), R.sizeCap)) / Math.log(1 + R.sizeCap);
   let value = R.sizeMin + (R.sizeMax - R.sizeMin) * t;
   if (nonCode) reasons.push(`${lines} lines`);
+  else if (tweaksOnly) reasons.push(`${tweakLines} lines with a few characters changed (typos, renames), no other code`);
   else if (commentsOnly) reasons.push(`${commentLines} comment lines, no code`);
   else if (formattingOnly) reasons.push(`${rawCodeLines} lines of formatting, no code`);
-  else reasons.push(`${codeLines} code lines${commentLines > 0 ? ` (${commentLines} comment lines not counted)` : ''}${formattingLines > 0 ? ` (${formattingLines} formatting lines not counted)` : ''}`);
+  else reasons.push(`${codeLines} code lines${tweakLines > 0 ? ` (${tweakLines} tweaked lines at quarter weight)` : ''}${commentLines > 0 ? ` (${commentLines} comment lines not counted)` : ''}${formattingLines > 0 ? ` (${formattingLines} formatting lines not counted)` : ''}`);
 
   let kind: PRKind = 'code';
-  if (contentOnly || docsOnly || docsAndContent || commentsOnly || formattingOnly) {
+  if (contentOnly || docsOnly || docsAndContent || commentsOnly || formattingOnly || tweaksOnly) {
     // Docs, content, comments and formatting scale inside their own band,
     // PR_VALUE_MIN..cap, so a two-line typo fix is not worth the same as a
     // four-hundred-line guide. Comments are docs; reformatting is content.
     const cap = contentOnly || formattingOnly ? R.contentCap : R.docsCap;
     value = PR_VALUE_MIN + (cap - PR_VALUE_MIN) * t;
-    kind = contentOnly ? 'content' : formattingOnly ? 'formatting' : commentsOnly ? 'comments' : 'docs';
-    reasons.push(contentOnly ? 'images, data or config only' : formattingOnly ? 'whitespace and formatting only' : commentsOnly ? 'comments only' : 'docs only');
+    kind = contentOnly ? 'content' : formattingOnly ? 'formatting' : commentsOnly ? 'comments' : tweaksOnly ? 'tweaks' : 'docs';
+    reasons.push(contentOnly ? 'images, data or config only' : formattingOnly ? 'whitespace and formatting only' : commentsOnly ? 'comments only' : tweaksOnly ? 'typo fixes and renames only' : 'docs only');
   } else {
     // Tests added: at least a few lines of test code, not a typo in a test
     // file's comment or a one-line assertion tweak.
@@ -314,17 +379,19 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
       value += R.newCodeBonus;
       reasons.push(newCodeFiles > 0 ? `${newCodeFiles} new code file${newCodeFiles === 1 ? '' : 's'}` : 'mostly new code');
     }
-    if (codeish >= R.breadthFiles) {
+    // Breadth counts files with real code in them, not files a sweep touched.
+    const wide = readDiff ? filesWithCode : codeish;
+    if (wide >= R.breadthFiles) {
       value += R.breadthBonus;
-      reasons.push(`${codeish} code files`);
+      reasons.push(`${wide} code files`);
     }
     if (kinds.docs > 0 || kinds.content > 0) kind = kind === 'tests' ? 'tests' : 'mixed';
     // A "documentation"/"typo" label on a code-looking PR (docstrings, comments)
     // is docs work: cap it unless the change is clearly substantial.
-    if (docsLabel && codeLines < 30) {
+    if (docsLabel && weightedCode < 30) {
       value = Math.min(value, R.docsCap);
       kind = 'docs';
-      reasons.push('labelled documentation');
+      reasons.push('labelled or titled as documentation');
     }
   }
   if ((input.reviews ?? 0) >= 2 && kind !== 'content') {
