@@ -26,7 +26,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['{lib,app,scripts}/**/*.test.ts'],
+    // .tsx too: components render through react-dom/server in tests
+    include: ['{lib,app,scripts}/**/*.test.{ts,tsx}'],
     env: {
       GITHUB_TOKEN: 'test-not-a-real-token',
       LLM_API_KEY: 'test-key-not-real',

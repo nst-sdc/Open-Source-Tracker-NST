@@ -3,6 +3,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { RepoActivityChart, type RepoMonth } from './RepoActivityChart';
+import { MaintainerHeatmap, type MaintainerActivity } from './MaintainerHeatmap';
 
 /** Marks a GitHub account that belongs to one of our students. */
 type SectionId = 'contributors' | 'maintainers';
@@ -75,13 +76,16 @@ export default function RepoActivityPage() {
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [monthly, setMonthly] = useState<RepoMonth[]>([]);
+  const [maintainerActivity, setMaintainerActivity] = useState<MaintainerActivity | null>(null);
   const [window_, setWindow] = useState<{ since: string | null; truncated: boolean }>({ since: null, truncated: false });
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [userActivity, setUserActivity] = useState<UserActivity | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
   const [userError, setUserError] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'prs' | 'issues'>('all');
-  const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month' | '2months' | '3months'>('1day');
+  // A month by default: a day of activity says little about a repository,
+  // and the maintainer calendar needs weeks to show a weekday pattern.
+  const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month' | '2months' | '3months'>('month');
   // Which list leads. Someone checking who maintains a repo should not have
   // to scroll past the whole community ranking every time, so the choice is
   // one click and remembered in this browser.
@@ -143,6 +147,7 @@ export default function RepoActivityPage() {
         setRepoInfo(data.repoInfo);
         setContributors(data.contributors);
         setMonthly(data.monthly ?? []);
+        setMaintainerActivity(data.maintainerActivity ?? null);
         setWindow({ since: data.window?.since ?? null, truncated: Boolean(data.window?.truncated) });
       } else {
         setError(data.error ?? 'Failed to fetch repository activity.');
@@ -164,6 +169,7 @@ export default function RepoActivityPage() {
     setRepoInfo(null);
     setContributors([]);
     setMonthly([]);
+    setMaintainerActivity(null);
     await performSearch(parsed, period);
   }
 
@@ -559,6 +565,7 @@ export default function RepoActivityPage() {
                 <p className="text-ink-soft text-xs mb-4">
                   People with merge access and automation accounts. Their activity is real, but it says nothing about who is contributing, so it stays out of the ranking and the chart.
                 </p>
+                {maintainerActivity && <MaintainerHeatmap activity={maintainerActivity} />}
                 {maintainersAndBots.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {maintainersAndBots.map((c) => (

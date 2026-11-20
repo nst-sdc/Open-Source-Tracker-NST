@@ -1,7 +1,8 @@
 import { getGitHubHeaders } from '@/lib/github';
 import { getStudentsKV } from '@/lib/kv-students';
 import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
-import { deriveMaintainers, fetchRecentMergers, isBotAccount, MAINTAINER_ASSOCIATIONS } from '@/lib/repo-maintainers';
+import { deriveMaintainers, fetchMergeEvents, isBotAccount, MAINTAINER_ASSOCIATIONS } from '@/lib/repo-maintainers';
+import type { MaintainerEvent } from '@/lib/maintainer-heatmap';
 
 interface RepoInfo {
   fullName: string;
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const repo = searchParams.get('repo');
-  const period = searchParams.get('period') || '1day';
+  const period = searchParams.get('period') || 'month';
 
   if (!repo || !repo.includes('/')) {
     return Response.json({ error: 'Valid repository parameter (owner/repo) is required.' }, { status: 400 });
@@ -104,12 +105,15 @@ export async function GET(request: Request) {
     //    lib/repo-maintainers.ts; the collaborators endpoint below is the
     //    weakest (needs push access to read), the mergers the strongest.
     const collaboratorLogins = new Set<string>();
-    const [publicMembers, mergers] = await Promise.all([
+    //    The merge events double as the maintainer-activity calendar, so they
+    //    reach back to the period's start (bounded), not just three pages.
+    const [publicMembers, mergeEvents] = await Promise.all([
       fetch(`https://api.github.com/orgs/${owner}/public_members?per_page=100`, { headers, next: { revalidate: 3600 } })
         .then(async (r) => (r.ok ? ((await r.json()) as Array<{ login: string }>).map((m) => m.login) : []))
         .catch(() => [] as string[]),
-      fetchRecentMergers(owner, repoName, headers),
+      fetchMergeEvents(owner, repoName, headers, { since: filterDate, minPages: 3, maxPages: period === 'all' ? 15 : 6 }),
     ]);
+    const mergers = mergeEvents === null ? null : new Set(mergeEvents.map((e) => e.mergedBy.toLowerCase()));
 
     try {
       const collabRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/collaborators?affiliation=all&per_page=100`, {
@@ -354,11 +358,38 @@ export async function GET(request: Request) {
     });
     const oldestPR = pullRequests.length ? pullRequests[pullRequests.length - 1].created_at : null;
 
+    // 6. When maintainers are active: every merge a (human) maintainer made and
+    //    every PR one raised in the window, as events the page lays out on a
+    //    weekday calendar in the viewer's time zone.
+    const clip = (t: string | undefined, n: number) => (t ?? '').length > n ? `${(t ?? '').slice(0, n - 1)}…` : (t ?? '');
+    const maintainerEvents: MaintainerEvent[] = [];
+    for (const e of mergeEvents ?? []) {
+      if (new Date(e.mergedAt) <= filterDate) continue;
+      if (isBotAccount({ login: e.mergedBy })) continue;
+      maintainerEvents.push({ t: e.mergedAt, who: e.mergedBy, kind: 'merged', n: e.number, title: clip(e.title, 80) });
+    }
+    for (const pr of pullRequests) {
+      const login = pr.user?.login;
+      if (!login) continue;
+      const c = contributorMap.get(login.toLowerCase());
+      if (!c?.isMaintainer || c.isBot) continue;
+      maintainerEvents.push({ t: pr.created_at, who: login, kind: 'raised', n: pr.number, title: clip(pr.title, 80) });
+    }
+    maintainerEvents.sort((a, b) => a.t.localeCompare(b.t));
+
     const responseData = {
       repoInfo,
       contributors,
       monthly,
       maintainerSignals: { mergers: mergers === null ? 'unavailable (no token)' : mergers.size, publicMembers: publicMembers.length },
+      maintainerActivity: {
+        events: maintainerEvents,
+        since: filterDate.toISOString(),
+        until: new Date(now).toISOString(),
+        // Without a token GraphQL is refused and merges cannot be attributed;
+        // the calendar then shows PRs raised by maintainers only.
+        mergesKnown: mergeEvents !== null,
+      },
       window: {
         // Newest-first, MAX_PAGES deep, so a very busy repo's twelve months
         // may still be cut short; the page says so when that happens.
