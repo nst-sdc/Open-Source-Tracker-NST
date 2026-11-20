@@ -1,3 +1,5 @@
+import { COMMUNITY_PROJECTS } from '@/lib/community-projects';
+import { CommunityProjectCard } from '@/app/components/CommunityProjectCard';
 import Link from 'next/link';
 
 export const metadata = {
@@ -441,51 +443,13 @@ export default function GetStartedPage() {
         <section id="student-spotlight" className="scroll-mt-[76px]">
           <SectionHeading
             title="Students here are already building these"
-            intro="Two projects written and maintained by Newton School of Technology students, published in the open for anyone to use or improve."
+            intro="Projects written and maintained by Newton School of Technology students, published in the open for anyone to use or improve."
           />
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <a
-              href="https://github.com/bitflicker64/Termstory"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group rounded-2xl border border-line bg-ground p-5 card-hover"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-base font-[650] text-ink group-hover:text-brand-600 transition-colors">
-                  Termstory
-                </h3>
-                <span className="text-[11px] text-ink-soft">@bitflicker64</span>
-              </div>
-              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-mid">
-                Turns your terminal history into a readable timeline, grouping commands
-                into sessions and matching them up with the commits you made.
-              </p>
-              <span className="mt-4 inline-block text-[13px] font-medium text-brand-600">
-                View on GitHub →
-              </span>
-            </a>
-
-            <a
-              href="https://github.com/Dreamstick9/filedrop"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group rounded-2xl border border-line bg-ground p-5 card-hover"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-base font-[650] text-ink group-hover:text-brand-600 transition-colors">
-                  filedrop
-                </h3>
-                <span className="text-[11px] text-ink-soft">@Dreamstick9</span>
-              </div>
-              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-mid">
-                Shares files across your local network, encrypted in the browser with
-                AES-256-GCM, with a QR code so a phone can pick them up.
-              </p>
-              <span className="mt-4 inline-block text-[13px] font-medium text-brand-600">
-                View on GitHub →
-              </span>
-            </a>
+            {COMMUNITY_PROJECTS.map((project) => (
+              <CommunityProjectCard key={project.repoUrl} project={project} variant="spotlight" />
+            ))}
           </div>
         </section>
 
