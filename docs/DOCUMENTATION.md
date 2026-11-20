@@ -635,7 +635,7 @@ Use the admin list for what the program list cannot know, for example a project'
 
 Shown out of 10 everywhere (`lib/display-scale.ts`: value × 5, so 2..10 with 5 neutral; project impact is the multiplier × 10/3, so 0.5..10). The model keeps the ranges above; only rendering scales.
 
-Values are measured by the refresh (`measurePRContributions`: GraphQL `pullRequest { additions deletions changedFiles reviews files }` 20 PRs per query, then one REST `pulls/{n}/files` call per PR for the patches, at most 40 PRs per student per pass, only for PRs into repositories the gate counts; a failed diff call leaves the PR for a later pass rather than measuring it on counts) and stored on the cached PR as `contribution` with the rule version `v`; bump `PR_VALUE_VERSION` to remeasure everything after a rule change. The contributor profile shows each measured PR's value as a chip with its reasons. Impact (the average project value) is unaffected.
+Values are measured by the refresh (`measurePRContributions`: GraphQL `pullRequest { additions deletions changedFiles reviews files }` 20 PRs per query, then one REST `pulls/{n}/files` call per PR for the patches, at most 40 PRs per student per pass, only for PRs into repositories the gate counts; a failed diff call leaves the PR for a later pass rather than measuring it on counts) and stored on the cached PR as `contribution` with the rule version `v`; bump `PR_VALUE_VERSION` to remeasure everything after a rule change. The contributor profile shows each measured PR's value as an **Effort** pill (right edge of the card, level with Impact) with its reasons on hover. Impact (the average project value) is unaffected.
 
 ## 12. Flagging Queue System
 

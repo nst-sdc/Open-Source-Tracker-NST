@@ -182,10 +182,10 @@ export default function DocumentationPage() {
               over someone&apos;s merged PRs, shown out of 10 (M = 3 reads as 10) and only once they have 5+ merged PRs
               (below that, one lucky merge into a big repo would read as a perfect average). Each PR on a profile
               carries two badges, both out of 10: <strong className="text-ink">Impact</strong>, the project&apos;s M, and{' '}
-              <strong className="text-ink">Value</strong>, what the change itself did — the effort term E, from the
+              <strong className="text-ink">Effort</strong>, what the change itself did — the effort term E, from the
               files and lines it touched (tests, new code and breadth raise it; docs-only and image/config-only
               changes sit low; comment lines, blank lines and reformatting are never counted as code). A typical twenty-line code change is a 5; points are{' '}
-              <Code>10·M<sup>0.75</sup>·E</Code>, so a Value of 10 doubles a PR and a 2 cuts it to 40%. E counts on the
+              <Code>10·M<sup>0.75</sup>·E</Code>, so an Effort of 10 doubles a PR and a 2 cuts it to 40%. E counts on the
               leaderboard as soon as a PR has been measured; an unmeasured PR reads as neutral until it is.
             </P>
             <Callout tone="warn">
