@@ -16,7 +16,7 @@ import { getStudentsKV } from '@/lib/kv-students';
 import { kvGet, kvSet } from '@/lib/kv';
 import { cookies } from 'next/headers';
 import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
-import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION, MIN_STARS, type ExclusionReason } from '@/lib/repo-score';
+import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION, type ExclusionReason } from '@/lib/repo-score';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
 import { SocialsCard } from './SocialsCard';
@@ -284,8 +284,11 @@ export default async function ContributorPage({
   }
   const notCountedTotal = [...notCounted.values()].reduce((a, b) => a + b, 0);
   const NOT_COUNTED_LABEL: Record<ExclusionReason | 'flagged', string> = {
-    'under-star-minimum': `in repos under ${MIN_STARS} stars`,
+    'under-star-minimum': 'in repos under the star minimum',
     'no-audience': 'in repos with no audience and no releases',
+    'nst-internal': 'into NST\'s own repos',
+    peer: 'into another student\'s repos',
+    practice: 'into practice repos',
     fork: 'into forks',
     archived: 'into archived repos',
     dead: 'into repos that no longer exist',

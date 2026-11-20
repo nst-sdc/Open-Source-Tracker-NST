@@ -1,5 +1,6 @@
 import { getStudentsKV, applyRosterUpdates, type RosterUpdate, type Student } from "./kv-students";
 import { primeVouchedOrgs } from "./kv-vouched-orgs";
+import { buildGateContext } from "./gate-rules";
 import {
   getExceptionRepoSetForUser,
   getOwnRepoExceptions,
@@ -21,7 +22,7 @@ import {
   legacyMultiplier,
   NEUTRAL_MULTIPLIER,
   aggregateMergedPRScore,
-  isRepoValid,
+  gateDecision,
   isConcentrated,
   CONCENTRATED_DECAY,
   PER_REPO_DECAY,
@@ -513,6 +514,7 @@ export async function validateNewRepos(
 ): Promise<{ updated: boolean; map: import("./repo-cache").RepoCacheMap }> {
   let updated = false;
   await primeVouchedOrgs();
+  const gate = await buildGateContext();
   const priorFor = buildOrgPriors(repoCacheMap);
 
   // Collect repos needing a fetch: never seen, or written by an older schema.
@@ -681,15 +683,18 @@ export async function validateNewRepos(
           return;
         }
         const signals = signalsFromNode(node);
+        const decision = previous?.manualOverride
+          ? { valid: previous.valid, reason: previous.reason, detail: previous.reasonDetail }
+          : gateDecision(signals, priorFor(repoFullName), gate, repoFullName);
         repoCacheMap[repoFullName] = {
           schemaVersion: REPO_SCHEMA_VERSION,
           stars: signals.stars,
           forks: signals.forks,
           // A manual override pins the admin's validity decision across
           // refreshes; the signals still update underneath it.
-          valid: previous?.manualOverride
-            ? previous.valid
-            : isRepoValid(signals, priorFor(repoFullName)),
+          valid: decision.valid,
+          ...(decision.reason ? { reason: decision.reason } : {}),
+          ...(decision.detail ? { reasonDetail: decision.detail } : {}),
           manualOverride: previous?.manualOverride,
           signals,
           checkedAt: new Date().toISOString(),

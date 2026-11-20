@@ -19,6 +19,9 @@ export interface RepoCacheEntry {
   stars: number;
   forks: number;
   valid: boolean;
+  /** Why the gate said no, recorded when it last ran; shown on profiles. */
+  reason?: ExclusionReason;
+  reasonDetail?: string;
   manualOverride?: boolean;
   /** Full signal set for the #4 scorer. Present iff schemaVersion is current. */
   signals?: RepoSignals;
@@ -120,7 +123,7 @@ export function prExcludedBy(
   mergedAt: string | null | undefined
 ): ExclusionReason | null {
   if (!entry) return null;
-  return prExclusionReason(entry.valid, entry.signals, mergedAt);
+  return prExclusionReason(entry.valid, entry.signals, mergedAt, entry.reason);
 }
 
 /** The prior each owner lends its repos, from what the cache already knows:

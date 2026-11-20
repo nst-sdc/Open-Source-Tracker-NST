@@ -24,6 +24,8 @@
  * M = 0.15, so farming them is actually cheap, not merely slightly-less-good.
  */
 
+import { nstOwnerReason, practiceReason, listedPracticeReason, type GateContext } from './gate-rules';
+
 /** Bump when RepoCacheEntry gains fields the scorer depends on. Entries with a
  *  different (or missing) version are re-fetched by validateNewRepos; until
  *  then they score through legacyMultiplier() below. */
@@ -346,15 +348,52 @@ export const VALIDITY_MIN_AUDIENCE = 0.15;
  *  prExclusionReason, because a PR merged into a live project stays a real
  *  contribution after the maintainers move on. This is a coarse gate; the
  *  multiplier does the fine-grained pricing above it. */
-export function isRepoValid(s: RepoSignals, prior?: OrgPrior): boolean {
-  if (s.isFork) return false;
-  if (hasOrgPrior(prior)) return true;
-  if (s.stars < MIN_STARS) return false;
-  if (audienceRatio(s) < VALIDITY_MIN_AUDIENCE && s.releases === 0) return false;
-  return true;
+export function isRepoValid(s: RepoSignals, prior?: OrgPrior, ctx?: GateContext, repoFullName?: string): boolean {
+  return gateDecision(s, prior, ctx, repoFullName).valid;
 }
 
-export type ExclusionReason = 'fork' | 'under-star-minimum' | 'no-audience' | 'archived' | 'dead';
+/**
+ * The whole gate, with its reason. Ownership rules (lib/gate-rules.ts) come
+ * first, because they are about what the repo is for, and no amount of stars
+ * changes that; the org prior comes next, because an owner that vouches is
+ * stronger evidence than a keyword (meshery and sympy carry the hacktoberfest
+ * topic and are not practice grounds); then keyword practice rules; then the
+ * numbers. Only the exact practice-repo list outranks a vouching owner.
+ *
+ * `ctx` is optional for callers that have no ownership knowledge (tests, the
+ * legacy path); without it the gate is stars-and-audience only, as before.
+ */
+export function gateDecision(
+  s: RepoSignals,
+  prior?: OrgPrior,
+  ctx?: GateContext,
+  repoFullName?: string,
+): { valid: boolean; reason?: ExclusionReason; detail?: string } {
+  if (s.isFork) return { valid: false, reason: 'fork' };
+  const owner = (repoFullName ?? '').split('/')[0] || s.ownerLogin;
+  const name = repoFullName ?? `${s.ownerLogin}/`;
+  if (ctx) {
+    const nst = nstOwnerReason(owner, ctx.rules);
+    if (nst) return { valid: false, reason: 'nst-internal', detail: nst };
+    if (ctx.isPeerOwner(owner)) return { valid: false, reason: 'peer', detail: `owner ${owner} is a tracked student` };
+    const listed = listedPracticeReason(name, ctx.rules);
+    if (listed) return { valid: false, reason: 'practice', detail: listed };
+  }
+  if (hasOrgPrior(prior)) return { valid: true };
+  if (ctx) {
+    const practice = practiceReason(name, s.topics ?? [], ctx.rules, s.stars);
+    if (practice) return { valid: false, reason: 'practice', detail: practice };
+    const kind = ctx.ownerKind(owner);
+    const bar = kind === 'user' ? ctx.rules.minStarsPersonal : ctx.rules.minStarsOrg;
+    if (s.stars < bar) return { valid: false, reason: 'under-star-minimum', detail: `${s.stars} stars, ${kind === 'user' ? 'personal' : 'organisation'} bar is ${bar}` };
+  } else if (s.stars < MIN_STARS) {
+    return { valid: false, reason: 'under-star-minimum' };
+  }
+  if (audienceRatio(s) < VALIDITY_MIN_AUDIENCE && s.releases === 0) return { valid: false, reason: 'no-audience' };
+  return { valid: true };
+}
+
+export type ExclusionReason = 'fork' | 'under-star-minimum' | 'no-audience' | 'archived' | 'dead' | 'nst-internal' | 'peer' | 'practice';
 
 /** Why a merged PR into this repo does not count, or null when it does.
  *  `valid` is the stored gate decision (which may be an admin override);
@@ -364,7 +403,9 @@ export type ExclusionReason = 'fork' | 'under-star-minimum' | 'no-audience' | 'a
 export function prExclusionReason(
   valid: boolean,
   s: RepoSignals | undefined,
-  mergedAt: string | null | undefined
+  mergedAt: string | null | undefined,
+  /** The reason recorded when the gate last ran (RepoCacheEntry.reason). */
+  storedReason?: ExclusionReason,
 ): ExclusionReason | null {
   if (!s) return valid ? null : 'dead';
   if (s.isArchived) {
@@ -372,6 +413,7 @@ export function prExclusionReason(
     if (!mergedAt || mergedAt >= s.archivedAt) return 'archived';
   }
   if (valid) return null;
+  if (storedReason) return storedReason;
   if (s.isFork) return 'fork';
   if (s.stars < MIN_STARS) return 'under-star-minimum';
   return 'no-audience';
