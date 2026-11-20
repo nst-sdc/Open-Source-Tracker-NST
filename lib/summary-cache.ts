@@ -88,6 +88,9 @@ export function isCacheFresh(cache: SummaryCache): boolean {
 }
 
 /** Stamps cachedAt as epoch so all predefined caches are immediately stale (used after flagging) */
+/** The cachedAt value that marks a cache as invalidated and due a full rebuild. */
+export const INVALIDATED_AT = '1970-01-01T00:00:00.000Z';
+
 export async function invalidateSummaryCache(): Promise<void> {
   const periods = ['all', 'week', 'month', '1day', '2months', '3months', '6months', 'year'];
   forgetSummaryCacheMemory();
@@ -95,7 +98,7 @@ export async function invalidateSummaryCache(): Promise<void> {
     try {
       const cache = await readSummaryCache(period, { bypassMemory: true });
       if (cache) {
-        cache.cachedAt = '1970-01-01T00:00:00.000Z';
+        cache.cachedAt = INVALIDATED_AT;
         await writeSummaryCache(cache.summaries, period);
       }
     } catch {
