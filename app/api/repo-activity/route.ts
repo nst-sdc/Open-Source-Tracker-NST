@@ -1,4 +1,5 @@
 import { getGitHubHeaders } from '@/lib/github';
+import { getStudentsKV } from '@/lib/kv-students';
 import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
 import { deriveMaintainers, fetchRecentMergers, isBotAccount, MAINTAINER_ASSOCIATIONS } from '@/lib/repo-maintainers';
 
@@ -313,6 +314,22 @@ export async function GET(request: Request) {
     }
 
     // Convert map to array and sort by activity
+    // Label the contributors who are on our roster, so a repo's list says
+    // which of them are our students. Current and previous logins both match.
+    const tracked = new Map<string, { login: string; campus: string; year: string }>();
+    try {
+      for (const st of await getStudentsKV()) {
+        const t = { login: st.github, campus: st.campus ?? 'campus not set', year: st.year ?? 'year not set' };
+        tracked.set(st.github.toLowerCase(), t);
+        for (const prev of st.previousLogins ?? []) tracked.set(prev.toLowerCase(), t);
+      }
+    } catch (err) {
+      console.warn('[repo-activity] roster unavailable; contributors go unlabelled this time:', err instanceof Error ? err.message : err);
+    }
+    for (const c of contributorMap.values()) {
+      (c as typeof c & { tracked: { login: string; campus: string; year: string } | null }).tracked = tracked.get(c.username.toLowerCase()) ?? null;
+    }
+
     const contributors = Array.from(contributorMap.values()).sort((a, b) => {
       if (b.prsCount !== a.prsCount) {
         return b.prsCount - a.prsCount;

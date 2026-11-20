@@ -1,7 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { RepoActivityChart, type RepoMonth } from './RepoActivityChart';
+
+/** Marks a GitHub account that belongs to one of our students. */
+function TrackedBadge({ tracked }: { tracked: { login: string; campus: string; year: string } }) {
+  return (
+    <span
+      title={`On the NST tracker as @${tracked.login} (${tracked.campus}, ${tracked.year})`}
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-[550] bg-success-0 text-success-600 border border-success-100 mt-0.5"
+    >
+      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-success-600" />
+      Our student · {tracked.campus}
+    </span>
+  );
+}
 
 interface Contributor {
   username: string;
@@ -13,6 +27,8 @@ interface Contributor {
   issuesCount: number;
   isMaintainer: boolean;
   isBot?: boolean;
+  /** Set when this GitHub account is one of our students. */
+  tracked?: { login: string; campus: string; year: string } | null;
   prs: Array<{ number: number; title: string; url: string; state: string; createdAt: string; mergedAt: string | null }>;
   issues: Array<{ number: number; title: string; url: string; state: string; createdAt: string }>;
 }
@@ -162,6 +178,7 @@ export default function RepoActivityPage() {
   };
   const sortedContributors = contributors.filter((c) => !c.isMaintainer && !c.isBot && matchesFilter(c)).sort(byActivity);
   const maintainersAndBots = contributors.filter((c) => (c.isMaintainer || c.isBot) && matchesFilter(c)).sort(byActivity);
+  const selectedTracked = selectedUser ? contributors.find((c) => c.username.toLowerCase() === selectedUser.toLowerCase())?.tracked ?? null : null;
 
   // The share bar follows the ranking: merged PRs unless the Issues filter is on.
   const shareOf = (c: Contributor) => (filterType === 'issues' ? c.issuesCount : c.mergedPRs);
@@ -394,6 +411,7 @@ export default function RepoActivityPage() {
                               <span className="text-ink font-[650] block truncate text-base group-hover:text-violet-600 transition-colors">
                                 @{c.username}
                               </span>
+                              {c.tracked && <TrackedBadge tracked={c.tracked} />}
                               {(c.isMaintainer || c.isBot) && (
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   {c.isMaintainer && (
@@ -490,7 +508,8 @@ export default function RepoActivityPage() {
                         />
                         <div className="min-w-0 flex-1">
                           <span className="text-ink font-[650] block truncate text-sm group-hover:text-violet-600 transition-colors">@{c.username}</span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            {c.tracked && <TrackedBadge tracked={c.tracked} />}
                             {c.isMaintainer && (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">Maintainer</span>
                             )}
@@ -541,7 +560,17 @@ export default function RepoActivityPage() {
               <div className="flex items-center gap-3">
                 <div>
                   <h3 className="text-lg font-[650] text-ink">Contributor Details</h3>
-                  <p className="text-xs text-ink-soft">@{selectedUser}&apos;s pull request history across GitHub</p>
+                  <p className="text-xs text-ink-soft">
+                    @{selectedUser}&apos;s pull request history across GitHub
+                    {selectedTracked && (
+                      <>
+                        {' · '}
+                        <Link href={`/contributors/${selectedTracked.login}`} className="text-violet-600 hover:underline font-[550]">
+                          Our student ({selectedTracked.campus}, {selectedTracked.year}) — open tracker profile
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
               <button
