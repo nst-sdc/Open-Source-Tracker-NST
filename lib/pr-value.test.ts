@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { classifyPath, prValue, valueOfPR, setPrValueWeighting, lineMix, PR_VALUE_RULES, PR_VALUE_MIN, PR_VALUE_MAX } from './pr-value';
+import { classifyPath, prValue, valueOfPR, setPrValueWeighting, lineMix, isTweak, PR_VALUE_RULES, PR_VALUE_MIN, PR_VALUE_MAX } from './pr-value';
 
 const f = (path: string, additions = 10, deletions = 2, changeType = 'MODIFIED') => ({ path, additions, deletions, changeType });
 const input = (files: ReturnType<typeof f>[], extra: Partial<Parameters<typeof prValue>[0]> = {}) => ({
@@ -110,13 +110,13 @@ describe('reading the diff', () => {
       '+const y = 2;', // same line, re-indented: formatting
       '-const gone = 3;',
     ]);
-    expect(lineMix(p, 'src/a.ts')).toEqual({ code: 3, comment: 4, blank: 2, formatting: 2 });
+    expect(lineMix(p, 'src/a.ts')).toEqual({ code: 3, comment: 4, blank: 2, formatting: 2, tweak: 0 });
   });
 
   it('knows # comments and docstrings in Python and -- in SQL', () => {
-    expect(lineMix(patch(['+# note', '+x = 1', '+"""', '+doc text', '+"""', '+y = 2']), 'app/m.py')).toEqual({ code: 2, comment: 4, blank: 0, formatting: 0 });
-    expect(lineMix(patch(['+-- comment', '+SELECT 1;']), 'db/q.sql')).toEqual({ code: 1, comment: 1, blank: 0, formatting: 0 });
-    expect(lineMix(patch(['+<!-- hidden -->', '+<div>x</div>']), 'index.html')).toEqual({ code: 1, comment: 1, blank: 0, formatting: 0 });
+    expect(lineMix(patch(['+# note', '+x = 1', '+"""', '+doc text', '+"""', '+y = 2']), 'app/m.py')).toEqual({ code: 2, comment: 4, blank: 0, formatting: 0, tweak: 0 });
+    expect(lineMix(patch(['+-- comment', '+SELECT 1;']), 'db/q.sql')).toEqual({ code: 1, comment: 1, blank: 0, formatting: 0, tweak: 0 });
+    expect(lineMix(patch(['+<!-- hidden -->', '+<div>x</div>']), 'index.html')).toEqual({ code: 1, comment: 1, blank: 0, formatting: 0, tweak: 0 });
   });
 
   it('scores a PR on its code lines alone: 50 code + 50 comment lines equals 50 code lines', () => {
@@ -158,13 +158,13 @@ describe('moves and small test edits', () => {
       '         this.save(selection.getRangeAt(0))',
       '+        document.execCommand("createLink", false, url)',
     ]);
-    expect(lineMix(p, 'ui/src/editor.js')).toEqual({ code: 2, comment: 0, blank: 1, formatting: 0 });
+    expect(lineMix(p, 'ui/src/editor.js')).toEqual({ code: 2, comment: 0, blank: 1, formatting: 0, tweak: 0 });
     const v = prValue({ additions: 1, deletions: 2, changedFiles: 1, files: [{ path: 'ui/src/editor.js', additions: 1, deletions: 2, patch: p }] });
     expect(v.kind).toBe('code');
     expect(v.value).toBeGreaterThan(PR_VALUE_RULES.contentCap);
   });
   it('still treats a re-indented line as formatting', () => {
-    expect(lineMix(patch(['-  const a = 1;', '+const a = 1;']), 'src/a.ts')).toEqual({ code: 0, comment: 0, blank: 0, formatting: 2 });
+    expect(lineMix(patch(['-  const a = 1;', '+const a = 1;']), 'src/a.ts')).toEqual({ code: 0, comment: 0, blank: 0, formatting: 2, tweak: 0 });
   });
   it('does not call a typo fix in a test comment "tests added"', () => {
     const v = prValue({ additions: 1, deletions: 1, changedFiles: 1, files: [{ path: 'test/a.test.ts', additions: 1, deletions: 1, patch: patch(['-// recieve', '+// receive']) }] });
@@ -173,5 +173,36 @@ describe('moves and small test edits', () => {
     const real = prValue({ additions: 4, deletions: 0, changedFiles: 1, files: [{ path: 'test/a.test.ts', additions: 4, deletions: 0, patch: patch(['+it("x", () => {', '+  expect(f()).toBe(1);', '+  expect(g()).toBe(2);', '+});']) }] });
     expect(real.reasons).toContain('tests added');
     expect(real.kind).toBe('tests');
+  });
+});
+
+describe('typo sweeps and renames', () => {
+  const patch = (lines: string[]) => ['@@ -1,3 +1,3 @@', ...lines].join('\n');
+  it('pairs a line that comes back with a few characters changed as a tweak', () => {
+    const p = patch(['-for (const dependant of module.implicitlyLoadedAfter) {', '+for (const dependent of module.implicitlyLoadedAfter) {', '-  error(logNotIncluded(dependant));', '+  error(logNotIncluded(dependent));', '+const brandNew = compute();']);
+    expect(lineMix(p, 'src/Graph.ts')).toEqual({ code: 1, comment: 0, blank: 0, formatting: 0, tweak: 2 });
+    expect(isTweak('if (a < b) {', 'if (a <= b) {')).toBe(true);
+    expect(isTweak('return foo(x);', 'return bar(y, z);')).toBe(false);
+  });
+  it('prices a forty-file typo sweep like docs work, not forty lines of code', () => {
+    const files = Array.from({ length: 40 }, (_, i) => ({
+      path: `src/m${i}.ts`, additions: 1, deletions: 1,
+      patch: patch([`-  const dependant${i} = load(${i});`, `+  const dependent${i} = load(${i});`]),
+    }));
+    const v = prValue({ additions: 40, deletions: 40, changedFiles: 40, files, title: 'docs: fix various typos in source' });
+    expect(v.kind).toBe('tweaks');
+    expect(v.value).toBeLessThanOrEqual(PR_VALUE_RULES.docsCap);
+    expect(v.reasons[0]).toContain('40 lines with a few characters changed');
+    expect(v.reasons).not.toContain('40 code files');
+  });
+  it('a title saying docs or typo caps a small code change like a docs label does', () => {
+    const v = prValue({ additions: 5, deletions: 5, changedFiles: 1, files: [{ path: 'src/a.ts', additions: 5, deletions: 5, patch: patch(['-const total = sum(items);', '+const total = sumAll(items, { strict: true });', '-let x = 1;', '+let x = compute(1, 2, 3);', '+export const y = 2;', '+export const z = 3;', '+export const w = 4;']) }], title: 'fix typos in parser' });
+    expect(v.kind).toBe('docs');
+    expect(v.value).toBeLessThanOrEqual(PR_VALUE_RULES.docsCap);
+  });
+  it('a real one-character fix still counts as code, just small', () => {
+    const v = prValue({ additions: 1, deletions: 1, changedFiles: 1, files: [{ path: 'src/a.ts', additions: 1, deletions: 1, patch: patch(['-if (i < n) {', '+if (i <= n) {']) }], title: 'fix off-by-one in loop bound' });
+    expect(v.kind).toBe('tweaks');
+    expect(v.value).toBeGreaterThanOrEqual(PR_VALUE_MIN);
   });
 });

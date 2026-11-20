@@ -1571,6 +1571,7 @@ export async function measurePRContributions(
         changedFiles: node.changedFiles,
         files: (node.files?.nodes ?? []).map((f) => ({ ...f, patch: patches.get(f.path) })),
         labels: (pr.labels ?? []).map((l) => l.name),
+        title: pr.title,
         reviews: node.reviews?.totalCount ?? 0,
       });
       pr.contribution = { ...v, at: new Date().toISOString(), v: PR_VALUE_VERSION };
