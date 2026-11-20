@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useId, useMemo, useState } from 'react';
-import type { MonthBucket } from '@/lib/community-timeline';
+import type { MonthBucket, ChartRanges } from '@/lib/community-timeline';
 
 /**
  * The community's activity by month: four thin lines (merged, opened, and
@@ -64,18 +64,25 @@ function smoothPath(pts: Array<[number, number]>): string {
 }
 
 export function CommunityChart({
-  series,
+  series: seriesProp,
+  ranges,
   compact = false,
   scopeLabel,
   href = '/contributors',
 }: {
-  series: MonthBucket[];
+  /** The months to draw. Used when `ranges` is not given (the home sparkline). */
+  series?: MonthBucket[];
+  /** Full chart: last-12-months plus one calendar year per chip, GitHub-style. */
+  ranges?: ChartRanges;
   compact?: boolean;
   /** e.g. "ADYPU · 2nd year" when the contributors page is filtered. */
   scopeLabel?: string;
   href?: string;
 }) {
   const gradId = useId().replace(/:/g, '');
+  const [range, setRange] = useState<'recent' | number>('recent');
+  const series: MonthBucket[] =
+    ranges ? (range === 'recent' ? ranges.recent : (ranges.years.find((y) => y.year === range)?.series ?? ranges.recent)) : (seriesProp ?? []);
   const [hover, setHover] = useState<number | null>(null);
   // True while the pointer is on the merged line itself (not just inside the
   // chart); that is what reveals the supporting series.
@@ -336,7 +343,25 @@ export function CommunityChart({
         <h2 className="text-ink text-sm font-[650]">
           Community activity{scopeLabel ? <span className="text-ink-soft font-[500]"> · {scopeLabel}</span> : ''}
         </h2>
-        <p className="text-ink-soft text-xs">By month <span className="text-ink-faint">· {span}</span></p>
+        <div className="flex items-center gap-2 flex-wrap">
+          {ranges && (
+            <div className="flex items-center gap-1 rounded-full border border-line bg-panel p-0.5" role="tablist" aria-label="Range">
+              {[{ key: 'recent' as const, label: 'Last 12 months' }, ...ranges.years.map((y) => ({ key: y.year, label: String(y.year) }))].map((r) => (
+                <button
+                  key={String(r.key)}
+                  type="button"
+                  role="tab"
+                  aria-selected={range === r.key}
+                  onClick={() => { setRange(r.key); setHover(null); setOnLine(false); }}
+                  className={`px-2.5 py-1 rounded-full text-[11.5px] font-[550] transition-colors ${range === r.key ? 'bg-ground text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="text-ink-soft text-xs">By month <span className="text-ink-faint">· {span}</span></p>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-2.5 mb-1">
         {SERIES.map((s) => {

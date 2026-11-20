@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => true) }));
 vi.mock('./profile-cache', () => ({ readProfileCache: vi.fn(async () => null) }));
-import { foldStudent, lastMonths, seriesFor, segmentKey, buildCommunityTimeline, timelineIsStale, type CommunityTimeline } from './community-timeline';
+import { foldStudent, lastMonths, seriesFor, segmentKey, buildCommunityTimeline, timelineIsStale, yearsAvailable, seriesForYear, chartRanges, type CommunityTimeline } from './community-timeline';
 
 const NOW = Date.UTC(2026, 10, 18); // 2026-11-18
 const pr = (repo: string, n: number, created: string, merged?: string, closed?: string) =>
@@ -83,5 +83,35 @@ describe('buildCommunityTimeline and staleness', () => {
     expect(timelineIsStale(t, NOW)).toBe(false);
     expect(timelineIsStale(t, NOW + 7 * 60 * 60 * 1000)).toBe(true);
     expect(timelineIsStale(null)).toBe(true);
+  });
+});
+
+describe('year ranges', () => {
+  const t: CommunityTimeline = {
+    builtAt: new Date(NOW).toISOString(),
+    studentsCounted: 1,
+    months: {
+      '2025-03': { 'ADYPU|2nd year': { opened: 2, merged: 1, closed: 0, issues: 0, contributors: 1 } },
+      '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, closed: 0, issues: 0, contributors: 1 } },
+      '2024-07': { '-|-': { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 } },
+    },
+  };
+  it('lists years with activity newest first and ignores empty months', () => {
+    expect(yearsAvailable(t)).toEqual([2026, 2025]);
+  });
+  it('gives January..now for the current year and a full year otherwise', () => {
+    const cur = seriesForYear(t, 2026, {}, NOW);
+    expect(cur).toHaveLength(11);
+    expect(cur[10]).toMatchObject({ month: '2026-11', merged: 1, partial: true });
+    const past = seriesForYear(t, 2025, {}, NOW);
+    expect(past).toHaveLength(12);
+    expect(past[2]).toMatchObject({ month: '2025-03', opened: 2 });
+    expect(past.every((b) => !b.partial)).toBe(true);
+    expect(seriesForYear(t, 2025, { campus: 'Rishihood' }, NOW).every((b) => b.opened === 0)).toBe(true);
+  });
+  it('bundles the ranges a chart needs', () => {
+    const r = chartRanges(t, {}, NOW);
+    expect(r.recent).toHaveLength(12);
+    expect(r.years.map((y) => y.year)).toEqual([2026, 2025]);
   });
 });

@@ -18,7 +18,8 @@ import type { Student } from './kv-students';
 
 export const KV_KEY = 'community_timeline';
 export const REBUILD_EVERY_MS = 6 * 60 * 60 * 1000;
-export const MONTHS_KEPT = 24;
+/** Ten years is far more than the tracker has existed; it just bounds the record. */
+export const MONTHS_KEPT = 120;
 
 export interface Counts {
   opened: number;
@@ -188,4 +189,54 @@ export function seriesFor(
     }
     return { month, partial: month === current, ...acc };
   });
+}
+
+/** Calendar years that have any activity, newest first. Pure. */
+export function yearsAvailable(t: CommunityTimeline | null): number[] {
+  const years = new Set<number>();
+  for (const [month, segs] of Object.entries(t?.months ?? {})) {
+    if (Object.values(segs).some((c) => c.opened || c.merged || c.closed || c.issues)) years.add(Number(month.slice(0, 4)));
+  }
+  return [...years].sort((a, b) => b - a);
+}
+
+/** January to December of one year, zero-filled; months after `nowMs` are
+ *  omitted so a current year ends at the running month. Pure. */
+export function seriesForYear(
+  t: CommunityTimeline | null,
+  year: number,
+  filters: { campus?: string; year?: string } = {},
+  nowMs = Date.now(),
+): MonthBucket[] {
+  const now = new Date(nowMs);
+  const current = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const out: MonthBucket[] = [];
+  for (let m = 1; m <= 12; m++) {
+    const month = `${year}-${String(m).padStart(2, '0')}`;
+    if (month > current) break;
+    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 };
+    for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
+      if (!segmentMatches(seg, filters)) continue;
+      acc.opened += c.opened;
+      acc.merged += c.merged;
+      acc.closed += c.closed ?? 0;
+      acc.issues += c.issues;
+      acc.contributors += c.contributors;
+    }
+    out.push({ month, partial: month === current, ...acc });
+  }
+  return out;
+}
+
+/** Everything a chart with a range selector needs, computed once server-side. */
+export interface ChartRanges {
+  recent: MonthBucket[];
+  years: Array<{ year: number; series: MonthBucket[] }>;
+}
+
+export function chartRanges(t: CommunityTimeline | null, filters: { campus?: string; year?: string } = {}, nowMs = Date.now()): ChartRanges {
+  return {
+    recent: seriesFor(t, filters, 12, nowMs),
+    years: yearsAvailable(t).map((year) => ({ year, series: seriesForYear(t, year, filters, nowMs) })),
+  };
 }

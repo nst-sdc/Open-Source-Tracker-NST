@@ -1,6 +1,6 @@
 import { buildLeaderboard, parseLeaderboardQuery, PAGE_SIZE, type LeaderboardRow } from "@/lib/leaderboard";
 import { getRecognitions } from "@/lib/recognitions";
-import { readCommunityTimeline, seriesFor } from "@/lib/community-timeline";
+import { readCommunityTimeline, chartRanges } from "@/lib/community-timeline";
 import { CommunityChart } from "../components/CommunityChart";
 import { FilterBar } from "./FilterBar";
 import { ContributorGrid } from "./ContributorGrid";
@@ -467,7 +467,7 @@ export default async function ContributorsPage({
       {!isOrgSearch && (
         <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
           <CommunityChart
-            series={seriesFor(timeline, { campus, year })}
+            ranges={chartRanges(timeline, { campus, year })}
             scopeLabel={[campus, year].filter(Boolean).join(" · ") || undefined}
           />
         </div>
