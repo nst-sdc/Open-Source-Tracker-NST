@@ -168,6 +168,18 @@ function groupByRepo<T extends { repository_url: string }>(items: T[]): Map<stri
 
 // ─── Content sections ─────────────────────────────────────────────────────────
 
+/** What the change itself was worth (lib/pr-value.ts): ×1.0 is a typical
+ *  twenty-line code change. Shown whenever the PR has been measured, so
+ *  students can see what moves it before the weighting is switched on. */
+function ContributionChip({ c }: { c: NonNullable<StudentPR['contribution']> }) {
+  const tone = c.value >= 1.3 ? 'text-success-600 bg-success-0 border-success-100' : c.value < 0.7 ? 'text-ink-soft bg-panel border-line' : 'text-ink-mid bg-panel border-line';
+  return (
+    <span title={`Contribution value ${c.value.toFixed(2)}: ${c.reasons.join(', ')}`} className={`inline-flex items-center gap-1 text-[11px] font-[550] px-1.5 py-0.5 rounded-md border tabular-nums ${tone}`}>
+      ×{c.value.toFixed(1)} <span className="font-[450] text-ink-faint">{c.kind}</span>
+    </span>
+  );
+}
+
 export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWeights?: Record<string, number> }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -207,6 +219,7 @@ export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWe
                     <span className="text-ink-soft text-xs">{formatDate(pr.created_at)}</span>
                     {pr.draft && <span className="text-xs font-[500] text-ink-soft bg-panel px-1.5 py-0.5 rounded-md">Draft</span>}
                     <Labels labels={pr.labels} />
+                    {pr.pull_request?.merged_at && pr.contribution && <ContributionChip c={pr.contribution} />}
                   </div>
                 </div>
                 <ExternalIcon />

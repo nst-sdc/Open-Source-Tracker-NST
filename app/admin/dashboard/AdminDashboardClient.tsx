@@ -866,7 +866,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 
         {tab === 'vouchedOrgs' && <VouchedOrgsTab />}
 
-        {tab === 'gateRules' && <GateRulesTab />}
+        {tab === 'gateRules' && (<><GateRulesTab /><PrValueCard /></>)}
       </div>
 
       {/* Flag modal */}
@@ -1365,6 +1365,46 @@ function GateRulesTab() {
         <button type="button" onClick={reclassify} disabled={busy} className="bg-ground border border-line-strong hover:bg-panel text-ink font-[550] px-5 py-2.5 rounded-xl text-sm cursor-pointer">Re-check with current rules</button>
       </div>
     </form>
+  );
+}
+
+function PrValueCard() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  async function load() {
+    const res = await fetch('/api/admin/pr-value');
+    if (res.ok) { const d = await res.json(); setEnabled(!!d.setting?.enabled); }
+  }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+  useEffect(() => { load(); }, []);
+  async function flip(next: boolean) {
+    setBusy(true); setMsg('');
+    const res = await fetch('/api/admin/pr-value', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: next }) });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { setEnabled(!!d.setting?.enabled); setMsg(next ? 'On. Every leaderboard period rebuilds on its next refresh with contribution values applied.' : 'Off. Merged PRs score by project value only again after the next refresh.'); }
+    else setMsg(d.error ?? 'Could not change the setting');
+    setBusy(false);
+  }
+  return (
+    <div className="mt-10 pt-8 border-t border-line space-y-4 max-w-3xl">
+      <div>
+        <h3 className="text-base font-[650] text-ink">Contribution value of each pull request</h3>
+        <p className="text-sm text-ink-soft mt-1">
+          Off: a merged PR scores by the project it went into, as always. On: the PR&apos;s own value multiplies that, from 0.4 to 2.0 with 1.0 as a typical twenty-line code change.
+          Docs-only PRs stay at or below 0.7, images, data and config at or below 0.5; added tests give +0.3, new code +0.2, six or more code files +0.2, two or more reviews +0.1.
+          Values are measured from the files each merged PR changed, during the normal refresh, so they fill in over about a day; an unmeasured PR counts as 1.0 meanwhile.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className={`text-sm font-[600] ${enabled ? 'text-success-600' : 'text-ink-mid'}`}>{enabled === null ? 'Loading…' : enabled ? 'On' : 'Off'}</span>
+        <button type="button" disabled={busy || enabled === null} onClick={() => flip(!enabled)}
+          className="bg-ground border border-line-strong hover:bg-panel text-ink font-[550] px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-40 cursor-pointer">
+          {enabled ? 'Turn off' : 'Turn on'}
+        </button>
+        {msg && <span className="text-xs text-ink-soft">{msg}</span>}
+      </div>
+    </div>
   );
 }
 

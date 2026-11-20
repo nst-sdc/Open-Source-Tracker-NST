@@ -627,6 +627,14 @@ The validity gate (`lib/repo-score.ts` `isRepoValid`) needs a repo to be a non-f
 
 Use the admin list for what the program list cannot know, for example a project's second org (`jenkins-infra` beside `jenkinsci`) or a community whose repos are real but small. It is deliberately not "every org passes": measured on the roster, an org-only gate would mostly re-admit the students' own club repos. Adding or removing an org re-decides the gate for that org's cached repos immediately and marks the summary caches stale, so the next page view reflects it.
 
+### Contribution value of a pull request (effort term E)
+
+`prScore` multiplies the project term by `E`, the value of the change itself (`lib/pr-value.ts`), when the admin switch **Contribution value of each pull request** (Gate rules tab, `PUT /api/admin/pr-value {enabled}`) is on. Off, or for a PR not yet measured, `E = 1` and nothing changes.
+
+`E` runs from 0.4 to 2.0. The size term is log-scaled over the lines changed in code and test files, 0.6 for one line, 1.0 at about twenty, 1.4 at five hundred or more. Added tests give +0.3, new code files (or additions far outweighing deletions) +0.2, six or more code files +0.2, two or more reviews +0.1. A PR made only of documentation files scales inside 0.4–0.7, one made only of images, data, config or lockfiles inside 0.4–0.5; a "documentation" or "typo" label on a code change under thirty lines is treated as docs. Files are bucketed by path: `tests/`, `__tests__/`, `*_test.go`, `*.spec.ts` are tests; `.md`, `.rst`, `docs/` are docs; images, `.json`, `.yaml`, lockfiles, `locales/`, `assets/` are content; everything else is code.
+
+Values are measured by the refresh (`measurePRContributions`, GraphQL `pullRequest { additions deletions changedFiles reviews files }`, 25 PRs per query, at most 150 per student per pass, only for PRs into repositories the gate counts) and stored on the cached PR as `contribution` with the rule version `v`; bump `PR_VALUE_VERSION` to remeasure everything after a rule change. The contributor profile shows each measured PR's value as a chip with its reasons. Impact (the average project value) is unaffected.
+
 ## 12. Flagging Queue System
 
 ### How Flagging Works

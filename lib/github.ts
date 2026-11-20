@@ -1,5 +1,7 @@
 import { getStudentsKV, applyRosterUpdates, type RosterUpdate, type Student } from "./kv-students";
 import { primeVouchedOrgs } from "./kv-vouched-orgs";
+import { primePrValueWeighting } from "./kv-pr-value";
+import { prValue, valueOfPR, PR_VALUE_VERSION, type PRContribution } from "./pr-value";
 import { buildGateContext } from "./gate-rules";
 import {
   getExceptionRepoSetForUser,
@@ -31,6 +33,7 @@ import {
   readProfileCache,
   writeProfileCache,
   type ProfileCacheEntry,
+  carryForwardContributions,
 } from "./profile-cache";
 import { execSync } from "child_process";
 import { cookies } from "next/headers";
@@ -284,6 +287,9 @@ export interface StudentPR {
     avatar_url: string;
     html_url: string;
   };
+  /** What the change itself was worth (lib/pr-value.ts); measured once per
+   *  merged PR by the refresh and kept in the profile cache. */
+  contribution?: PRContribution;
 }
 
 export interface GitHubUser {
@@ -514,6 +520,7 @@ export async function validateNewRepos(
 ): Promise<{ updated: boolean; map: import("./repo-cache").RepoCacheMap }> {
   let updated = false;
   await primeVouchedOrgs();
+  await primePrValueWeighting();
   const gate = await buildGateContext();
   const priorFor = buildOrgPriors(repoCacheMap);
 
@@ -982,6 +989,7 @@ export function getSummaryFromCache(
     repoMultiplierFor,
     (repo, count) =>
       repo && isConcentrated(count, repoCacheMap[repo]?.signals) ? CONCENTRATED_DECAY : PER_REPO_DECAY,
+    valueOfPR,
   );
 
   // Secondary "project impact" signal — see StudentSummary.avgScore doc.
@@ -1314,6 +1322,7 @@ export async function getAllStudentSummaries(
       liveRepoMultiplierFor,
       (repo, count) =>
         repo && isConcentrated(count, repoCache[repo]?.signals) ? CONCENTRATED_DECAY : PER_REPO_DECAY,
+      valueOfPR,
     );
     // Plain mean of each merged PR's own repo multiplier — see the doc
     // comment on the equivalent computation in getSummaryFromCache for why
@@ -1422,8 +1431,91 @@ export async function refreshStudentCache(
     await saveRepoCache(map);
   }
 
+  // Contribution values survive from the previous cache (a merged PR does
+  // not change); only the still-unmeasured merged PRs are measured now, a
+  // bounded batch per refresh so the first pass over the roster stays cheap.
+  carryForwardContributions(prs, await readProfileCache(username).catch(() => null));
+  await measurePRContributions(prs, map, token);
+
   await writeProfileCache(username, profile, prs, issues);
   return profile;
+}
+
+/** Merged PRs per refresh whose files are fetched; the rest wait for the next pass. */
+const PR_VALUE_BATCH_PER_REFRESH = 150;
+const PR_VALUE_CHUNK = 25;
+
+/**
+ * Measures merged PRs that have no contribution value yet (lib/pr-value.ts)
+ * from GraphQL: additions, deletions, the changed files and the review
+ * count, 25 PRs per query. Only PRs into repositories the gate counts are
+ * measured; a PR the gate excludes would never be scored. Failures leave
+ * the PR unmeasured (neutral) for a later refresh. Needs a token.
+ */
+export async function measurePRContributions(
+  prs: StudentPR[],
+  repoCacheMap: import("./repo-cache").RepoCacheMap,
+  token?: string,
+): Promise<number> {
+  const headers = (await getGitHubHeaders(token)) as Record<string, string>;
+  if (!headers.Authorization) {
+    console.warn("[pr-value] no GitHub token; merged PRs stay unmeasured");
+    return 0;
+  }
+  const todo = prs
+    .filter((pr) => pr.pull_request?.merged_at && !pr.contribution && pr.repository_url)
+    .filter((pr) => repoCacheMap[repoFromUrl(pr.repository_url)]?.valid !== false)
+    .slice(0, PR_VALUE_BATCH_PER_REFRESH);
+  let measured = 0;
+  for (let i = 0; i < todo.length; i += PR_VALUE_CHUNK) {
+    const chunk = todo.slice(i, i + PR_VALUE_CHUNK);
+    const aliases = chunk.map((pr, idx) => {
+      const [owner, ...rest] = repoFromUrl(pr.repository_url).split("/");
+      return `p${idx}: repository(owner: ${JSON.stringify(owner)}, name: ${JSON.stringify(rest.join("/"))}) { pullRequest(number: ${pr.number}) { additions deletions changedFiles reviews { totalCount } files(first: 100) { nodes { path additions deletions changeType } } } }`;
+    });
+    let body: { data?: Record<string, { pullRequest: { additions: number; deletions: number; changedFiles: number; reviews: { totalCount: number }; files: { nodes: Array<{ path: string; additions: number; deletions: number; changeType: string }> } } | null } | null>; errors?: Array<{ message: string }> };
+    try {
+      const res = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ query: `query PRValues {\n${aliases.join("\n")}\n}` }),
+        cache: "no-store",
+      });
+      if (res.status === 401) return measured;
+      if (res.status === 403 || res.status === 429) {
+        console.warn("[pr-value] rate limited while measuring PRs; the rest wait for the next refresh");
+        return measured;
+      }
+      if (!res.ok) {
+        console.warn(`[pr-value] GraphQL answered ${res.status}; chunk skipped`);
+        continue;
+      }
+      body = await res.json();
+      if (body.errors?.length && !body.data) {
+        console.warn("[pr-value] GraphQL errors:", body.errors.slice(0, 2).map((e) => e.message).join(" | "));
+        continue;
+      }
+    } catch (err) {
+      console.warn("[pr-value] GraphQL call failed:", err instanceof Error ? err.message : err);
+      continue;
+    }
+    chunk.forEach((pr, idx) => {
+      const node = body.data?.[`p${idx}`]?.pullRequest;
+      if (!node) return;
+      const v = prValue({
+        additions: node.additions,
+        deletions: node.deletions,
+        changedFiles: node.changedFiles,
+        files: node.files?.nodes ?? [],
+        labels: (pr.labels ?? []).map((l) => l.name),
+        reviews: node.reviews?.totalCount ?? 0,
+      });
+      pr.contribution = { ...v, at: new Date().toISOString(), v: PR_VALUE_VERSION };
+      measured++;
+    });
+  }
+  if (todo.length) console.log(`[pr-value] measured ${measured} of ${todo.length} merged PRs`);
+  return measured;
 }
 
 // Each student refresh costs 2 search-API calls (PRs + issues). Staying at

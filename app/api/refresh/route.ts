@@ -6,6 +6,7 @@ import {
   buildDateQuery,
   getSummaryFromCache,
   GitHubRateLimitError,
+  measurePRContributions,
 } from '@/lib/github';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
@@ -15,7 +16,7 @@ import {
   isCacheFresh,
   REFRESH_COOLDOWN_MS,
 } from '@/lib/summary-cache';
-import { readProfileCache, writeProfileCache } from '@/lib/profile-cache';
+import { readProfileCache, writeProfileCache, carryForwardContributions } from '@/lib/profile-cache';
 import { getRepoCache } from '@/lib/repo-cache';
 import { getExceptionRepoSetForUser } from '@/lib/kv-own-repo-exceptions';
 import { kvGet, kvSet } from '@/lib/kv';
@@ -126,6 +127,10 @@ export async function POST(request: Request) {
       if (prs === null || issues === null) {
         throw new Error('Failed to fetch contributions from GitHub');
       }
+
+      // Reuse every contribution value already stored; measure only the rest.
+      carryForwardContributions(prs, cached);
+      await measurePRContributions(prs, await getRepoCache());
 
       await writeProfileCache(username, profile, prs, issues);
 
