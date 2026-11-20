@@ -232,7 +232,19 @@ export default function RepoActivityPage() {
     return b.issuesCount - a.issuesCount;
   };
   const sortedContributors = contributors.filter((c) => !c.isMaintainer && !c.isBot && matchesFilter(c)).sort(byActivity);
-  const maintainersAndBots = contributors.filter((c) => (c.isMaintainer || c.isBot) && matchesFilter(c)).sort(byActivity);
+  // Maintainers rank by what matters to a contributor: pull requests of
+  // OTHER people they merged (from the merge events), then issues they
+  // opened, then their own merged PRs.
+  const othersMergedBy = new Map<string, number>();
+  for (const e of maintainerActivity?.events ?? []) {
+    if (e.kind !== 'merged' || (e.by && e.by.toLowerCase() === e.who.toLowerCase())) continue;
+    const k = e.who.toLowerCase();
+    othersMergedBy.set(k, (othersMergedBy.get(k) ?? 0) + 1);
+  }
+  const othersMerged = (c: Contributor) => othersMergedBy.get(c.username.toLowerCase()) ?? 0;
+  const maintainersAndBots = contributors
+    .filter((c) => (c.isMaintainer || c.isBot) && matchesFilter(c))
+    .sort((a, b) => othersMerged(b) - othersMerged(a) || b.issuesCount - a.issuesCount || b.mergedPRs - a.mergedPRs || byActivity(a, b));
   const selected = selectedUser ? contributors.find((c) => c.username.toLowerCase() === selectedUser.toLowerCase()) ?? null : null;
   const selectedTracked = selected?.tracked ?? null;
   const selectedIsMaintainer = !!selected && (selected.isMaintainer || !!selected.isBot);
@@ -579,7 +591,7 @@ export default function RepoActivityPage() {
                   </span>
                 </div>
                 <p className="text-ink-soft text-xs mb-4">
-                  People with merge access and automation accounts. Their activity is real, but it says nothing about who is contributing, so it stays out of the ranking and the chart.
+                  People with merge access and automation accounts, ranked by the pull requests of others they merged, then issues opened, then their own merged PRs. Their activity says nothing about who is contributing, so it stays out of the ranking and the chart.
                 </p>
                 {maintainerActivity && <MaintainerHeatmap key={`${maintainerActivity.since}:${maintainerActivity.until}:${maintainerActivity.events.length}`} activity={maintainerActivity} repoUrl={repoInfo?.url ?? `https://github.com/${repoInfo?.fullName ?? ''}`} />}
                 {maintainersAndBots.length > 0 ? (
@@ -609,8 +621,8 @@ export default function RepoActivityPage() {
                           </div>
                         </div>
                         <div className="text-right shrink-0 text-[11px] font-mono text-ink-soft leading-snug tabular-nums">
-                          <div><span className="text-ink font-[650]">{c.prsCount}</span> PRs</div>
-                          <div><span className="text-success-600 font-[650]">{c.mergedPRs}</span> merged · <span className="text-violet-600 font-[650]">{c.issuesCount}</span> issues</div>
+                          <div><span className="text-success-600 font-[650]">{othersMerged(c)}</span> merged for others</div>
+                          <div><span className="text-violet-600 font-[650]">{c.issuesCount}</span> issues · <span className="text-ink font-[650]">{c.mergedPRs}</span>/{c.prsCount} own PRs merged</div>
                         </div>
                       </button>
                     ))}
