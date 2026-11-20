@@ -5,7 +5,7 @@
 # runs specifically. This CronJob has no dependency on GitHub Actions at all.
 #
 # Talks directly to the in-cluster Service on its ClusterIP (not the public
-# oss-tracker.nstsdc.org hostname) — this also sidesteps the Cloudflare
+# os.nstsdc.org hostname) — this also sidesteps the Cloudflare
 # Tunnel's shorter proxy timeout entirely, since internal cluster networking
 # has no such constraint.
 apiVersion: batch/v1

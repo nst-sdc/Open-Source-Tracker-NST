@@ -27,12 +27,10 @@ export function ShareButton({
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [origin, setOrigin] = useState('');
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
-
+  // Read at render, not in an effect: the URL is only used inside the modal
+  // (closed at hydration) and in click handlers, so the server's empty
+  // origin never reaches the DOM and nothing can mismatch.
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
   const profileUrl = `${origin}/contributors/${username}`;
 
   // Close modal on Escape key press
@@ -193,7 +191,7 @@ export function ShareButton({
       // 8. Footer watermark
       ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.font = '11px sans-serif';
-      ctx.fillText('oss-tracker.nstsdc.org', 45, 410);
+      ctx.fillText('os.nstsdc.org', 45, 410);
 
       // 9. Generate and download image
       const dataUrl = canvas.toDataURL('image/png');

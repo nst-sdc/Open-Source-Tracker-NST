@@ -43,7 +43,7 @@ export interface VerifyResult {
   verifiedAt: Partial<Record<SocialPlatform, string>>;
 }
 
-const UA = 'Mozilla/5.0 (compatible; oss-tracker-link-check; +https://oss-tracker.nstsdc.org)';
+const UA = 'Mozilla/5.0 (compatible; oss-tracker-link-check; +https://os.nstsdc.org)';
 
 /** Addresses a student's website must not point the server at. */
 export function isPublicAddress(ip: string): boolean {

@@ -78,14 +78,14 @@ GitHub push to main
         Service (ClusterIP, port 80→3000)
                     │
                     ▼
-        Ingress (traefik, host oss-tracker.nstsdc.org)
+        Ingress (traefik, host os.nstsdc.org; oss-tracker.nstsdc.org redirects)
                     │
                     ▼
         Cloudflare Tunnel + wildcard *.nstsdc.org DNS
         (already configured cluster-wide — zero cert/DNS work per app)
                     │
                     ▼
-              https://oss-tracker.nstsdc.org
+              https://os.nstsdc.org
 
 k8s/05-refresh-cronjob.yaml  (native K8s CronJob, every 15 min)
    → POST http://opensource-tracker/api/refresh/incremental (in-cluster Service, not the public hostname)

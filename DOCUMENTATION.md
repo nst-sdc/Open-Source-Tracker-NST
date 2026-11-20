@@ -1,1 +1,1 @@
-https://oss-tracker.nstsdc.org/documentation
+https://os.nstsdc.org/documentation

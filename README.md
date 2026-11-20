@@ -10,7 +10,7 @@ This exact codebase runs in two independent places:
 
 | | NST SDC Kubernetes cluster |
 |---|---|
-| **URL** | `oss-tracker.nstsdc.org` |
+| **URL** | `os.nstsdc.org` (`oss-tracker.nstsdc.org` redirects here) |
 | **Owner repo** |  `nst-sdc/Open-Source-Tracker-NST` |
 | **Database** | Valkey inside the cluster, behind an Upstash-compatible REST proxy (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
 | **Refresh trigger** | A native Kubernetes CronJob (15 min) — GitHub Actions' own scheduled trigger doesn't fire on this repo (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)) |
