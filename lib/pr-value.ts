@@ -69,7 +69,7 @@ export interface PRContribution {
   v: number;
 }
 
-export const PR_VALUE_VERSION = 2;
+export const PR_VALUE_VERSION = 3;
 export const PR_VALUE_MIN = 0.4;
 export const PR_VALUE_MAX = 2.0;
 export const PR_VALUE_NEUTRAL = 1.0;
@@ -86,6 +86,8 @@ export const PR_VALUE_RULES = {
   contentCap: 0.5,
   /** Added lines in test files. */
   testsBonus: 0.3,
+  /** Test code lines needed before the bonus applies. */
+  testsMinLines: 3,
   /** New code files, or additions far outweighing deletions on a real change. */
   newCodeBonus: 0.2,
   /** Six or more code files touched. */
@@ -165,24 +167,29 @@ export function lineMix(patch: string, path: string): LineMix {
     if (raw.startsWith('+')) added.push(raw.slice(1));
     else if (raw.startsWith('-')) removed.push(raw.slice(1));
   }
-  // Formatting: a removed line that returns with only whitespace differences.
+  // Formatting: a removed line that returns with only whitespace differences
+  // (re-indented, retabbed). A line that returns IDENTICAL is not formatting:
+  // git only shows it because it moved, and reordering statements is a real
+  // change (a fix that swaps two calls looked like whitespace before this).
   const pool = new Map<string, number>();
   for (const r of removed) {
     const k = squash(r);
     if (k) pool.set(k, (pool.get(k) ?? 0) + 1);
   }
+  const exact = new Set(removed.map((r) => r.trimEnd()));
   const keepAdded: string[] = [];
   for (const a of added) {
     const k = squash(a);
     const n = k ? pool.get(k) ?? 0 : 0;
-    if (n > 0) { pool.set(k, n - 1); mix.formatting += 2; }
+    if (n > 0 && !exact.has(a.trimEnd())) { pool.set(k, n - 1); mix.formatting += 2; }
     else keepAdded.push(a);
   }
   // What is left in the pool found no re-indented partner: real removals.
   const keepRemoved: string[] = [];
   for (const r of removed) {
     const k = squash(r);
-    const n = k ? pool.get(k) ?? 0 : 0;
+    if (!k) { keepRemoved.push(r); continue; } // blank: classified as blank below
+    const n = pool.get(k) ?? 0;
     if (n > 0) {
       pool.set(k, n - 1);
       keepRemoved.push(r);
@@ -229,6 +236,9 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
   let formattingLines = 0;
   let rawCodeLines = 0;
   let testAdditions = 0;
+  /** Code lines in test files when the diff was read; typo fixes in a test's comments are not "tests added". */
+  let testCodeLines = 0;
+  let testDiffRead = false;
   let newCodeFiles = 0;
   let codeAdds = 0;
   let codeDels = 0;
@@ -246,6 +256,7 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
         commentLines += mix.comment;
         formattingLines += mix.formatting;
         readDiff = true;
+        if (k === 'test') { testCodeLines += mix.code; testDiffRead = true; }
       } else {
         codeLines += f.additions + f.deletions;
       }
@@ -291,7 +302,10 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
     kind = contentOnly ? 'content' : formattingOnly ? 'formatting' : commentsOnly ? 'comments' : 'docs';
     reasons.push(contentOnly ? 'images, data or config only' : formattingOnly ? 'whitespace and formatting only' : commentsOnly ? 'comments only' : 'docs only');
   } else {
-    if (testAdditions > 0) {
+    // Tests added: at least a few lines of test code, not a typo in a test
+    // file's comment or a one-line assertion tweak.
+    const testsAdded = testDiffRead ? testCodeLines >= R.testsMinLines : testAdditions >= R.testsMinLines;
+    if (testsAdded) {
       value += R.testsBonus;
       reasons.push('tests added');
       if (kinds.code === 0) kind = 'tests';
