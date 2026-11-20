@@ -155,6 +155,9 @@ export async function kvDel(key: string): Promise<boolean> {
 }
 
 /** Returns true if the value was actually persisted to Redis (or disk fallback). */
+const KV_SET_ATTEMPTS = 3;
+const KV_SET_RETRY_DELAY_MS = 400;
+
 export async function kvSet<T>(key: string, value: T, ttlSeconds?: number): Promise<boolean> {
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
@@ -164,8 +167,19 @@ export async function kvSet<T>(key: string, value: T, ttlSeconds?: number): Prom
     const command = ttlSeconds
       ? ['SET', key, serialized, 'EX', String(ttlSeconds)]
       : ['SET', key, serialized];
-    const { ok } = await executeKVCommand(command);
-    return ok;
+    // A multi-megabyte SET (the summary caches are ~3.5 MB each) occasionally
+    // dies with "other side closed" at the REST proxy. One retry with a short
+    // pause has always been enough; three attempts keeps a transient blip
+    // from being mistaken for a failed rebuild.
+    for (let attempt = 1; attempt <= KV_SET_ATTEMPTS; attempt++) {
+      const { ok } = await executeKVCommand(command);
+      if (ok) return true;
+      if (attempt < KV_SET_ATTEMPTS) {
+        console.warn(`KV SET ${key} failed (attempt ${attempt}/${KV_SET_ATTEMPTS}); retrying`);
+        await new Promise((r) => setTimeout(r, KV_SET_RETRY_DELAY_MS * attempt));
+      }
+    }
+    return false;
   }
 
   writeDiskKV(key, value, ttlSeconds);

@@ -155,8 +155,13 @@ async function loadSummaries(q: LeaderboardQuery, flaggedPRIds: Set<string>): Pr
     const summaries = await getAllStudentSummaries(dateQuery, flaggedPRIds);
     let cachedAt: string | null = null;
     if (isPredefined) {
-      await writeSummaryCache(summaries, q.period);
-      cachedAt = new Date().toISOString();
+      try {
+        await writeSummaryCache(summaries, q.period);
+        cachedAt = new Date().toISOString();
+      } catch (err) {
+        // The page still gets the fresh numbers; only the cache missed out.
+        console.error(`Could not store the ${q.period} summary cache:`, err);
+      }
     }
     return { summaries, cachedAt };
   } catch (err) {

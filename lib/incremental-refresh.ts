@@ -213,8 +213,14 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     }
     if (changed) {
       existingCache.summaries.sort((a, b) => b.scoreMergedPRs - a.scoreMergedPRs);
-      await writeSummaryCache(existingCache.summaries, period);
-      console.log(`[Incremental Refresh] Patched summary cache for period: ${period}`);
+      try {
+        await writeSummaryCache(existingCache.summaries, period);
+        console.log(`[Incremental Refresh] Patched summary cache for period: ${period}`);
+      } catch (err) {
+        // One period's write failing is no reason to skip the others; the
+        // next tick patches the same students again.
+        console.error(`[Incremental Refresh] could not store the ${period} summary cache:`, err);
+      }
     }
   }
 

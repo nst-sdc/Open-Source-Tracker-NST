@@ -18,3 +18,15 @@ describe('pruneToRoster', () => {
     expect(pruneToRoster([sum('x')], [])).toEqual([]);
   });
 });
+
+describe('writeSummaryCache', () => {
+  it('throws when the store rejects the write instead of reporting success', async () => {
+    const kv = await import('./kv');
+    const { writeSummaryCache, SummaryCacheWriteError } = await import('./summary-cache');
+    const kvSet = kv.kvSet as unknown as ReturnType<typeof vi.fn>;
+    kvSet.mockResolvedValueOnce(false);
+    await expect(writeSummaryCache([], 'all')).rejects.toBeInstanceOf(SummaryCacheWriteError);
+    kvSet.mockResolvedValueOnce(true);
+    await expect(writeSummaryCache([], 'all')).resolves.toBeUndefined();
+  });
+});

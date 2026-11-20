@@ -67,6 +67,14 @@ export function forgetSummaryCacheMemory(period?: string): void {
   else memory.delete(getCacheKey(period));
 }
 
+/** The store did not accept the summary cache; nothing was changed. */
+export class SummaryCacheWriteError extends Error {
+  constructor(period: string) {
+    super(`The summary cache for "${period}" could not be written to the store; the previous cache is still in place.`);
+    this.name = 'SummaryCacheWriteError';
+  }
+}
+
 export async function writeSummaryCache(summaries: StudentSummary[], period = 'all'): Promise<void> {
   const cache: SummaryCache = {
     cachedAt: new Date().toISOString(),
@@ -74,7 +82,14 @@ export async function writeSummaryCache(summaries: StudentSummary[], period = 'a
   };
   // Store summary caches permanently. They are ONLY updated incrementally
   // by background jobs, preventing the leaderboard from ever dropping to zero.
-  await kvSet(getCacheKey(period), cache);
+  //
+  // A write that did not land must not look like one that did: the "all"
+  // rebuild once reported ok while the proxy had closed the socket on the
+  // 3.5 MB SET, and the leaderboard kept pre-gate totals for hours.
+  const stored = await kvSet(getCacheKey(period), cache);
+  if (!stored) {
+    throw new SummaryCacheWriteError(period);
+  }
   // Drop the in-process copy rather than populating it with `summaries`: that
   // array belongs to the caller and the refresh routes keep mutating theirs.
   // The next read re-fetches once and caches a parsed copy nobody else holds.
@@ -101,8 +116,10 @@ export async function invalidateSummaryCache(): Promise<void> {
         cache.cachedAt = INVALIDATED_AT;
         await writeSummaryCache(cache.summaries, period);
       }
-    } catch {
-      // ignore — if cache doesn't exist, nothing to invalidate
+    } catch (err) {
+      // A missing cache is nothing to invalidate; a write failure is worth a
+      // line, because that period will keep serving pre-change totals.
+      console.warn(`[summary-cache] could not invalidate ${period}:`, err instanceof Error ? err.message : err);
     }
   }
 }
