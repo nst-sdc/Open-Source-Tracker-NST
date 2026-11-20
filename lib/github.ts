@@ -1510,6 +1510,7 @@ export async function measurePRContributions(
   prs: StudentPR[],
   repoCacheMap: import("./repo-cache").RepoCacheMap,
   token?: string,
+  opts: { max?: number } = {},
 ): Promise<number> {
   const headers = (await getGitHubHeaders(token)) as Record<string, string>;
   if (!headers.Authorization) {
@@ -1519,7 +1520,7 @@ export async function measurePRContributions(
   const todo = prs
     .filter((pr) => pr.pull_request?.merged_at && !pr.contribution && pr.repository_url)
     .filter((pr) => repoCacheMap[repoFromUrl(pr.repository_url)]?.valid !== false)
-    .slice(0, PR_VALUE_BATCH_PER_REFRESH);
+    .slice(0, opts.max ?? PR_VALUE_BATCH_PER_REFRESH);
   let measured = 0;
   for (let i = 0; i < todo.length; i += PR_VALUE_CHUNK) {
     const chunk = todo.slice(i, i + PR_VALUE_CHUNK);
