@@ -16,7 +16,7 @@ import { getStudentsKV } from '@/lib/kv-students';
 import { kvGet, kvSet } from '@/lib/kv';
 import { cookies } from 'next/headers';
 import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
-import { repoMultiplier, legacyMultiplier, prScore, REPO_SCHEMA_VERSION, type ExclusionReason } from '@/lib/repo-score';
+import { repoMultiplier, legacyMultiplier, REPO_SCHEMA_VERSION, type ExclusionReason } from '@/lib/repo-score';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { PRsSection, IssuesSection } from './ContentSections';
 import { SocialsCard } from './SocialsCard';
@@ -314,11 +314,11 @@ export default async function ContributorPage({
   const badges = getBadges(validPRs, repoCache);
   const recognition = recognitionFor(await getRecognitions(), username);
 
-  // Per-PR Impact: what one merged PR into this repo is worth under the #4
-  // scoring (10·M^0.75), computed once per distinct repo. The leaderboard
-  // total additionally decays repeat PRs into the same repo and caps any
-  // single repo at 40% — so these badges are each PR's *first-PR* value, not
-  // shares of the total.
+  // Per-PR Impact: the project multiplier M of the repo each PR went into,
+  // computed once per distinct repo and shown out of 10 (lib/display-scale).
+  // Points are 10·M^0.75·E with repeat PRs into the same repo decayed and any
+  // single repo capped at 40% of the total, so the badge is the project's
+  // worth, not a share of the score.
   // eslint-disable-next-line react-hooks/purity -- async Server Component, see above.
   const nowMs = Date.now();
   const viewedLogin = username.toLowerCase();
@@ -330,11 +330,11 @@ export default async function ContributorPage({
     const entry = repoCache[repo];
     if (entry?.signals && entry.schemaVersion === REPO_SCHEMA_VERSION) {
       const selfOwned = repo.split('/')[0]?.toLowerCase() === viewedLogin;
-      repoWeights[repo] = prScore(repoMultiplier(entry.signals, nowMs, { selfOwned }), 1);
+      repoWeights[repo] = repoMultiplier(entry.signals, nowMs, { selfOwned });
     } else if (entry) {
-      repoWeights[repo] = prScore(legacyMultiplier(entry.stars), 1);
+      repoWeights[repo] = legacyMultiplier(entry.stars);
     } else {
-      repoWeights[repo] = prScore(1, 1);
+      repoWeights[repo] = 1;
     }
   }
 

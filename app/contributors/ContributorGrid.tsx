@@ -6,12 +6,9 @@ import { KIND_LABEL, type Recognition, type RecognitionMap } from '@/lib/recogni
 import Image from 'next/image';
 import type { LeaderboardRow, LeaderboardQuery } from '@/lib/leaderboard';
 
-// Display-only rescale: avgScore is a repo multiplier average in [0.15, 3.0]
-// (see lib/repo-score.ts MULTIPLIER_MIN/MAX) — accurate, but an odd range to
-// read at a glance. This stretches it onto a friendlier 0.5-10 for display
-// only; the underlying value, ranking math, and everything else that reads
-// avgScore is untouched. Do not use this for anything but rendering.
-const IMPACT_DISPLAY_FACTOR = 10 / 3;
+// avgScore is a repo multiplier average in [0.15, 3.0]; shown out of 10
+// like every other impact number (lib/display-scale). Display only.
+import { impactOutOf10, outOf10 } from '@/lib/display-scale';
 
 interface GridProps {
   /** First page of ranked contributors; each row already carries its
@@ -254,7 +251,7 @@ function ContributorRow({
             title="Average impact per merged PR — how significant the projects they contribute to tend to be, not how many PRs they've done."
             className="hidden md:block text-[9.5px] text-ink-soft tabular-nums"
           >
-            impact {(summary.avgScore * IMPACT_DISPLAY_FACTOR).toFixed(1)}
+            impact {outOf10(impactOutOf10(summary.avgScore))}
           </span>
         )}
       </span>

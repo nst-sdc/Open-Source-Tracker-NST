@@ -1,5 +1,6 @@
 import type { GitHubUser, StudentPR, StudentIssue } from './github';
 import { kvGet, kvSet } from './kv';
+import { PR_VALUE_VERSION } from './pr-value';
 
 const TTL_MS = 60 * 60 * 1000; // 1 hour (in ms for freshness check)
 const TTL_SECS = 30 * 24 * 3600; // 30 days physical cache TTL
@@ -45,6 +46,7 @@ function trimPR(pr: StudentPR): StudentPR {
       ? { merged_at: pr.pull_request.merged_at, html_url: pr.pull_request.html_url }
       : pr.pull_request,
     user: { login: pr.user.login, avatar_url: pr.user.avatar_url, html_url: pr.user.html_url },
+    ...(pr.contribution ? { contribution: pr.contribution } : {}),
   };
 }
 
@@ -75,6 +77,28 @@ function newestActivity(prs: StudentPR[]): number {
 }
 
 /**
+ * A merged PR's contribution value (lib/pr-value.ts) is measured once and
+ * never changes, so every fresh PR list inherits the values the stored
+ * cache already holds, by PR id, before anything is measured or written.
+ * Returns how many PRs still lack a value.
+ */
+export function carryForwardContributions(prs: StudentPR[], existing: ProfileCacheEntry | null): number {
+  const known = new Map<number, NonNullable<StudentPR['contribution']>>();
+  for (const pr of existing?.prs ?? []) {
+    if (pr.contribution && pr.contribution.v === PR_VALUE_VERSION) known.set(pr.id, pr.contribution);
+  }
+  let missing = 0;
+  for (const pr of prs) {
+    if (!pr.contribution || pr.contribution.v !== PR_VALUE_VERSION) {
+      const c = known.get(pr.id);
+      if (c) pr.contribution = c;
+      else if (pr.pull_request?.merged_at) missing++;
+    }
+  }
+  return missing;
+}
+
+/**
  * Writes the cache, unless the incoming PR list is older than what is already
  * stored. GitHub's search index and any intermediate cache can hand back a
  * snapshot from days earlier; stamping that with a fresh cachedAt and writing
@@ -88,6 +112,9 @@ export async function writeProfileCache(
   issues: StudentIssue[]
 ): Promise<boolean> {
   const existing = await readProfileCache(username);
+  // Never drop a measured value: whichever path wrote this list, the values
+  // already stored for the same PRs come along.
+  carryForwardContributions(prs, existing);
   if (existing && existing.prs.length > 0) {
     const incoming = newestActivity(prs);
     const stored = newestActivity(existing.prs);

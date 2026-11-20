@@ -339,3 +339,18 @@ describe('legacyMultiplier (pre-migration cache entries)', () => {
     expect(legacyMultiplier(10)).toBeLessThan(1.0);
   });
 });
+
+describe('aggregateMergedPRScore with an effort term', () => {
+  it('multiplies each PR by its own value, keeps decay on merge order, and defaults to 1', () => {
+    const prs = [{ repo: 'a/b', v: 2 }, { repo: 'a/b', v: 0.5 }, { repo: 'c/d', v: 1 }];
+    const plain = aggregateMergedPRScore(prs, (p) => p.repo, () => 1);
+    const weighted = aggregateMergedPRScore(prs, (p) => p.repo, () => 1, undefined, (p) => p.v);
+    // a/b: 10·2 + 10·0.5/1.3 ; c/d: 10 → no repo over 40%? a/b = 23.85 of 33.85 = 70% → capped at 40% of total
+    const ab = 10 * 2 + (10 * 0.5) / 1.3;
+    const total = ab + 10;
+    expect(weighted).toBeCloseTo(Math.min(ab, 0.4 * total) + 10, 5);
+    expect(plain).toBeCloseTo(Math.min(10 + 10 / 1.3, 0.4 * (10 + 10 / 1.3 + 10)) + 10, 5);
+    expect(prScore(1, 1, 0.3, 1.5)).toBeCloseTo(15, 5);
+    expect(prScore(1, 2, 0.3)).toBeCloseTo(10 / 1.3, 5);
+  });
+});

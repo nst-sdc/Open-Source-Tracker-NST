@@ -7,7 +7,8 @@ vi.mock('./kv', () => ({
   kvDel: vi.fn(async (key: string) => { delete memoryKv[key]; }),
 }));
 
-const { writeProfileCache, readProfileCache } = await import('./profile-cache');
+const { writeProfileCache, readProfileCache, carryForwardContributions } = await import('./profile-cache');
+const { PR_VALUE_VERSION } = await import('./pr-value');
 
 const user = { login: 'Dreamstick9', avatar_url: '', html_url: '' } as never;
 const pr = (number: number, updated_at: string, merged: boolean) =>
@@ -52,5 +53,36 @@ describe('writeProfileCache regression guard', () => {
   it('refuses an empty list over a populated cache', async () => {
     await writeProfileCache('Dreamstick9', user, [pr(1, '2026-10-01T00:00:00Z', true)], []);
     expect(await writeProfileCache('Dreamstick9', user, [], [])).toBe(false);
+  });
+});
+
+describe('contribution values are measured once', () => {
+  const measured = { value: 1.4, kind: 'code', codeLines: 80, files: 3, reasons: ['80 code lines'], at: '2026-11-20T00:00:00Z', v: PR_VALUE_VERSION };
+  it('carries a stored value onto a fresh PR list and counts what is still unmeasured', async () => {
+    const stored = pr(1, '2026-10-06T15:18:00Z', true) as { contribution?: typeof measured };
+    stored.contribution = measured;
+    await writeProfileCache('Dreamstick9', user, [stored as never], []);
+    const fresh = [pr(1, '2026-10-07T00:00:00Z', true), pr(2, '2026-10-07T00:00:00Z', true), pr(3, '2026-10-07T00:00:00Z', false)] as Array<{ id: number; contribution?: typeof measured }>;
+    const missing = carryForwardContributions(fresh as never, await readProfileCache('Dreamstick9'));
+    expect(fresh[0].contribution).toEqual(measured);
+    expect(fresh[1].contribution).toBeUndefined();
+    expect(missing).toBe(1); // #2 is merged and unmeasured; #3 is open and never measured
+  });
+  it('keeps the value through any write, whichever path produced the list', async () => {
+    const stored = pr(1, '2026-10-06T15:18:00Z', true) as { contribution?: typeof measured };
+    stored.contribution = measured;
+    await writeProfileCache('Dreamstick9', user, [stored as never], []);
+    await writeProfileCache('Dreamstick9', user, [pr(1, '2026-10-08T00:00:00Z', true), pr(2, '2026-10-08T00:00:00Z', true)], []);
+    const entry = await readProfileCache('Dreamstick9');
+    expect(entry!.prs[0].contribution).toEqual(measured);
+    expect(entry!.prs[1].contribution).toBeUndefined();
+  });
+  it('drops a value from an older rule version so it is measured again', async () => {
+    const stored = pr(1, '2026-10-06T15:18:00Z', true) as { contribution?: typeof measured };
+    stored.contribution = { ...measured, v: PR_VALUE_VERSION - 1 };
+    await writeProfileCache('Dreamstick9', user, [stored as never], []);
+    const fresh = [pr(1, '2026-10-07T00:00:00Z', true)] as Array<{ contribution?: typeof measured }>;
+    expect(carryForwardContributions(fresh as never, await readProfileCache('Dreamstick9'))).toBe(1);
+    expect(fresh[0].contribution).toBeUndefined();
   });
 });

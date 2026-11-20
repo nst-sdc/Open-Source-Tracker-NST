@@ -30,6 +30,8 @@ import { aggregateMergedPRScore, isConcentrated, CONCENTRATED_DECAY, PER_REPO_DE
 import { resolveOrganization } from './org-cache';
 import { readOrgIndex, contributorsForOrg } from './org-index';
 import { primeVouchedOrgs } from './kv-vouched-orgs';
+import { primePrValueWeighting } from './kv-pr-value';
+import { valueOfPR } from './pr-value';
 
 export const PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
@@ -199,7 +201,7 @@ function applyDateWindow<T extends { created_at: string }>(items: T[], dateQuery
 }
 
 export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard> {
-  const [students] = await Promise.all([getStudentsKV(), primeVouchedOrgs()]);
+  const [students] = await Promise.all([getStudentsKV(), primeVouchedOrgs(), primePrValueWeighting()]);
   const empty: Leaderboard = {
     rosterEmpty: true,
     active: [],
@@ -282,6 +284,7 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
               (pr) => (pr.repository_url ? repoFromUrl(pr.repository_url) : null),
               repoMultiplierFor,
               (repo, count) => (repo && isConcentrated(count, repoCache[repo]?.signals) ? CONCENTRATED_DECAY : PER_REPO_DECAY),
+              valueOfPR,
             );
             orgSummaries.push({
               profile: studentSummary.profile,

@@ -260,9 +260,10 @@ export const PRESTIGE_EXPONENT = 0.75;
 export const PER_REPO_DECAY = 0.3;
 
 /** Score of the k-th merged PR (k = 1, 2, ...) into a repo with multiplier m.
- *  The effort term E from #4 is not implemented yet and reads as 1. */
-export function prScore(m: number, k: number, decay: number = PER_REPO_DECAY): number {
-  return (PR_BASE_POINTS * Math.pow(m, PRESTIGE_EXPONENT)) / (1 + decay * (k - 1));
+ *  `value` is the effort term E from #4 (lib/pr-value.ts): what the change
+ *  itself was worth, 1 when unmeasured or when the admin switch is off. */
+export function prScore(m: number, k: number, decay: number = PER_REPO_DECAY, value = 1): number {
+  return (PR_BASE_POINTS * Math.pow(m, PRESTIGE_EXPONENT) * value) / (1 + decay * (k - 1));
 }
 
 /** Steeper decay for a repo the student is effectively the author of: a small
@@ -312,20 +313,24 @@ export function aggregateMergedPRScore<T>(
   mergedPRs: T[],
   repoOf: (pr: T) => string | null,
   multiplierFor: (repoFullName: string) => number,
-  decayFor: (repoFullName: string | null, count: number) => number = () => PER_REPO_DECAY
+  decayFor: (repoFullName: string | null, count: number) => number = () => PER_REPO_DECAY,
+  /** Effort term per PR (lib/pr-value.ts valueOfPR); 1 keeps the pre-#4-E behaviour. */
+  valueOf: (pr: T) => number = () => 1,
 ): number {
-  const countByRepo = new Map<string | null, number>();
+  // PRs keep their order within a repo, so the k-th PR is the k-th the
+  // caller listed (merge order in practice) and decay never depends on value.
+  const byRepo = new Map<string | null, T[]>();
   for (const pr of mergedPRs) {
     const repo = repoOf(pr);
-    countByRepo.set(repo, (countByRepo.get(repo) ?? 0) + 1);
+    (byRepo.get(repo) ?? byRepo.set(repo, []).get(repo)!).push(pr);
   }
 
   const subtotals: number[] = [];
-  for (const [repo, count] of countByRepo) {
+  for (const [repo, prs] of byRepo) {
     const m = repo === null ? NEUTRAL_MULTIPLIER : multiplierFor(repo);
-    const decay = decayFor(repo, count);
+    const decay = decayFor(repo, prs.length);
     let subtotal = 0;
-    for (let k = 1; k <= count; k++) subtotal += prScore(m, k, decay);
+    prs.forEach((pr, i) => { subtotal += prScore(m, i + 1, decay, valueOf(pr)); });
     subtotals.push(subtotal);
   }
 

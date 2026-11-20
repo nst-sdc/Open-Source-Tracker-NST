@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { StudentPR, StudentIssue } from '@/lib/github';
+import { impactOutOf10, prValueOutOf10, outOf10 } from '@/lib/display-scale';
 
 const PAGE_SIZE = 30;
 
@@ -31,13 +32,14 @@ function PRBadge({ pr }: { pr: StudentPR }) {
   );
 }
 
+/** The project's worth, out of 10: 10 is the biggest projects on GitHub. */
 function ImpactBadge({ weight }: { weight: number }) {
   return (
     <span
-      title="Impact score: how much a merged pull request into this project is worth on the leaderboard. It is higher for projects with more real activity, and repeat pull requests into the same project count for progressively less."
+      title="Impact, out of 10: how significant this project is, from its contributors, activity, releases, stars and audience. A merged pull request into a 10 is worth the most on the leaderboard; repeat pull requests into the same project count for progressively less."
       className="inline-flex items-center gap-1 bg-panel-2 text-ink-mid px-2 py-0.5 rounded-full text-[10.5px] font-[600] whitespace-nowrap cursor-help"
     >
-      Impact <span className="tabular-nums text-ink">{weight.toFixed(1)}</span>
+      Impact <span className="tabular-nums text-ink">{outOf10(impactOutOf10(weight))}</span>
     </span>
   );
 }
@@ -168,6 +170,20 @@ function groupByRepo<T extends { repository_url: string }>(items: T[]): Map<stri
 
 // ─── Content sections ─────────────────────────────────────────────────────────
 
+/** What the change itself was worth (lib/pr-value.ts), out of 10: 5 is a
+ *  typical twenty-line code change, 10 the most substantial. Shown whenever
+ *  the PR has been measured, so students can see what moves it before the
+ *  weighting is switched on. */
+function ContributionChip({ c }: { c: NonNullable<StudentPR['contribution']> }) {
+  const v = prValueOutOf10(c.value);
+  const tone = v >= 6.5 ? 'text-success-600 bg-success-0 border-success-100' : v < 3.5 ? 'text-ink-soft bg-panel border-line' : 'text-ink-mid bg-panel border-line';
+  return (
+    <span title={`Value ${outOf10(v)} out of 10: ${c.reasons.join(', ')}`} className={`inline-flex items-center gap-1 text-[11px] font-[550] px-1.5 py-0.5 rounded-md border tabular-nums ${tone}`}>
+      Value <span className="text-ink">{outOf10(v)}</span> <span className="font-[450] text-ink-faint">{c.kind}</span>
+    </span>
+  );
+}
+
 export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWeights?: Record<string, number> }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -207,6 +223,7 @@ export function PRsSection({ prs, repoWeights = {} }: { prs: StudentPR[]; repoWe
                     <span className="text-ink-soft text-xs">{formatDate(pr.created_at)}</span>
                     {pr.draft && <span className="text-xs font-[500] text-ink-soft bg-panel px-1.5 py-0.5 rounded-md">Draft</span>}
                     <Labels labels={pr.labels} />
+                    {pr.pull_request?.merged_at && pr.contribution && <ContributionChip c={pr.contribution} />}
                   </div>
                 </div>
                 <ExternalIcon />
