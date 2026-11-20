@@ -75,9 +75,13 @@ export class SummaryCacheWriteError extends Error {
   }
 }
 
-export async function writeSummaryCache(summaries: StudentSummary[], period = 'all'): Promise<void> {
+export async function writeSummaryCache(
+  summaries: StudentSummary[],
+  period = 'all',
+  options: { cachedAt?: string } = {},
+): Promise<void> {
   const cache: SummaryCache = {
-    cachedAt: new Date().toISOString(),
+    cachedAt: options.cachedAt ?? new Date().toISOString(),
     summaries,
   };
   // Store summary caches permanently. They are ONLY updated incrementally
@@ -113,8 +117,11 @@ export async function invalidateSummaryCache(): Promise<void> {
     try {
       const cache = await readSummaryCache(period, { bypassMemory: true });
       if (cache) {
-        cache.cachedAt = INVALIDATED_AT;
-        await writeSummaryCache(cache.summaries, period);
+        // Passed explicitly: setting cache.cachedAt and writing the summaries
+        // stamped the cache with the current time, so no invalidation ever
+        // reached the store and the flag / gate-rule / vouch paths that call
+        // this were silently no-ops.
+        await writeSummaryCache(cache.summaries, period, { cachedAt: INVALIDATED_AT });
       }
     } catch (err) {
       // A missing cache is nothing to invalidate; a write failure is worth a
