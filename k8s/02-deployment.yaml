@@ -36,6 +36,19 @@ spec:
       labels:
         app: opensource-tracker
     spec:
+      # Only the nodes the team administers (n3, n4, n6, n7). On 2026-11-20 a
+      # roll-out stalled for an hour because the scheduler placed the new pod
+      # on nst-n9, then nst-n10, whose host resolvers could not look up
+      # Docker Hub (pod DNS was fine: CoreDNS runs on n3/n6/n7). Nobody on the
+      # team can fix DNS on the other nodes, so the app does not run there.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: [nst-n3, nst-n4, nst-n6, nst-n7]
       containers:
         - name: opensource-tracker
           image: docker.io/saiudayagiri/opensource-tracker:00b4056
