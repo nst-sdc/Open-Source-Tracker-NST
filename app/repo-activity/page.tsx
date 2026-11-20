@@ -38,9 +38,6 @@ export default function RepoActivityPage() {
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [monthly, setMonthly] = useState<RepoMonth[]>([]);
   const [window_, setWindow] = useState<{ since: string | null; truncated: boolean }>({ since: null, truncated: false });
-  // Maintainers (merge access) and bots are left out of the ranking by
-  // default: they top every list and say nothing about who is contributing.
-  const [showAll, setShowAll] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [userActivity, setUserActivity] = useState<UserActivity | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
@@ -142,37 +139,25 @@ export default function RepoActivityPage() {
     }
   }
 
-  // Filter contributors based on selected type
-  const hiddenCount = contributors.filter((c) => c.isMaintainer || c.isBot).length;
-  const activeContributors = contributors.filter((c) => {
-    if (!showAll && (c.isMaintainer || c.isBot)) return false;
+  // Two sections, as on the contributors page: the community ranking, and
+  // the people with merge access plus automation accounts. Maintainers and
+  // bots top every list and say nothing about who is contributing, so they
+  // never enter the ranking or the chart; they get their own list instead.
+  const matchesFilter = (c: Contributor) => {
     if (filterType === 'prs') return c.prsCount > 0;
     if (filterType === 'issues') return c.issuesCount > 0;
     return c.prsCount > 0 || c.issuesCount > 0;
-  });
+  };
+  const scoreOf = (c: Contributor) =>
+    filterType === 'prs' ? c.prsCount : filterType === 'issues' ? c.issuesCount : c.prsCount + c.issuesCount;
+  const byActivity = (a: Contributor, b: Contributor) => {
+    const d = scoreOf(b) - scoreOf(a);
+    return d !== 0 ? d : b.prsCount - a.prsCount; // tiebreaker: prs first
+  };
+  const sortedContributors = contributors.filter((c) => !c.isMaintainer && !c.isBot && matchesFilter(c)).sort(byActivity);
+  const maintainersAndBots = contributors.filter((c) => (c.isMaintainer || c.isBot) && matchesFilter(c)).sort(byActivity);
 
-  // Sort contributors dynamically based on selection
-  const sortedContributors = [...activeContributors].sort((a, b) => {
-    if (filterType === 'prs') {
-      return b.prsCount - a.prsCount;
-    }
-    if (filterType === 'issues') {
-      return b.issuesCount - a.issuesCount;
-    }
-    const totalA = a.prsCount + a.issuesCount;
-    const totalB = b.prsCount + b.issuesCount;
-    if (totalB !== totalA) return totalB - totalA;
-    return b.prsCount - a.prsCount; // tiebreaker: prs first
-  });
-
-  const maxActivity = Math.max(
-    ...contributors.map((c) => {
-      if (filterType === 'prs') return c.prsCount;
-      if (filterType === 'issues') return c.issuesCount;
-      return c.prsCount + c.issuesCount;
-    }),
-    1
-  );
+  const maxActivity = Math.max(...contributors.map(scoreOf), 1);
 
   return (
     <main className="min-h-screen bg-panel text-ink py-12 px-4 relative overflow-hidden">
@@ -328,24 +313,18 @@ export default function RepoActivityPage() {
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-[650] text-ink">Top Contributors</h2>
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-lg font-[650] text-ink">Contributors</h2>
+                    <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
+                      {sortedContributors.length}
+                    </span>
+                  </div>
                   <p className="text-ink-soft text-xs mt-0.5">
-                    Community contributors in the selected period.{' '}
-                    {hiddenCount > 0 && !showAll && `${hiddenCount} maintainer${hiddenCount === 1 ? '' : 's'} and bots hidden.`}
+                    Community contributors in the selected period. Maintainers and bots are listed separately below.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2.5">
-                  {hiddenCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAll((v) => !v)}
-                      aria-pressed={showAll}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-[550] border transition-all ${showAll ? 'bg-violet-0 border-violet-100 text-violet-600' : 'bg-ground border-line text-ink-soft hover:text-ink'}`}
-                    >
-                      {showAll ? 'Hide maintainers & bots' : `Show maintainers & bots (${hiddenCount})`}
-                    </button>
-                  )}
                   {/* Filter Tabs */}
                   <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0">
                     {([
@@ -478,6 +457,57 @@ export default function RepoActivityPage() {
                   <div className="text-center py-16 bg-ground border border-line rounded-2xl text-ink-soft col-span-full">
                     <p className="text-sm font-[500]">No activity found for this category</p>
                     <p className="text-xs text-ink-faint mt-1">Try toggling to &quot;All Activity&quot; or scan another repository.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Maintainers & bots: the same split the contributors page makes
+                  between the ranking and "registered, not contributing yet". */}
+              <div className="pt-4">
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <h2 className="text-[15px] font-[650] text-ink">Maintainers &amp; bots</h2>
+                  <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
+                    {maintainersAndBots.length}
+                  </span>
+                </div>
+                <p className="text-ink-soft text-xs mb-4">
+                  People with merge access and automation accounts. Their activity is real, but it says nothing about who is contributing, so it stays out of the ranking and the chart.
+                </p>
+                {maintainersAndBots.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {maintainersAndBots.map((c) => (
+                      <button
+                        type="button"
+                        key={c.username}
+                        onClick={() => handleContributorClick(c.username)}
+                        className="flex items-center gap-3 bg-ground border border-line rounded-xl px-4 py-3 card-hover group text-left cursor-pointer w-full"
+                      >
+                        <img
+                          src={c.avatarUrl}
+                          alt={c.username}
+                          className="w-10 h-10 rounded-full ring-2 ring-line group-hover:ring-violet-200 transition-all object-cover shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-ink font-[650] block truncate text-sm group-hover:text-violet-600 transition-colors">@{c.username}</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {c.isMaintainer && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">Maintainer</span>
+                            )}
+                            {c.isBot && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-panel-2 text-ink-mid border border-line">Bot</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 text-[11px] font-mono text-ink-soft leading-snug tabular-nums">
+                          <div><span className="text-ink font-[650]">{c.prsCount}</span> PRs</div>
+                          <div><span className="text-success-600 font-[650]">{c.mergedPRs}</span> merged · <span className="text-violet-600 font-[650]">{c.issuesCount}</span> issues</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-ground border border-line rounded-2xl text-ink-soft text-sm">
+                    No maintainer or bot activity in this period.
                   </div>
                 )}
               </div>
