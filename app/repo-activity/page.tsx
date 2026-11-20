@@ -1,7 +1,46 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
+import Link from 'next/link';
 import { RepoActivityChart, type RepoMonth } from './RepoActivityChart';
+import { MaintainerHeatmap, type MaintainerActivity } from './MaintainerHeatmap';
+import { MaintainerPanel } from './MaintainerPanel';
+import { ContributorInRepo } from './ContributorInRepo';
+
+/** Marks a GitHub account that belongs to one of our students. */
+type SectionId = 'contributors' | 'maintainers';
+const FIRST_SECTION_KEY = 'repo-activity:first-section';
+
+const PeopleIcon = (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+const WrenchIcon = (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+/** Index 0 is the community list, index 1 the maintainers list. */
+const SECTION_TABS: ReadonlyArray<{ id: SectionId; label: string; icon: ReactNode }> = [
+  { id: 'contributors', label: 'Contributors', icon: PeopleIcon },
+  { id: 'maintainers', label: 'Maintainers & bots', icon: WrenchIcon },
+];
+
+function TrackedBadge({ tracked }: { tracked: { login: string; campus: string; year: string } }) {
+  return (
+    <span
+      title={`On the NST tracker as @${tracked.login} (${tracked.campus}, ${tracked.year})`}
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-[550] bg-success-0 text-success-600 border border-success-100 mt-0.5"
+    >
+      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-success-600" />
+      Our student · {tracked.campus}
+    </span>
+  );
+}
 
 interface Contributor {
   username: string;
@@ -13,6 +52,8 @@ interface Contributor {
   issuesCount: number;
   isMaintainer: boolean;
   isBot?: boolean;
+  /** Set when this GitHub account is one of our students. */
+  tracked?: { login: string; campus: string; year: string } | null;
   prs: Array<{ number: number; title: string; url: string; state: string; createdAt: string; mergedAt: string | null }>;
   issues: Array<{ number: number; title: string; url: string; state: string; createdAt: string }>;
 }
@@ -37,16 +78,33 @@ export default function RepoActivityPage() {
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [monthly, setMonthly] = useState<RepoMonth[]>([]);
+  const [maintainerActivity, setMaintainerActivity] = useState<MaintainerActivity | null>(null);
   const [window_, setWindow] = useState<{ since: string | null; truncated: boolean }>({ since: null, truncated: false });
-  // Maintainers (merge access) and bots are left out of the ranking by
-  // default: they top every list and say nothing about who is contributing.
-  const [showAll, setShowAll] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [userActivity, setUserActivity] = useState<UserActivity | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
   const [userError, setUserError] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'prs' | 'issues'>('all');
-  const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month' | '2months' | '3months'>('1day');
+  // A month by default: a day of activity says little about a repository,
+  // and the maintainer calendar needs weeks to show a weekday pattern.
+  const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month' | '2months' | '3months'>('month');
+  // Which list leads. Someone checking who maintains a repo should not have
+  // to scroll past the whole community ranking every time, so the choice is
+  // one click and remembered in this browser.
+  // Read lazily, not in an effect: the lists only render after a scan, so the
+  // server HTML never depends on this value and there is nothing to mismatch.
+  const [firstSection, setFirstSection] = useState<SectionId>(() => {
+    if (typeof window === 'undefined') return 'contributors';
+    try {
+      const saved = localStorage.getItem(FIRST_SECTION_KEY);
+      return saved === 'maintainers' ? 'maintainers' : 'contributors';
+    } catch { return 'contributors'; /* private window or storage blocked */ }
+  });
+  const chooseFirstSection = (id: SectionId) => {
+    setFirstSection(id);
+    try { localStorage.setItem(FIRST_SECTION_KEY, id); } catch { /* ignore */ }
+  };
+  const sectionOrder: SectionId[] = firstSection === 'maintainers' ? ['maintainers', 'contributors'] : ['contributors', 'maintainers'];
 
   // Lock background body scroll when contributor details modal is open
   useEffect(() => {
@@ -91,6 +149,7 @@ export default function RepoActivityPage() {
         setRepoInfo(data.repoInfo);
         setContributors(data.contributors);
         setMonthly(data.monthly ?? []);
+        setMaintainerActivity(data.maintainerActivity ?? null);
         setWindow({ since: data.window?.since ?? null, truncated: Boolean(data.window?.truncated) });
       } else {
         setError(data.error ?? 'Failed to fetch repository activity.');
@@ -112,6 +171,7 @@ export default function RepoActivityPage() {
     setRepoInfo(null);
     setContributors([]);
     setMonthly([]);
+    setMaintainerActivity(null);
     await performSearch(parsed, period);
   }
 
@@ -124,9 +184,17 @@ export default function RepoActivityPage() {
 
   async function handleContributorClick(username: string) {
     setSelectedUser(username);
-    setLoadingUser(true);
     setUserError('');
     setUserActivity(null);
+    // A maintainer's panel is about this repository (what they merged and
+    // opened here, when they are around); their PRs elsewhere are noise for
+    // someone deciding how to work with them. No cross-GitHub fetch.
+    const who = contributors.find((c) => c.username.toLowerCase() === username.toLowerCase());
+    if (who && (who.isMaintainer || who.isBot)) {
+      setLoadingUser(false);
+      return;
+    }
+    setLoadingUser(true);
     try {
       const res = await fetch(`/api/user-activity?username=${encodeURIComponent(username)}&period=all`);
       const data = await res.json();
@@ -142,37 +210,52 @@ export default function RepoActivityPage() {
     }
   }
 
-  // Filter contributors based on selected type
-  const hiddenCount = contributors.filter((c) => c.isMaintainer || c.isBot).length;
-  const activeContributors = contributors.filter((c) => {
-    if (!showAll && (c.isMaintainer || c.isBot)) return false;
+  // Two sections, as on the contributors page: the community ranking, and
+  // the people with merge access plus automation accounts. Maintainers and
+  // bots top every list and say nothing about who is contributing, so they
+  // never enter the ranking or the chart; they get their own list instead.
+  const matchesFilter = (c: Contributor) => {
     if (filterType === 'prs') return c.prsCount > 0;
     if (filterType === 'issues') return c.issuesCount > 0;
     return c.prsCount > 0 || c.issuesCount > 0;
-  });
-
-  // Sort contributors dynamically based on selection
-  const sortedContributors = [...activeContributors].sort((a, b) => {
-    if (filterType === 'prs') {
-      return b.prsCount - a.prsCount;
-    }
+  };
+  // Merged PRs rank first: a contributor whose work landed sits above one who
+  // only opened PRs, whatever the volume. Then opened PRs, then issues.
+  // The Issues filter alone ranks by issues, since that is what it shows.
+  const byActivity = (a: Contributor, b: Contributor) => {
     if (filterType === 'issues') {
-      return b.issuesCount - a.issuesCount;
+      if (b.issuesCount !== a.issuesCount) return b.issuesCount - a.issuesCount;
+      return b.mergedPRs - a.mergedPRs;
     }
-    const totalA = a.prsCount + a.issuesCount;
-    const totalB = b.prsCount + b.issuesCount;
-    if (totalB !== totalA) return totalB - totalA;
-    return b.prsCount - a.prsCount; // tiebreaker: prs first
-  });
+    if (b.mergedPRs !== a.mergedPRs) return b.mergedPRs - a.mergedPRs;
+    if (b.prsCount !== a.prsCount) return b.prsCount - a.prsCount;
+    return b.issuesCount - a.issuesCount;
+  };
+  const sortedContributors = contributors.filter((c) => !c.isMaintainer && !c.isBot && matchesFilter(c)).sort(byActivity);
+  // Maintainers rank by what matters to a contributor: pull requests of
+  // OTHER people they merged (from the merge events), then issues they
+  // opened, then their own merged PRs.
+  const othersMergedBy = new Map<string, number>();
+  for (const e of maintainerActivity?.events ?? []) {
+    if (e.kind !== 'merged' || (e.by && e.by.toLowerCase() === e.who.toLowerCase())) continue;
+    const k = e.who.toLowerCase();
+    othersMergedBy.set(k, (othersMergedBy.get(k) ?? 0) + 1);
+  }
+  const othersMerged = (c: Contributor) => othersMergedBy.get(c.username.toLowerCase()) ?? 0;
+  const maintainersAndBots = contributors
+    .filter((c) => (c.isMaintainer || c.isBot) && matchesFilter(c))
+    .sort((a, b) => othersMerged(b) - othersMerged(a) || b.issuesCount - a.issuesCount || b.mergedPRs - a.mergedPRs || byActivity(a, b));
+  const selected = selectedUser ? contributors.find((c) => c.username.toLowerCase() === selectedUser.toLowerCase()) ?? null : null;
+  const selectedTracked = selected?.tracked ?? null;
+  const selectedIsMaintainer = !!selected && (selected.isMaintainer || !!selected.isBot);
+  // The across-GitHub lists leave this repository out: it is shown first, in full, from the scan.
+  const here = (repoInfo?.fullName ?? '').toLowerCase();
+  const otherRepos = (userActivity?.repositories ?? []).filter((r) => r.repoName.toLowerCase() !== here);
+  const otherPRs = (userActivity?.pullRequests ?? []).filter((pr) => pr.repoName.toLowerCase() !== here);
 
-  const maxActivity = Math.max(
-    ...contributors.map((c) => {
-      if (filterType === 'prs') return c.prsCount;
-      if (filterType === 'issues') return c.issuesCount;
-      return c.prsCount + c.issuesCount;
-    }),
-    1
-  );
+  // The share bar follows the ranking: merged PRs unless the Issues filter is on.
+  const shareOf = (c: Contributor) => (filterType === 'issues' ? c.issuesCount : c.mergedPRs);
+  const maxActivity = Math.max(...contributors.filter((c) => !c.isMaintainer && !c.isBot).map(shareOf), 1);
 
   return (
     <main className="min-h-screen bg-panel text-ink py-12 px-4 relative overflow-hidden">
@@ -324,28 +407,36 @@ export default function RepoActivityPage() {
               </div>
               <RepoActivityChart monthly={monthly} since={window_.since} truncated={window_.truncated} />
 
-                 {/* Leaderboard Section */}
+            {/* People: two lists, in the order the visitor prefers */}
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-[650] text-ink">Top Contributors</h2>
-                  <p className="text-ink-soft text-xs mt-0.5">
-                    Community contributors in the selected period.{' '}
-                    {hiddenCount > 0 && !showAll && `${hiddenCount} maintainer${hiddenCount === 1 ? '' : 's'} and bots hidden.`}
-                  </p>
-                </div>
+                <p className="text-ink-soft text-xs">
+                  Two lists for the selected period: community contributors ranked by merged PRs, and the repository&apos;s maintainers and bots. Choose which comes first.
+                </p>
 
                 <div className="flex flex-wrap gap-2.5">
-                  {hiddenCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAll((v) => !v)}
-                      aria-pressed={showAll}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-[550] border transition-all ${showAll ? 'bg-violet-0 border-violet-100 text-violet-600' : 'bg-ground border-line text-ink-soft hover:text-ink'}`}
-                    >
-                      {showAll ? 'Hide maintainers & bots' : `Show maintainers & bots (${hiddenCount})`}
-                    </button>
-                  )}
+                  {/* Section order */}
+                  <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0" role="radiogroup" aria-label="Which list comes first">
+                    {SECTION_TABS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={firstSection === t.id}
+                        title={`Show ${t.label.toLowerCase()} first`}
+                        onClick={() => chooseFirstSection(t.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-[550] transition-all ${
+                          firstSection === t.id
+                            ? 'bg-panel text-ink shadow-sm'
+                            : 'text-ink-soft hover:text-ink-mid'
+                        }`}
+                      >
+                        {t.icon}
+                        <span className="hidden sm:inline">{t.label}</span>
+                        <span className="sr-only sm:hidden">{t.label} first</span>
+                      </button>
+                    ))}
+                  </div>
                   {/* Filter Tabs */}
                   <div className="flex bg-ground border border-line rounded-xl p-1 shrink-0">
                     {([
@@ -372,17 +463,22 @@ export default function RepoActivityPage() {
                 </div>
               </div>
 
+              {sectionOrder.map((id) => id === 'contributors' ? (
+              <div key="contributors" id="contributors">
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  {SECTION_TABS[0].icon}
+                  <h2 className="text-lg font-[650] text-ink">Contributors</h2>
+                  <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
+                    {sortedContributors.length}
+                  </span>
+                </div>
+                <p className="text-ink-soft text-xs mb-4">
+                  Community contributors, most merged PRs first. Maintainers and bots are listed in their own section.
+                </p>
               {/* Leaderboard Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sortedContributors.map((c, index) => {
-                  const score =
-                    filterType === 'prs'
-                      ? c.prsCount
-                      : filterType === 'issues'
-                      ? c.issuesCount
-                      : c.prsCount + c.issuesCount;
-
-                  const widthPercent = (score / maxActivity) * 100;
+                  const widthPercent = (shareOf(c) / maxActivity) * 100;
 
                   // Gold, Silver, Bronze styling
                   const rankIcon = index < 3 ? String(index + 1) : null;
@@ -414,6 +510,7 @@ export default function RepoActivityPage() {
                               <span className="text-ink font-[650] block truncate text-base group-hover:text-violet-600 transition-colors">
                                 @{c.username}
                               </span>
+                              {c.tracked && <TrackedBadge tracked={c.tracked} />}
                               {(c.isMaintainer || c.isBot) && (
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   {c.isMaintainer && (
@@ -459,7 +556,7 @@ export default function RepoActivityPage() {
                         {/* Progress Visual */}
                         <div className="space-y-1">
                           <div className="flex justify-between text-[10px] text-ink-soft">
-                            <span>Contribution share</span>
+                            <span>{filterType === 'issues' ? 'Issue share' : 'Merged share'}</span>
                             <span>{Math.round(widthPercent)}%</span>
                           </div>
                           <div className="w-full h-1.5 bg-ground rounded-full overflow-hidden">
@@ -482,6 +579,73 @@ export default function RepoActivityPage() {
                 )}
               </div>
               </div>
+              ) : (
+              /* Maintainers & bots: the same split the contributors page makes
+                 between the ranking and "registered, not contributing yet". */
+              <div key="maintainers" id="maintainers">
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  {SECTION_TABS[1].icon}
+                  <h2 className="text-lg font-[650] text-ink">Maintainers &amp; bots</h2>
+                  <span className="bg-panel-2 text-ink-mid text-[11.5px] px-2 py-0.5 rounded-full font-[650] tabular-nums">
+                    {maintainersAndBots.length}
+                  </span>
+                </div>
+                <p className="text-ink-soft text-xs mb-4">
+                  People with merge access and automation accounts, ranked by the pull requests of others they merged, then issues opened, then their own merged PRs. Their activity says nothing about who is contributing, so it stays out of the ranking and the chart.
+                </p>
+                {maintainerActivity && <MaintainerHeatmap key={`${maintainerActivity.since}:${maintainerActivity.until}:${maintainerActivity.events.length}`} activity={maintainerActivity} repoUrl={repoInfo?.url ?? `https://github.com/${repoInfo?.fullName ?? ''}`} />}
+                {maintainersAndBots.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {maintainersAndBots.map((c) => (
+                      <button
+                        type="button"
+                        key={c.username}
+                        onClick={() => handleContributorClick(c.username)}
+                        className="bg-ground border border-line rounded-xl px-4 py-3 card-hover group text-left cursor-pointer w-full min-w-0"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={c.avatarUrl}
+                            alt={c.username}
+                            className="w-10 h-10 rounded-full ring-2 ring-line group-hover:ring-violet-200 transition-all object-cover shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-ink font-[650] block truncate text-sm group-hover:text-violet-600 transition-colors">@{c.username}</span>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              {c.tracked && <TrackedBadge tracked={c.tracked} />}
+                              {c.isMaintainer && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">Maintainer</span>
+                              )}
+                              {c.isBot && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-panel-2 text-ink-mid border border-line">Bot</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Stats as chips on their own row: a monospace line on the right
+                            overflowed the card and sat on top of the name. */}
+                        <div className="flex flex-wrap gap-1.5 mt-2.5 text-[11px] tabular-nums">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success-0 border border-success-100 text-success-600">
+                            <span className="font-[650]">{othersMerged(c)}</span> merged for others
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-0 border border-violet-100 text-violet-600">
+                            <span className="font-[650]">{c.issuesCount}</span> issues
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-panel-2 border border-line text-ink-mid">
+                            <span className="font-[650] text-ink">{c.mergedPRs}</span>/{c.prsCount} own PRs merged
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-ground border border-line rounded-2xl text-ink-soft text-sm">
+                    No maintainer or bot activity in this period.
+                  </div>
+                )}
+              </div>
+              ))}
+            </div>
             </div>
           </div>
         )}
@@ -509,8 +673,20 @@ export default function RepoActivityPage() {
             <div className="p-6 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div>
-                  <h3 className="text-lg font-[650] text-ink">Contributor Details</h3>
-                  <p className="text-xs text-ink-soft">@{selectedUser}&apos;s pull request history across GitHub</p>
+                  <h3 className="text-lg font-[650] text-ink">{selectedIsMaintainer ? (selected?.isBot && !selected.isMaintainer ? 'Bot' : 'Maintainer') : 'Contributor Details'}</h3>
+                  <p className="text-xs text-ink-soft">
+                    {selectedIsMaintainer
+                      ? <>@{selectedUser} in {repoInfo?.fullName ?? 'this repository'}, selected period</>
+                      : <>@{selectedUser} here first, then across GitHub</>}
+                    {selectedTracked && (
+                      <>
+                        {' · '}
+                        <Link href={`/contributors/${selectedTracked.login}`} className="text-violet-600 hover:underline font-[550]">
+                          Our student ({selectedTracked.campus}, {selectedTracked.year}) — open tracker profile
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
               <button
@@ -528,8 +704,24 @@ export default function RepoActivityPage() {
 
             {/* Modal Content */}
             <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin overscroll-contain" data-lenis-prevent>
+              {selectedIsMaintainer && selected && (
+                <MaintainerPanel
+                  contributor={selected}
+                  events={maintainerActivity?.events ?? []}
+                  repoUrl={repoInfo?.url ?? `https://github.com/${repoInfo?.fullName ?? ''}`}
+                  since={maintainerActivity?.since ?? new Date(0).toISOString()}
+                  until={maintainerActivity?.until ?? new Date().toISOString()}
+                  mergesKnown={maintainerActivity?.mergesKnown ?? false}
+                />
+              )}
+              {!selectedIsMaintainer && selected && (
+                <ContributorInRepo contributor={selected} repoName={repoInfo?.fullName ?? 'this repository'} />
+              )}
+              {!selectedIsMaintainer && selected && (userActivity || loadingUser || userError) && (
+                <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider border-t border-line pt-5">Elsewhere on GitHub</h4>
+              )}
               {loadingUser && (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
                   <svg className="w-8 h-8 text-brand-500 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -551,12 +743,12 @@ export default function RepoActivityPage() {
                 <>
                   {/* Repositories breakdown */}
                   <div>
-                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Repositories Contributed To</h4>
-                    {userActivity.repositories.length === 0 ? (
-                      <p className="text-sm text-ink-soft italic">No pull requests found in this period.</p>
+                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Other repositories</h4>
+                    {otherRepos.length === 0 ? (
+                      <p className="text-sm text-ink-soft italic">No pull requests in other repositories.</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {userActivity.repositories.map((repo) => (
+                        {otherRepos.map((repo) => (
                           <div key={repo.repoName} className="bg-ground border border-line rounded-2xl p-4 space-y-3">
                             <div className="font-[650] text-sm text-ink truncate" title={repo.repoName}>
                               {repo.repoName}
@@ -587,12 +779,12 @@ export default function RepoActivityPage() {
 
                   {/* Recent PRs Timeline */}
                   <div>
-                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Pull Request History</h4>
-                    {userActivity.pullRequests.length === 0 ? (
-                      <p className="text-sm text-ink-soft italic">No recent work to display.</p>
+                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Pull requests elsewhere</h4>
+                    {otherPRs.length === 0 ? (
+                      <p className="text-sm text-ink-soft italic">No recent work elsewhere to display.</p>
                     ) : (
                       <div className="space-y-2">
-                        {userActivity.pullRequests.map((pr) => (
+                        {otherPRs.map((pr) => (
                           <a
                             key={pr.url}
                             href={pr.url}
