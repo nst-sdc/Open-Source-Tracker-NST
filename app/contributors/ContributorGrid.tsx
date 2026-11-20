@@ -40,6 +40,15 @@ interface GridProps {
  * rows are fetched. A button does the same for keyboards and for browsers
  * without IntersectionObserver.
  */
+/** The contributors URL for the same filters with a different order. */
+function hrefWithSort(query: LeaderboardQuery, sort: 'rating' | 'impact'): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(query)) if (v && k !== 'sort') params.set(k, String(v));
+  if (sort === 'impact') params.set('sort', 'impact');
+  const qs = params.toString();
+  return `/contributors${qs ? `?${qs}` : ''}`;
+}
+
 function usePagedRows(section: 'active' | 'other', initial: LeaderboardRow[], total: number, query: LeaderboardQuery) {
   const [rows, setRows] = useState(initial);
   const [loading, setLoading] = useState(false);
@@ -313,7 +322,15 @@ export function ContributorGrid({
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">RANK</span>
           <span className="text-[11px] font-[650] text-ink-soft tracking-[0.08em]">NAME</span>
           <span className="flex flex-col items-end leading-tight text-[11px] font-[650] text-ink-soft tracking-[0.08em]">
-            <span>RATING</span>
+            {/* The column title is the sort switch: the word shows the order in
+                force, clicking it flips to the other. No icon, no extra control. */}
+            <Link
+              href={hrefWithSort(query, query.sort === 'impact' ? 'rating' : 'impact')}
+              title={query.sort === 'impact' ? 'Sorted by impact. Click to sort by rating.' : 'Sorted by rating. Click to sort by impact.'}
+              className="text-ink hover:text-brand-600 underline decoration-dotted underline-offset-4 transition-colors"
+            >
+              {query.sort === 'impact' ? 'IMPACT' : 'RATING'}
+            </Link>
             <span className="md:hidden">MERGED</span>
           </span>
           <span className="hidden lg:block text-[11px] font-[650] text-ink-soft tracking-[0.08em]">CAMPUS</span>
