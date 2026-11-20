@@ -601,28 +601,39 @@ export default function RepoActivityPage() {
                         type="button"
                         key={c.username}
                         onClick={() => handleContributorClick(c.username)}
-                        className="flex items-center gap-3 bg-ground border border-line rounded-xl px-4 py-3 card-hover group text-left cursor-pointer w-full"
+                        className="bg-ground border border-line rounded-xl px-4 py-3 card-hover group text-left cursor-pointer w-full min-w-0"
                       >
-                        <img
-                          src={c.avatarUrl}
-                          alt={c.username}
-                          className="w-10 h-10 rounded-full ring-2 ring-line group-hover:ring-violet-200 transition-all object-cover shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <span className="text-ink font-[650] block truncate text-sm group-hover:text-violet-600 transition-colors">@{c.username}</span>
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            {c.tracked && <TrackedBadge tracked={c.tracked} />}
-                            {c.isMaintainer && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">Maintainer</span>
-                            )}
-                            {c.isBot && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-panel-2 text-ink-mid border border-line">Bot</span>
-                            )}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={c.avatarUrl}
+                            alt={c.username}
+                            className="w-10 h-10 rounded-full ring-2 ring-line group-hover:ring-violet-200 transition-all object-cover shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-ink font-[650] block truncate text-sm group-hover:text-violet-600 transition-colors">@{c.username}</span>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              {c.tracked && <TrackedBadge tracked={c.tracked} />}
+                              {c.isMaintainer && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-violet-0 text-violet-600 border border-violet-100">Maintainer</span>
+                              )}
+                              {c.isBot && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-[500] bg-panel-2 text-ink-mid border border-line">Bot</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right shrink-0 text-[11px] font-mono text-ink-soft leading-snug tabular-nums">
-                          <div><span className="text-success-600 font-[650]">{othersMerged(c)}</span> merged for others</div>
-                          <div><span className="text-violet-600 font-[650]">{c.issuesCount}</span> issues · <span className="text-ink font-[650]">{c.mergedPRs}</span>/{c.prsCount} own PRs merged</div>
+                        {/* Stats as chips on their own row: a monospace line on the right
+                            overflowed the card and sat on top of the name. */}
+                        <div className="flex flex-wrap gap-1.5 mt-2.5 text-[11px] tabular-nums">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success-0 border border-success-100 text-success-600">
+                            <span className="font-[650]">{othersMerged(c)}</span> merged for others
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-0 border border-violet-100 text-violet-600">
+                            <span className="font-[650]">{c.issuesCount}</span> issues
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-panel-2 border border-line text-ink-mid">
+                            <span className="font-[650] text-ink">{c.mergedPRs}</span>/{c.prsCount} own PRs merged
+                          </span>
                         </div>
                       </button>
                     ))}
