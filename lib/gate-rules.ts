@@ -109,6 +109,10 @@ export const DEFAULT_GATE_RULES: GateRules = {
     'github/docs-content-practice',
     'Syknapse/Contribute-To-This-Project',
     'codeisscience/first-contribution',
+    // zero-to-mastery's flagship clears the org's small repos; these two are
+    // "add your card" collections (81 and 1 student merges in the live audit)
+    'zero-to-mastery/Animation-Nation',
+    'zero-to-mastery/ascii-art',
   ],
   practiceKeywords: [
     'first-contribution', 'firstcontribution', 'hacktoberfest', 'hacktober', 'beginner', 'practice', 'good-first',

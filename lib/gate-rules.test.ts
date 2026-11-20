@@ -96,10 +96,22 @@ describe('audit tuning (2026-11-20)', () => {
   it('lets a strong owner vouch for its small repos by stars, through the gate only', async () => {
     _resetGateMemory();
     const ctx = await buildGateContext(true);
-    const small = sig({ stars: 17, topics: ['hacktoberfest'] });
+    const small = sig({ stars: 17, topics: ['hacktoberfest'], ownerType: 'Organization' });
     expect(gateDecision(small, { programOrg: false, maxStarsInOrg: 1154 }, ctx, 'layer5io/discuss-theme').valid).toBe(true);
     expect(gateDecision(small, { programOrg: false, maxStarsInOrg: 999 }, ctx, 'layer5io/discuss-theme').valid).toBe(false);
     expect(gateDecision(small, { programOrg: false, maxStarsInOrg: 1154 }, { ...ctx, rules: { ...ctx.rules, strongOrgMinStars: 0 } }, 'layer5io/discuss-theme').valid).toBe(false);
+    // only organisations: a personal account's 2,660-star Hacktoberfest2026 vouches for nothing beside it
+    const personal = sig({ stars: 917, topics: ['hacktoberfest'], ownerType: 'User' });
+    expect(gateDecision(personal, { programOrg: false, maxStarsInOrg: 2660 }, ctx, 'fineanmol/hacktoberfest').reason).toBe('practice');
+    expect(gateDecision({ ...personal, topics: [] }, { programOrg: false, maxStarsInOrg: 2660 }, ctx, 'fineanmol/some-tool').valid).toBe(true); // 917 clears the personal bar on its own
+    expect(gateDecision({ ...personal, topics: [], stars: 60 }, { programOrg: false, maxStarsInOrg: 2660 }, ctx, 'fineanmol/some-tool').reason).toBe('under-star-minimum');
+    // an unclassified owner gets no credit; a practice-named repo under a real org gets none either
+    expect(gateDecision({ ...small, ownerType: undefined }, { programOrg: false, maxStarsInOrg: 1154 }, ctx, 'unknownco/discuss-theme').valid).toBe(false);
+    expect(gateDecision({ ...small, stars: 400 }, { programOrg: false, maxStarsInOrg: 1154 }, ctx, 'layer5io/Hacktoberfest-Starter').reason).toBe('practice');
+    // program and vouched owners keep vouching regardless of kind
+    expect(gateDecision({ ...personal, stars: 3 }, { programOrg: true }, ctx, 'jenkins-infra/hacktoberfest').valid).toBe(true);
+    // listed collections under a strong org stay out
+    expect(gateDecision({ ...small, stars: 401 }, { programOrg: false, maxStarsInOrg: 5000 }, ctx, 'zero-to-mastery/Animation-Nation').reason).toBe('practice');
     expect(hasOrgPrior({ programOrg: false, maxStarsInOrg: 5000 })).toBe(false); // scoring never uses it
     expect(hasOrgPrior({ programOrg: false, maxStarsInOrg: 5000 }, 1000)).toBe(true);
   });

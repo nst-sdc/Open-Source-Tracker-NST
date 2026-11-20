@@ -24,7 +24,7 @@
  * M = 0.15, so farming them is actually cheap, not merely slightly-less-good.
  */
 
-import { nstOwnerReason, practiceReason, listedPracticeReason, type GateContext, realProjectReason, isTopicPracticeReason } from './gate-rules';
+import { nstOwnerReason, practiceReason, listedPracticeReason, type GateContext, type OwnerKind, realProjectReason, isTopicPracticeReason } from './gate-rules';
 
 /** Bump when RepoCacheEntry gains fields the scorer depends on. Entries with a
  *  different (or missing) version are re-fetched by validateNewRepos; until
@@ -389,14 +389,24 @@ export function gateDecision(
     const listed = listedPracticeReason(name, ctx.rules);
     if (listed) return { valid: false, reason: 'practice', detail: listed };
   }
-  if (hasOrgPrior(prior, ctx?.rules.strongOrgMinStars)) return { valid: true };
+  // The owner's kind sets the star bar. The org cache is the authority; a
+  // repo fetched since the owner type was recorded answers for itself while
+  // the owner waits in the classification queue, so a 179-star personal
+  // repo is never let through on the 50-star organisation bar.
+  let kind: OwnerKind = 'unknown';
   if (ctx) {
-    // The owner's kind sets the star bar. The org cache is the authority; a
-    // repo fetched since the owner type was recorded answers for itself while
-    // the owner waits in the classification queue, so a 179-star personal
-    // repo is never let through on the 50-star organisation bar.
-    let kind = ctx.ownerKind(owner);
+    kind = ctx.ownerKind(owner);
     if (kind === 'unknown' && s.ownerType) kind = s.ownerType === 'Organization' ? 'org' : 'user';
+  }
+  // The star test vouches for an ORGANISATION's other repos only, and never
+  // for a repo whose own name declares practice. The live audit found a
+  // personal account whose 2,660-star Hacktoberfest2026 would otherwise have
+  // cleared both itself and the hacktoberfest repo beside it (49 merges from
+  // 37 students). An owner still unclassified gets no such credit.
+  const strongOrgMinStars =
+    ctx && kind === 'org' && !practiceReason(name, [], ctx.rules) ? ctx.rules.strongOrgMinStars : undefined;
+  if (hasOrgPrior(prior, strongOrgMinStars)) return { valid: true };
+  if (ctx) {
     const bar = kind === 'user' ? ctx.rules.minStarsPersonal : ctx.rules.minStarsOrg;
     const practice = practiceReason(name, s.topics ?? [], ctx.rules, s.stars);
     if (practice) {
