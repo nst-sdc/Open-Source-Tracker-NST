@@ -30,6 +30,7 @@ import { buildCommunityTimeline, readCommunityTimeline, writeCommunityTimeline, 
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
+import { revalidateOwnersRepos } from '@/lib/revalidate-owner';
 
 export interface IncrementalRefreshResult {
   ok: true;
@@ -154,7 +155,7 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     }
 
     try {
-      const c = await classifyUnknownOwners(15);
+      const c = await classifyUnknownOwners(15, { onClassified: revalidateOwnersRepos });
       if (c.checked > 0 || c.stoppedBy) {
         console.log(`[Incremental Refresh] classified ${c.checked} repo owners (${c.organisations} organisations), ${c.remaining} to go${c.stoppedBy ? `; stopped: ${c.stoppedBy}` : ''}`);
       }

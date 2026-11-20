@@ -7,6 +7,7 @@ import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '
 import { readOrgIndex, rebuildOrgIndex, studentsMissingFromIndex, orgIndexRebuiltAt, indexedStudents } from '@/lib/org-index';
 import { readSummaryCache } from '@/lib/summary-cache';
 import { classifyUnknownOwners, getOrgCache, unclassifiedOwners } from '@/lib/org-cache';
+import { revalidateOwnersRepos } from '@/lib/revalidate-owner';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,6 @@ export async function POST() {
   if (!index) return NextResponse.json({ error: 'The store did not accept the rebuilt index.' }, { status: 503 });
   // Then classify every owner the index knows, so the search box can suggest
   // all of them. ~700 owners is well inside one hour of the system token.
-  const classified = await classifyUnknownOwners(2000);
+  const classified = await classifyUnknownOwners(2000, { onClassified: revalidateOwnersRepos });
   return NextResponse.json({ ok: true, organisations: Object.keys(index).length, studentsIndexed: indexedStudents(index).size, classified });
 }

@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvRead: vi.fn(async () => ({ ok: true, value: null })), kvSet: vi.fn(async () => true), kvDel: vi.fn(async () => true) }));
 vi.mock('./org-cache', () => ({ getOrgCache: vi.fn(async () => ({ jenkinsci: { isOrganization: true }, ghostmkg: { isOrganization: false } })) }));
 vi.mock('./kv-students', () => ({ getStudentsKV: vi.fn(async () => [{ github: 'alice', previousLogins: ['alice-old'] }]) }));
-const { DEFAULT_GATE_RULES, nstOwnerReason, practiceReason, buildGateContext, saveGateRules, _resetGateMemory } = await import('./gate-rules');
-const { gateDecision } = await import('./repo-score');
+const { DEFAULT_GATE_RULES, nstOwnerReason, practiceReason, buildGateContext, saveGateRules, _resetGateMemory, realProjectReason } = await import('./gate-rules');
+const { gateDecision, hasOrgPrior } = await import('./repo-score');
 import type { RepoSignals } from './repo-score';
 
 const sig = (over: Partial<RepoSignals> = {}): RepoSignals => ({
@@ -69,5 +69,53 @@ describe('saveGateRules', () => {
     expect(saved.practiceKeywords).toEqual(['hack', 'x']);
     expect(saved.minStarsPersonal).toBe(250);
     expect(saved.minStarsOrg).toBe(0);
+  });
+});
+
+describe('audit tuning (2026-11-20)', () => {
+  it('lifts a practice topic from a repo that is plainly a real project, never from a collection or a farm', async () => {
+    _resetGateMemory();
+    const ctx = await buildGateContext(true);
+    // fury-gl/fury: 304 stars, 102 contributors, 15 releases, hacktoberfest topic, organisation
+    const fury = sig({ stars: 304, forks: 180, watchers: 20, releases: 15, contributors: 102, mergedPRCount: 900, languageCount: 3, topics: ['scientific-visualization', 'hacktoberfest'] });
+    expect(gateDecision(fury, undefined, ctx, 'jenkinsci/fury').valid).toBe(true);
+    // same signals under a personal account fail the 200 bar, so the topic verdict stands
+    expect(gateDecision({ ...fury, stars: 150 }, undefined, ctx, 'ghostmkg/fury').reason).toBe('practice');
+    // a farm: hundreds of contributors, no releases, no audience
+    const farm = sig({ stars: 401, forks: 3000, watchers: 5, releases: 0, contributors: 1584, mergedPRCount: 4000, languageCount: 3, topics: ['css', 'art', 'hacktoberfest'] });
+    expect(gateDecision(farm, undefined, ctx, 'jenkinsci/animation-nation').reason).toBe('practice');
+    // a collection with releases still fails on its marker
+    const list = sig({ stars: 557, releases: 9, contributors: 38, languageCount: 2, topics: ['nodejs', 'resources', 'hacktoberfest'] });
+    expect(gateDecision(list, undefined, ctx, 'jenkinsci/Ultimate-NodeJs-Resources').reason).toBe('practice');
+    // the exact practice list and a practice keyword in the name are never lifted
+    expect(gateDecision({ ...fury, stars: 56000 }, undefined, ctx, 'firstcontributions/first-contributions').reason).toBe('practice');
+    expect(gateDecision(fury, undefined, ctx, 'jenkinsci/Hacktoberfest-Starter').reason).toBe('practice');
+    expect(realProjectReason('acme/thing', { stars: 300, releases: 0, contributors: 18, languageCount: 1, topics: [], audience: 17.4 }, 50)).toMatch(/18 contributors/);
+    expect(realProjectReason('acme/thing', { stars: 300, releases: 0, contributors: 18, languageCount: 0, topics: [], audience: 17.4 }, 50)).toBeNull();
+  });
+  it('lets a strong owner vouch for its small repos by stars, through the gate only', async () => {
+    _resetGateMemory();
+    const ctx = await buildGateContext(true);
+    const small = sig({ stars: 17, topics: ['hacktoberfest'] });
+    expect(gateDecision(small, { programOrg: false, maxStarsInOrg: 1154 }, ctx, 'layer5io/discuss-theme').valid).toBe(true);
+    expect(gateDecision(small, { programOrg: false, maxStarsInOrg: 999 }, ctx, 'layer5io/discuss-theme').valid).toBe(false);
+    expect(gateDecision(small, { programOrg: false, maxStarsInOrg: 1154 }, { ...ctx, rules: { ...ctx.rules, strongOrgMinStars: 0 } }, 'layer5io/discuss-theme').valid).toBe(false);
+    expect(hasOrgPrior({ programOrg: false, maxStarsInOrg: 5000 })).toBe(false); // scoring never uses it
+    expect(hasOrgPrior({ programOrg: false, maxStarsInOrg: 5000 }, 1000)).toBe(true);
+  });
+  it('uses the owner type carried by the signals while the owner is unclassified', async () => {
+    _resetGateMemory();
+    const ctx = await buildGateContext(true);
+    expect(gateDecision(sig({ stars: 179, ownerType: 'User' }), undefined, ctx, 'vmDeshpande/ai-agent-automation').reason).toBe('under-star-minimum');
+    expect(gateDecision(sig({ stars: 179, ownerType: 'Organization' }), undefined, ctx, 'Checkora/Checkora').valid).toBe(true);
+    expect(gateDecision(sig({ stars: 179 }), undefined, ctx, 'nobody-knows/thing').valid).toBe(true); // nothing known: org bar, as before
+    expect(gateDecision(sig({ stars: 179, ownerType: 'Organization' }), undefined, ctx, 'ghostmkg/thing').reason).toBe('under-star-minimum'); // the org cache wins
+  });
+  it('matches practice keywords across separators and short ones as whole words', () => {
+    expect(practiceReason('dhairyagothi/100_days_100_web_project', [], DEFAULT_GATE_RULES)).toMatch(/100-days/);
+    expect(practiceReason('ghostmkg/dsa-code', [], DEFAULT_GATE_RULES)).toMatch(/dsa/);
+    expect(practiceReason('noodles-sed/Simple_DSA', [], DEFAULT_GATE_RULES)).toMatch(/dsa/);
+    expect(practiceReason('acme/lambdsa-runtime', [], DEFAULT_GATE_RULES)).toBeNull();
+    expect(practiceReason('sympy/sympy', ['python', 'hacktoberfest'], DEFAULT_GATE_RULES, 15098)).toBeNull();
   });
 });

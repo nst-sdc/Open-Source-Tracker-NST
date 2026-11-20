@@ -47,7 +47,56 @@ export interface GateRules {
   minStarsPersonal: number;
   /** Stars an organisation's repo needs to count (org priors still vouch below it). */
   minStarsOrg: number;
+  /** An owner with any repo at or above this many stars vouches for its
+   *  other repos: they skip the star bar and the topic keywords (not the
+   *  exact practice list). Found on the live data: layer5io and hackclub
+   *  sub-repos with 10-30 stars under a 1,100-star flagship were out. */
+  strongOrgMinStars: number;
   updatedAt?: string;
+}
+
+/** A repository that carries a practice topic (hacktoberfest, gssoc…) but is
+ *  plainly a real project: it clears the star bar for its owner kind, has
+ *  code, has no collection marker in its name or topics, and either ships
+ *  releases or has a real contributor base with an audience. Measured on the
+ *  live data this readmits fury-gl/fury, scribe-org/Scribe-iOS,
+ *  graycoreio/daffodil, CycloneDX/cyclonedx-node-npm and a dozen like them,
+ *  and keeps every hacktoberfest farm out (they fail the audience or the
+ *  marker test). */
+export const REAL_PROJECT = {
+  minReleases: 5,
+  minContributors: 15,
+  minAudience: 1,
+  /** Substrings of a name or topic that mark a collection rather than software. */
+  collectionMarkers: ['awesome', 'roadmap', 'tutorial', 'interview', 'resources', 'projects', 'beginner', 'cheat', 'notes', 'question', '100-days', '30-days', 'collection', 'practice', 'first-contrib', 'portfolio', 'namecard'],
+} as const;
+
+export interface RealProjectSignals {
+  stars: number;
+  releases: number;
+  contributors: number;
+  languageCount: number;
+  topics: readonly string[];
+  /** (stars + 5·watchers) / (forks + 0.2·merged PRs); see repo-score.ts audienceRatio. */
+  audience: number;
+}
+
+const norm = (s: string) => s.toLowerCase().replace(/[_\s]+/g, '-');
+
+/** Pure. Why a practice-topic repo is nevertheless a real project, or null. */
+export function realProjectReason(repoFullName: string, s: RealProjectSignals, starBar: number): string | null {
+  if (s.stars < starBar) return null;
+  if (s.languageCount <= 0) return null;
+  const name = norm(repoFullName.split('/')[1] ?? repoFullName);
+  const topics = s.topics.map(norm);
+  for (const m of REAL_PROJECT.collectionMarkers) {
+    if (name.includes(m) || topics.some((t) => t.includes(m))) return null;
+  }
+  if (s.releases >= REAL_PROJECT.minReleases) return `${s.releases} releases on a ${s.stars}-star repository`;
+  if (s.contributors >= REAL_PROJECT.minContributors && s.audience >= REAL_PROJECT.minAudience) {
+    return `${s.contributors} contributors and an audience ratio of ${s.audience.toFixed(2)} on a ${s.stars}-star repository`;
+  }
+  return null;
 }
 
 export const DEFAULT_GATE_RULES: GateRules = {
@@ -64,7 +113,7 @@ export const DEFAULT_GATE_RULES: GateRules = {
   practiceKeywords: [
     'first-contribution', 'firstcontribution', 'hacktoberfest', 'hacktober', 'beginner', 'practice', 'good-first',
     'learn-git', 'git-practice', 'contribute-to-this', 'dev-wall', 'workbook', 'gssoc', 'ecsoc', 'swoc',
-    'open-source-practice', '100-days', '30-days', 'awesome-list', 'interview', 'roadmap', 'tutorial',
+    'open-source-practice', '100-days', '30-days', 'awesome-list', 'interview', 'roadmap', 'tutorial', 'dsa',
   ],
   practiceTopicKeywords: [
     'hacktoberfest', 'hacktober', 'first-contribution', 'firstcontribution', 'learn-git', 'git-practice',
@@ -73,6 +122,7 @@ export const DEFAULT_GATE_RULES: GateRules = {
   practiceTopicMaxStars: 1000,
   minStarsPersonal: 200,
   minStarsOrg: 50,
+  strongOrgMinStars: 1000,
 };
 
 const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
@@ -99,19 +149,30 @@ export function listedPracticeReason(repoFullName: string, rules: GateRules): st
 export function practiceReason(repoFullName: string, topics: readonly string[], rules: GateRules, stars = 0): string | null {
   const listed = listedPracticeReason(repoFullName, rules);
   if (listed) return listed;
-  const full = repoFullName.toLowerCase();
+  // "100_days_100_web_project" and "100-days" are the same word; a keyword
+  // of four letters or fewer ("dsa") must be a whole word so it never fires
+  // inside another ("lambdsa").
+  const full = norm(repoFullName);
+  const ws = words(full);
   for (const k of rules.practiceKeywords) {
-    const kw = k.toLowerCase();
-    if (kw && full.includes(kw)) return `practice keyword "${k}" in the name`;
+    const kw = norm(k);
+    if (!kw) continue;
+    if (kw.length <= 4 ? ws.includes(kw) : full.includes(kw)) return `practice keyword "${k}" in the name`;
   }
   if (stars < rules.practiceTopicMaxStars) {
-    const ts = topics.map((t) => t.toLowerCase());
+    const ts = topics.map(norm);
     for (const k of rules.practiceTopicKeywords) {
-      const kw = k.toLowerCase();
+      const kw = norm(k);
       if (kw && ts.some((t) => t.includes(kw))) return `topic "${k}" on a repository under ${rules.practiceTopicMaxStars} stars`;
     }
   }
   return null;
+}
+
+/** Pure. True when the practice verdict came from a topic (not the name or
+ *  the exact list) and so may be lifted by realProjectReason. */
+export function isTopicPracticeReason(reason: string | null): boolean {
+  return !!reason && reason.startsWith('topic "');
 }
 
 export type OwnerKind = 'org' | 'user' | 'unknown';
@@ -119,6 +180,7 @@ export type OwnerKind = 'org' | 'user' | 'unknown';
 /** What the gate needs to know about a repo beyond its signals. */
 export interface GateContext {
   rules: GateRules;
+  /** From org_cache_map; 'unknown' until the refresh tick classifies the owner. */
   ownerKind: (owner: string) => OwnerKind;
   isPeerOwner: (owner: string) => boolean;
 }
@@ -145,6 +207,7 @@ export async function saveGateRules(rules: GateRules): Promise<boolean> {
     practiceTopicMaxStars: Math.max(0, Math.floor(Number(rules.practiceTopicMaxStars) || 0)),
     minStarsPersonal: Math.max(0, Math.floor(Number(rules.minStarsPersonal) || 0)),
     minStarsOrg: Math.max(0, Math.floor(Number(rules.minStarsOrg) || 0)),
+    strongOrgMinStars: Math.max(0, Math.floor(Number(rules.strongOrgMinStars) || 0)),
     updatedAt: new Date().toISOString(),
   };
   const ok = await kvSet(KV_KEY, clean);

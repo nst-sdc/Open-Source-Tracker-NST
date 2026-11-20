@@ -421,7 +421,7 @@ const REPO_SIGNALS_QUERY_FIELDS = `
   isFork
   createdAt
   pushedAt
-  owner { login }
+  owner { login __typename }
   mergedPRs: pullRequests(states: MERGED) { totalCount }
   closedIssues: issues(states: CLOSED) { totalCount }
   defaultBranchRef {
@@ -443,7 +443,7 @@ interface GraphQLRepoNode {
   isFork: boolean;
   createdAt: string;
   pushedAt: string;
-  owner: { login: string };
+  owner: { login: string; __typename?: string };
   mergedPRs: { totalCount: number };
   closedIssues: { totalCount: number };
   defaultBranchRef: {
@@ -468,6 +468,7 @@ function signalsFromNode(node: GraphQLRepoNode): RepoSignals {
     isArchived: node.isArchived ?? false,
     archivedAt: node.archivedAt ?? null,
     ownerLogin: node.owner?.login ?? "",
+    ownerType: node.owner?.__typename === "Organization" ? "Organization" : node.owner?.__typename === "User" ? "User" : undefined,
     createdAt: node.createdAt,
     pushedAt: node.pushedAt,
   };

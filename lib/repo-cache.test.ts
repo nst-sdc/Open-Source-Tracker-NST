@@ -81,3 +81,17 @@ describe('isEntryStale', () => {
     expect(isEntryStale({ ...entry(0), checkedAt: new Date().toISOString() })).toBe(false);
   });
 });
+
+describe('buildOrgPriors', () => {
+  it('reports the most-starred non-fork repo of each owner', async () => {
+    const { buildOrgPriors } = await import('./repo-cache');
+    const sig = { stars: 0, forks: 0, watchers: 0, releases: 0, contributors: 0, commitsLastYear: 0, mergedPRCount: 0, closedIssueCount: 0, languageCount: 1, topics: [], licenseSpdxId: 'MIT', isFork: false, isArchived: false, ownerLogin: 'layer5io', createdAt: '2020-01-01', pushedAt: '2026-01-01' };
+    const priorFor = buildOrgPriors({
+      'layer5io/layer5': { stars: 1154, forks: 300, valid: true, signals: { ...sig, stars: 1154 } },
+      'layer5io/discuss-theme': { stars: 17, forks: 2, valid: false, signals: { ...sig, stars: 17 } },
+      'layer5io/some-fork': { stars: 9000, forks: 2, valid: false, signals: { ...sig, stars: 9000, isFork: true } },
+    });
+    expect(priorFor('layer5io/discuss-theme').maxStarsInOrg).toBe(1154);
+    expect(priorFor('nobody/x').maxStarsInOrg).toBeUndefined();
+  });
+});

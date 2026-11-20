@@ -1254,6 +1254,7 @@ interface GateRulesShape {
   practiceTopicMaxStars: number;
   minStarsPersonal: number;
   minStarsOrg: number;
+  strongOrgMinStars?: number;
   updatedAt?: string;
 }
 
@@ -1268,7 +1269,7 @@ function GateRulesTab() {
     nstOwners: r.nstOwners.join('\n'), nstOwnerKeywords: r.nstOwnerKeywords.join('\n'),
     practiceRepos: r.practiceRepos.join('\n'), practiceKeywords: r.practiceKeywords.join('\n'),
     practiceTopicKeywords: (r.practiceTopicKeywords ?? []).join('\n'), practiceTopicMaxStars: String(r.practiceTopicMaxStars ?? 1000),
-    minStarsPersonal: String(r.minStarsPersonal), minStarsOrg: String(r.minStarsOrg),
+    minStarsPersonal: String(r.minStarsPersonal), minStarsOrg: String(r.minStarsOrg), strongOrgMinStars: String(r.strongOrgMinStars ?? 1000),
   });
 
   async function load() {
@@ -1289,7 +1290,7 @@ function GateRulesTab() {
         nstOwners: lines('nstOwners'), nstOwnerKeywords: lines('nstOwnerKeywords'),
         practiceRepos: lines('practiceRepos'), practiceKeywords: lines('practiceKeywords'),
         practiceTopicKeywords: lines('practiceTopicKeywords'), practiceTopicMaxStars: Number(draft.practiceTopicMaxStars),
-        minStarsPersonal: Number(draft.minStarsPersonal), minStarsOrg: Number(draft.minStarsOrg),
+        minStarsPersonal: Number(draft.minStarsPersonal), minStarsOrg: Number(draft.minStarsOrg), strongOrgMinStars: Number(draft.strongOrgMinStars),
       }),
     });
     const d = await res.json().catch(() => ({}));
@@ -1356,8 +1357,14 @@ function GateRulesTab() {
           <input type="number" min={0} value={draft.minStarsOrg ?? ''} onChange={(e) => setDraft((d) => ({ ...d, minStarsOrg: e.target.value }))}
             className="mt-1.5 w-full bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-violet-100" />
         </label>
+        <label className="block">
+          <span className="block text-sm font-[550] text-ink">Strong owner: stars on any one repo</span>
+          <input type="number" min={0} value={draft.strongOrgMinStars ?? ''} onChange={(e) => setDraft((d) => ({ ...d, strongOrgMinStars: e.target.value }))}
+            className="mt-1.5 w-full bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-violet-100" />
+          <span className="block mt-1 text-xs text-ink-soft">An owner with one repo this starred vouches for its smaller ones (0 turns this off).</span>
+        </label>
       </div>
-      <p className="text-xs text-ink-soft">Vouched and program organisations pass the star bar regardless; the audience rule still applies above the bar.</p>
+      <p className="text-xs text-ink-soft">Vouched, program and strong owners pass the star bar regardless; the audience rule still applies above the bar. A practice-topic repo that clears its star bar and shows a real project (5+ releases, or 15+ contributors with an audience) also counts.</p>
       {error && <div className="text-error-600 text-sm bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</div>}
       {success && <div className="text-success-600 text-sm bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</div>}
       <div className="flex flex-wrap gap-3">
