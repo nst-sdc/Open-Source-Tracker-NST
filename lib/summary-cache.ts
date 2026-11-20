@@ -67,14 +67,33 @@ export function forgetSummaryCacheMemory(period?: string): void {
   else memory.delete(getCacheKey(period));
 }
 
-export async function writeSummaryCache(summaries: StudentSummary[], period = 'all'): Promise<void> {
+/** The store did not accept the summary cache; nothing was changed. */
+export class SummaryCacheWriteError extends Error {
+  constructor(period: string) {
+    super(`The summary cache for "${period}" could not be written to the store; the previous cache is still in place.`);
+    this.name = 'SummaryCacheWriteError';
+  }
+}
+
+export async function writeSummaryCache(
+  summaries: StudentSummary[],
+  period = 'all',
+  options: { cachedAt?: string } = {},
+): Promise<void> {
   const cache: SummaryCache = {
-    cachedAt: new Date().toISOString(),
+    cachedAt: options.cachedAt ?? new Date().toISOString(),
     summaries,
   };
   // Store summary caches permanently. They are ONLY updated incrementally
   // by background jobs, preventing the leaderboard from ever dropping to zero.
-  await kvSet(getCacheKey(period), cache);
+  //
+  // A write that did not land must not look like one that did: the "all"
+  // rebuild once reported ok while the proxy had closed the socket on the
+  // 3.5 MB SET, and the leaderboard kept pre-gate totals for hours.
+  const stored = await kvSet(getCacheKey(period), cache);
+  if (!stored) {
+    throw new SummaryCacheWriteError(period);
+  }
   // Drop the in-process copy rather than populating it with `summaries`: that
   // array belongs to the caller and the refresh routes keep mutating theirs.
   // The next read re-fetches once and caches a parsed copy nobody else holds.
@@ -88,6 +107,9 @@ export function isCacheFresh(cache: SummaryCache): boolean {
 }
 
 /** Stamps cachedAt as epoch so all predefined caches are immediately stale (used after flagging) */
+/** The cachedAt value that marks a cache as invalidated and due a full rebuild. */
+export const INVALIDATED_AT = '1970-01-01T00:00:00.000Z';
+
 export async function invalidateSummaryCache(): Promise<void> {
   const periods = ['all', 'week', 'month', '1day', '2months', '3months', '6months', 'year'];
   forgetSummaryCacheMemory();
@@ -95,11 +117,16 @@ export async function invalidateSummaryCache(): Promise<void> {
     try {
       const cache = await readSummaryCache(period, { bypassMemory: true });
       if (cache) {
-        cache.cachedAt = '1970-01-01T00:00:00.000Z';
-        await writeSummaryCache(cache.summaries, period);
+        // Passed explicitly: setting cache.cachedAt and writing the summaries
+        // stamped the cache with the current time, so no invalidation ever
+        // reached the store and the flag / gate-rule / vouch paths that call
+        // this were silently no-ops.
+        await writeSummaryCache(cache.summaries, period, { cachedAt: INVALIDATED_AT });
       }
-    } catch {
-      // ignore — if cache doesn't exist, nothing to invalidate
+    } catch (err) {
+      // A missing cache is nothing to invalidate; a write failure is worth a
+      // line, because that period will keep serving pre-change totals.
+      console.warn(`[summary-cache] could not invalidate ${period}:`, err instanceof Error ? err.message : err);
     }
   }
 }

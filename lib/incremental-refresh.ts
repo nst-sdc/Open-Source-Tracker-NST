@@ -9,7 +9,7 @@
  */
 import { updateStaleProfiles, buildDateQuery, getSummaryFromCache } from '@/lib/github';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
-import { writeSummaryCache, readSummaryCache, pruneToRoster } from '@/lib/summary-cache';
+import { writeSummaryCache, readSummaryCache, pruneToRoster, INVALIDATED_AT } from '@/lib/summary-cache';
 import { readProfileCache } from '@/lib/profile-cache';
 import {
   readOrgIndexForWrite,
@@ -168,6 +168,16 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     // before writing it back, so it must not share the cached instance.
     const existingCache = await readSummaryCache(period, { bypassMemory: true });
     if (!existingCache) continue;
+    // An invalidated cache (cachedAt pinned to the epoch by
+    // invalidateSummaryCache after a rules change, a vouch, a roster edit)
+    // is waiting for a full rebuild on the next page view. Patching a few
+    // students into it and writing it back would stamp it fresh again and
+    // resurrect every other student's stale summary, which is exactly what
+    // happened after the gate rules shipped. Leave it alone.
+    if (existingCache.cachedAt === INVALIDATED_AT) {
+      console.log(`[Incremental Refresh] summary cache for ${period} is invalidated; leaving it for a full rebuild`);
+      continue;
+    }
 
     const dateQuery = buildDateQuery(period);
     let changed = false;
@@ -203,8 +213,14 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     }
     if (changed) {
       existingCache.summaries.sort((a, b) => b.scoreMergedPRs - a.scoreMergedPRs);
-      await writeSummaryCache(existingCache.summaries, period);
-      console.log(`[Incremental Refresh] Patched summary cache for period: ${period}`);
+      try {
+        await writeSummaryCache(existingCache.summaries, period);
+        console.log(`[Incremental Refresh] Patched summary cache for period: ${period}`);
+      } catch (err) {
+        // One period's write failing is no reason to skip the others; the
+        // next tick patches the same students again.
+        console.error(`[Incremental Refresh] could not store the ${period} summary cache:`, err);
+      }
     }
   }
 
