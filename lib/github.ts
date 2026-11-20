@@ -1441,9 +1441,37 @@ export async function refreshStudentCache(
   return profile;
 }
 
-/** Merged PRs per refresh whose files are fetched; the rest wait for the next pass. */
-const PR_VALUE_BATCH_PER_REFRESH = 150;
-const PR_VALUE_CHUNK = 25;
+/** Merged PRs per refresh whose files are fetched; the rest wait for the next
+ *  pass. Each costs one REST call for its diff on top of the shared GraphQL
+ *  batch, so this is sized to the core rate limit, not to GraphQL. */
+const PR_VALUE_BATCH_PER_REFRESH = 40;
+const PR_VALUE_CHUNK = 20;
+
+/** The per-file patches of one PR, keyed by path, from REST
+ *  pulls/{n}/files (GraphQL does not expose patches). Files GitHub will not
+ *  diff (very large or binary) come back without one and fall back to their
+ *  line counts. null means the call failed and the PR should wait. */
+async function fetchPRPatches(
+  repoFullName: string,
+  number: number,
+  headers: Record<string, string>,
+): Promise<Map<string, string> | null | "rate-limited"> {
+  const out = new Map<string, string>();
+  for (let page = 1; page <= 3; page++) {
+    let res: Response;
+    try {
+      res = await fetch(`https://api.github.com/repos/${repoFullName}/pulls/${number}/files?per_page=100&page=${page}`, { headers, cache: "no-store" });
+    } catch {
+      return null;
+    }
+    if (res.status === 403 || res.status === 429) return "rate-limited";
+    if (!res.ok) return null;
+    const files = (await res.json()) as Array<{ filename: string; patch?: string }>;
+    for (const f of files) if (typeof f.patch === "string") out.set(f.filename, f.patch);
+    if (files.length < 100) break;
+  }
+  return out;
+}
 
 /**
  * Measures merged PRs that have no contribution value yet (lib/pr-value.ts)
@@ -1499,20 +1527,29 @@ export async function measurePRContributions(
       console.warn("[pr-value] GraphQL call failed:", err instanceof Error ? err.message : err);
       continue;
     }
-    chunk.forEach((pr, idx) => {
+    for (const [idx, pr] of chunk.entries()) {
       const node = body.data?.[`p${idx}`]?.pullRequest;
-      if (!node) return;
+      if (!node) continue;
+      // The diff of each file, so comments, blank lines and reformatting are
+      // not counted as change. A failed call leaves the PR for a later pass
+      // rather than measuring it on counts alone.
+      const patches = await fetchPRPatches(repoFromUrl(pr.repository_url), pr.number, headers);
+      if (patches === "rate-limited") {
+        console.warn("[pr-value] core rate limited while reading diffs; the rest wait for the next refresh");
+        return measured;
+      }
+      if (patches === null) continue;
       const v = prValue({
         additions: node.additions,
         deletions: node.deletions,
         changedFiles: node.changedFiles,
-        files: node.files?.nodes ?? [],
+        files: (node.files?.nodes ?? []).map((f) => ({ ...f, patch: patches.get(f.path) })),
         labels: (pr.labels ?? []).map((l) => l.name),
         reviews: node.reviews?.totalCount ?? 0,
       });
       pr.contribution = { ...v, at: new Date().toISOString(), v: PR_VALUE_VERSION };
       measured++;
-    });
+    }
   }
   if (todo.length) console.log(`[pr-value] measured ${measured} of ${todo.length} merged PRs`);
   return measured;

@@ -184,7 +184,7 @@ export default function DocumentationPage() {
               carries two badges, both out of 10: <strong className="text-ink">Impact</strong>, the project&apos;s M, and{' '}
               <strong className="text-ink">Value</strong>, what the change itself did — the effort term E, from the
               files and lines it touched (tests, new code and breadth raise it; docs-only and image/config-only
-              changes sit low). A typical twenty-line code change is a 5; points are{' '}
+              changes sit low; comment lines, blank lines and reformatting are never counted as code). A typical twenty-line code change is a 5; points are{' '}
               <Code>10·M<sup>0.75</sup>·E</Code>, so a Value of 10 doubles a PR and a 2 cuts it to 40%. E counts on the
               leaderboard once the admin turns the weighting on; until then it is shown but reads as neutral.
             </P>

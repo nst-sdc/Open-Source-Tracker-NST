@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { classifyPath, prValue, valueOfPR, setPrValueWeighting, PR_VALUE_RULES, PR_VALUE_MIN, PR_VALUE_MAX } from './pr-value';
+import { classifyPath, prValue, valueOfPR, setPrValueWeighting, lineMix, PR_VALUE_RULES, PR_VALUE_MIN, PR_VALUE_MAX } from './pr-value';
 
 const f = (path: string, additions = 10, deletions = 2, changeType = 'MODIFIED') => ({ path, additions, deletions, changeType });
 const input = (files: ReturnType<typeof f>[], extra: Partial<Parameters<typeof prValue>[0]> = {}) => ({
@@ -89,5 +89,61 @@ describe('valueOfPR', () => {
     expect(valueOfPR(measured)).toBe(1.6);
     expect(valueOfPR({})).toBe(1);
     expect(valueOfPR({ contribution: { ...measured.contribution, value: 9 } })).toBe(PR_VALUE_MAX);
+  });
+});
+
+describe('reading the diff', () => {
+  const patch = (lines: string[]) => ['@@ -1,3 +1,9 @@', ...lines].join('\n');
+
+  it('separates code, comments, blanks and reformatting in a TypeScript diff', () => {
+    const p = patch([
+      '+// a comment',
+      '+/* block',
+      '+ * still block',
+      '+ */',
+      '+',
+      '+}',
+      '+const x = 1;',
+      '+export function f() { return x; }',
+      '-  const y = 2;',
+      '+const y = 2;', // same line, re-indented: formatting
+      '-const gone = 3;',
+    ]);
+    expect(lineMix(p, 'src/a.ts')).toEqual({ code: 3, comment: 4, blank: 2, formatting: 2 });
+  });
+
+  it('knows # comments and docstrings in Python and -- in SQL', () => {
+    expect(lineMix(patch(['+# note', '+x = 1', '+"""', '+doc text', '+"""', '+y = 2']), 'app/m.py')).toEqual({ code: 2, comment: 4, blank: 0, formatting: 0 });
+    expect(lineMix(patch(['+-- comment', '+SELECT 1;']), 'db/q.sql')).toEqual({ code: 1, comment: 1, blank: 0, formatting: 0 });
+    expect(lineMix(patch(['+<!-- hidden -->', '+<div>x</div>']), 'index.html')).toEqual({ code: 1, comment: 1, blank: 0, formatting: 0 });
+  });
+
+  it('scores a PR on its code lines alone: 50 code + 50 comment lines equals 50 code lines', () => {
+    const code = Array.from({ length: 50 }, (_, i) => `+const v${i} = ${i};`);
+    const comments = Array.from({ length: 50 }, (_, i) => `+// note ${i}`);
+    const withComments = prValue({ additions: 100, deletions: 0, changedFiles: 1, files: [{ path: 'src/a.ts', additions: 100, deletions: 0, patch: patch([...code, ...comments]) }] });
+    const codeOnly = prValue({ additions: 50, deletions: 0, changedFiles: 1, files: [{ path: 'src/a.ts', additions: 50, deletions: 0, patch: patch(code) }] });
+    expect(withComments.value).toBe(codeOnly.value);
+    expect(withComments.codeLines).toBe(50);
+    expect(withComments.commentLines).toBe(50);
+    expect(withComments.reasons[0]).toBe('50 code lines (50 comment lines not counted)');
+    const more = prValue({ additions: 100, deletions: 0, changedFiles: 1, files: [{ path: 'src/a.ts', additions: 100, deletions: 0, patch: patch([...code, ...code]) }] });
+    expect(more.value).toBeGreaterThan(codeOnly.value);
+  });
+
+  it('caps comment-only and formatting-only changes like docs and content', () => {
+    const comments = prValue({ additions: 40, deletions: 0, changedFiles: 1, files: [{ path: 'src/a.ts', additions: 40, deletions: 0, patch: patch(Array.from({ length: 40 }, (_, i) => `+// ${i}`)) }] });
+    expect(comments.kind).toBe('comments');
+    expect(comments.value).toBeLessThanOrEqual(PR_VALUE_RULES.docsCap);
+    const fmt = prValue({ additions: 30, deletions: 30, changedFiles: 1, files: [{ path: 'src/a.ts', additions: 30, deletions: 30, patch: patch([...Array.from({ length: 30 }, (_, i) => `-  let a${i} = ${i};`), ...Array.from({ length: 30 }, (_, i) => `+let a${i} = ${i};`)]) }] });
+    expect(fmt.kind).toBe('formatting');
+    expect(fmt.value).toBeLessThanOrEqual(PR_VALUE_RULES.contentCap);
+    expect(fmt.reasons).toContain('whitespace and formatting only');
+  });
+
+  it('falls back to the line counts for a file without a patch', () => {
+    const v = prValue({ additions: 60, deletions: 0, changedFiles: 1, files: [{ path: 'src/big.ts', additions: 60, deletions: 0 }] });
+    expect(v.codeLines).toBe(60);
+    expect(v.kind).toBe('code');
   });
 });

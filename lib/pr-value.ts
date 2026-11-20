@@ -21,6 +21,20 @@ export interface PRFileChange {
   deletions: number;
   /** GraphQL PullRequestChangedFile.changeType: ADDED, MODIFIED, DELETED, RENAMED, … */
   changeType?: string;
+  /** Unified diff of this file (REST pulls/{n}/files `patch`); absent for very large files. */
+  patch?: string;
+}
+
+/** What the added and removed lines of a diff are made of. */
+export interface LineMix {
+  /** Lines with logic in them: everything below taken out. */
+  code: number;
+  /** Comment-only lines, by the file's language. */
+  comment: number;
+  /** Blank, whitespace-only, or a lone bracket / punctuation. */
+  blank: number;
+  /** A removed line that comes back identical except for whitespace: re-indenting, reformatting. */
+  formatting: number;
 }
 
 export interface PRValueInput {
@@ -33,15 +47,18 @@ export interface PRValueInput {
   reviews?: number;
 }
 
-export type PRKind = 'code' | 'tests' | 'docs' | 'content' | 'mixed';
+export type PRKind = 'code' | 'tests' | 'docs' | 'content' | 'mixed' | 'comments' | 'formatting';
 
 /** Stored on the cached PR; small on purpose (every PR of every student carries one). */
 export interface PRContribution {
   /** E, the effort term: PR_VALUE_MIN..PR_VALUE_MAX, 1 = neutral. */
   value: number;
   kind: PRKind;
-  /** Code lines (additions + deletions in code and test files). */
+  /** Substantive code lines (additions + deletions in code and test files, with
+   *  comment-only, blank and formatting-only lines taken out when the diff was read). */
   codeLines: number;
+  /** Comment-only lines seen in code and test files; never score, shown for honesty. */
+  commentLines?: number;
   /** Files changed, all kinds. */
   files: number;
   /** Short human reasons, e.g. "120 code lines", "tests added", "docs only". */
@@ -52,7 +69,7 @@ export interface PRContribution {
   v: number;
 }
 
-export const PR_VALUE_VERSION = 1;
+export const PR_VALUE_VERSION = 2;
 export const PR_VALUE_MIN = 0.4;
 export const PR_VALUE_MAX = 2.0;
 export const PR_VALUE_NEUTRAL = 1.0;
@@ -109,6 +126,98 @@ export function classifyPath(path: string): FileKind {
 
 const DOCS_LABELS = ['documentation', 'docs', 'typo', 'readme'];
 
+/* ── reading the diff ─────────────────────────────────────────────────────
+   GitHub's per-file counts treat a comment, a blank line and a line of logic
+   alike. The patch tells them apart. */
+const SLASH = new Set(['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'java', 'c', 'cc', 'cpp', 'cxx', 'h', 'hh', 'hpp', 'cs', 'go', 'rs', 'kt', 'kts', 'swift', 'scala', 'php', 'dart', 'm', 'mm', 'groovy', 'gradle', 'proto', 'css', 'scss', 'less', 'sass', 'vue', 'svelte']);
+const HASH = new Set(['py', 'pyi', 'rb', 'sh', 'bash', 'zsh', 'fish', 'pl', 'pm', 'r', 'jl', 'ex', 'exs', 'nim', 'cr', 'ps1', 'tcl', 'awk', 'makefile', 'mk', 'cmake', 'dockerfile', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf']);
+const DASH = new Set(['sql', 'lua', 'hs', 'lhs', 'elm', 'ada', 'adb', 'ads', 'vhd', 'vhdl']);
+const ANGLE = new Set(['html', 'htm', 'xml', 'xhtml', 'svg', 'md', 'mdx', 'astro']);
+const SEMI = new Set(['lisp', 'cl', 'el', 'clj', 'cljs', 'cljc', 'edn', 'scm', 'rkt', 'asm', 's']);
+const PERCENT = new Set(['tex', 'sty', 'erl', 'hrl', 'm']);
+
+type CommentSyntax = { line: string[]; blockOpen?: string; blockClose?: string; docstring?: boolean };
+function commentSyntax(path: string): CommentSyntax {
+  const name = path.toLowerCase().split('/').pop() ?? '';
+  const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : name;
+  if (ext === 'py' || ext === 'pyi') return { line: ['#'], docstring: true };
+  if (HASH.has(ext)) return { line: ['#'] };
+  if (SLASH.has(ext)) return { line: ['//'], blockOpen: '/*', blockClose: '*/' };
+  if (DASH.has(ext)) return { line: ['--'], blockOpen: '/*', blockClose: '*/' };
+  if (ANGLE.has(ext)) return { line: [], blockOpen: '<!--', blockClose: '-->' };
+  if (SEMI.has(ext)) return { line: [';'] };
+  if (PERCENT.has(ext)) return { line: ['%'] };
+  // Unknown language: the common prefixes, so a comment is still a comment.
+  return { line: ['//', '#'], blockOpen: '/*', blockClose: '*/' };
+}
+
+const PUNCT_ONLY = /^[\s{}()[\];,.:]*$/;
+const squash = (s: string) => s.replace(/\s+/g, '');
+
+/** Classifies the added and removed lines of one file's unified diff. Pure. */
+export function lineMix(patch: string, path: string): LineMix {
+  const mix: LineMix = { code: 0, comment: 0, blank: 0, formatting: 0 };
+  const syn = commentSyntax(path);
+  const removed: string[] = [];
+  const added: string[] = [];
+  for (const raw of patch.split('\n')) {
+    if (raw.startsWith('+++') || raw.startsWith('---') || raw.startsWith('@@') || raw.startsWith('\\')) continue;
+    if (raw.startsWith('+')) added.push(raw.slice(1));
+    else if (raw.startsWith('-')) removed.push(raw.slice(1));
+  }
+  // Formatting: a removed line that returns with only whitespace differences.
+  const pool = new Map<string, number>();
+  for (const r of removed) {
+    const k = squash(r);
+    if (k) pool.set(k, (pool.get(k) ?? 0) + 1);
+  }
+  const keepAdded: string[] = [];
+  for (const a of added) {
+    const k = squash(a);
+    const n = k ? pool.get(k) ?? 0 : 0;
+    if (n > 0) { pool.set(k, n - 1); mix.formatting += 2; }
+    else keepAdded.push(a);
+  }
+  // What is left in the pool found no re-indented partner: real removals.
+  const keepRemoved: string[] = [];
+  for (const r of removed) {
+    const k = squash(r);
+    const n = k ? pool.get(k) ?? 0 : 0;
+    if (n > 0) {
+      pool.set(k, n - 1);
+      keepRemoved.push(r);
+    }
+  }
+  let inBlock = false;
+  let inDoc = false;
+  const classify = (line: string) => {
+    const t = line.trim();
+    if (inBlock) {
+      mix.comment++;
+      if (syn.blockClose && t.includes(syn.blockClose)) inBlock = false;
+      return;
+    }
+    if (syn.docstring) {
+      const q = (t.match(/"""|'''/g) ?? []).length;
+      if (inDoc) { mix.comment++; if (q % 2 === 1) inDoc = false; return; }
+      if (t.startsWith('"""') || t.startsWith("'''")) { mix.comment++; if (q % 2 === 1) inDoc = true; return; }
+    }
+    if (!t || PUNCT_ONLY.test(t)) { mix.blank++; return; }
+    if (syn.line.some((p) => t.startsWith(p))) { mix.comment++; return; }
+    if (syn.blockOpen && t.startsWith(syn.blockOpen)) {
+      mix.comment++;
+      if (!(syn.blockClose && t.includes(syn.blockClose, syn.blockOpen.length))) inBlock = true;
+      return;
+    }
+    if (syn.blockOpen === '/*' && t.startsWith('*')) { mix.comment++; return; } // continuation of a block
+    mix.code++;
+  };
+  for (const l of keepAdded) classify(l);
+  inBlock = false; inDoc = false;
+  for (const l of keepRemoved) classify(l);
+  return mix;
+}
+
 const clamp = (v: number) => Math.max(PR_VALUE_MIN, Math.min(PR_VALUE_MAX, Math.round(v * 100) / 100));
 
 export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
@@ -116,14 +225,31 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
   const reasons: string[] = [];
   const kinds = { code: 0, test: 0, docs: 0, content: 0 };
   let codeLines = 0;
+  let commentLines = 0;
+  let formattingLines = 0;
+  let rawCodeLines = 0;
   let testAdditions = 0;
   let newCodeFiles = 0;
   let codeAdds = 0;
   let codeDels = 0;
+  let readDiff = false;
   for (const f of input.files) {
     const k = classifyPath(f.path);
     kinds[k]++;
-    if (k === 'code' || k === 'test') codeLines += f.additions + f.deletions;
+    if (k === 'code' || k === 'test') {
+      rawCodeLines += f.additions + f.deletions;
+      if (typeof f.patch === 'string' && f.patch.length > 0) {
+        // The diff says what the lines are; comments, blanks and
+        // re-indentation do not count as change.
+        const mix = lineMix(f.patch, f.path);
+        codeLines += mix.code;
+        commentLines += mix.comment;
+        formattingLines += mix.formatting;
+        readDiff = true;
+      } else {
+        codeLines += f.additions + f.deletions;
+      }
+    }
     if (k === 'test') testAdditions += f.additions;
     if (k === 'code') {
       codeAdds += f.additions;
@@ -138,23 +264,32 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
   const docsOnly = codeish === 0 && kinds.docs > 0 && kinds.content === 0;
   const contentOnly = codeish === 0 && kinds.content > 0 && kinds.docs === 0;
   const docsAndContent = codeish === 0 && kinds.docs > 0 && kinds.content > 0;
+  // Code files whose diff turned out to hold no logic: comments alone, or
+  // whitespace and reformatting alone.
+  const commentsOnly = readDiff && codeish > 0 && codeLines === 0 && commentLines > 0;
+  const formattingOnly = readDiff && codeish > 0 && codeLines === 0 && commentLines === 0 && rawCodeLines > 0;
   const labels = (input.labels ?? []).map((l) => l.toLowerCase());
   const docsLabel = labels.some((l) => DOCS_LABELS.some((d) => l.includes(d)));
 
-  // Size: log-scaled lines in code and test files.
-  const lines = docsOnly || contentOnly || docsAndContent ? input.additions + input.deletions : codeLines;
+  // Size: log-scaled substantive lines in code and test files.
+  const nonCode = docsOnly || contentOnly || docsAndContent;
+  const lines = nonCode ? input.additions + input.deletions : commentsOnly ? commentLines : formattingOnly ? rawCodeLines : codeLines;
   const t = Math.log(1 + Math.min(Math.max(0, lines), R.sizeCap)) / Math.log(1 + R.sizeCap);
   let value = R.sizeMin + (R.sizeMax - R.sizeMin) * t;
-  reasons.push(docsOnly || contentOnly || docsAndContent ? `${lines} lines` : `${codeLines} code lines`);
+  if (nonCode) reasons.push(`${lines} lines`);
+  else if (commentsOnly) reasons.push(`${commentLines} comment lines, no code`);
+  else if (formattingOnly) reasons.push(`${rawCodeLines} lines of formatting, no code`);
+  else reasons.push(`${codeLines} code lines${commentLines > 0 ? ` (${commentLines} comment lines not counted)` : ''}${formattingLines > 0 ? ` (${formattingLines} formatting lines not counted)` : ''}`);
 
   let kind: PRKind = 'code';
-  if (contentOnly || docsOnly || docsAndContent) {
-    // Docs and content scale inside their own band, PR_VALUE_MIN..cap, so a
-    // two-line typo fix is not worth the same as a four-hundred-line guide.
-    const cap = contentOnly ? R.contentCap : R.docsCap;
+  if (contentOnly || docsOnly || docsAndContent || commentsOnly || formattingOnly) {
+    // Docs, content, comments and formatting scale inside their own band,
+    // PR_VALUE_MIN..cap, so a two-line typo fix is not worth the same as a
+    // four-hundred-line guide. Comments are docs; reformatting is content.
+    const cap = contentOnly || formattingOnly ? R.contentCap : R.docsCap;
     value = PR_VALUE_MIN + (cap - PR_VALUE_MIN) * t;
-    kind = contentOnly ? 'content' : 'docs';
-    reasons.push(contentOnly ? 'images, data or config only' : 'docs only');
+    kind = contentOnly ? 'content' : formattingOnly ? 'formatting' : commentsOnly ? 'comments' : 'docs';
+    reasons.push(contentOnly ? 'images, data or config only' : formattingOnly ? 'whitespace and formatting only' : commentsOnly ? 'comments only' : 'docs only');
   } else {
     if (testAdditions > 0) {
       value += R.testsBonus;
@@ -182,7 +317,7 @@ export function prValue(input: PRValueInput): Omit<PRContribution, 'at' | 'v'> {
     value += R.reviewBonus;
     reasons.push(`${input.reviews} reviews`);
   }
-  return { value: clamp(value), kind, codeLines, files: input.files.length || input.changedFiles, reasons };
+  return { value: clamp(value), kind, codeLines, ...(commentLines > 0 ? { commentLines } : {}), files: input.files.length || input.changedFiles, reasons };
 }
 
 /* ── the switch ───────────────────────────────────────────────────────────
