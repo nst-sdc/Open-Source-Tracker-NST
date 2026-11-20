@@ -1619,6 +1619,50 @@ const MAX_TOTAL_BATCH = 400;
 const TICK_DEADLINE_MS = Number(process.env.TICK_DEADLINE_MS) || 150_000;
 
 export const FAIL_STATE_KEY = "refresh_fail_state";
+
+/**
+ * Which students a tick may refresh, and in what lane. Never cached and
+ * never attempted is first priority. Anything attempted — a recorded
+ * failure, or a login GitHub could not find (`unresolvedSince`) — waits
+ * `staleMs` since that attempt and then rotates in with the stale profiles,
+ * oldest first. Before this, a deleted account came back as "never cached"
+ * on every tick and was retried first, eight times in three hours, while
+ * students with real work waited.
+ */
+export function classifyRefreshCandidates(input: {
+  students: ReadonlyArray<{ github: string; unresolvedSince?: string }>;
+  /** login (lower) -> cachedAt ISO of the last successful cache. */
+  cacheMap: ReadonlyMap<string, string>;
+  /** login (lower) -> ISO of the last failed attempt. */
+  failState: Readonly<Record<string, string>>;
+  excluded: ReadonlySet<string>;
+  now: number;
+  staleMs: number;
+}): { neverCached: string[]; staleCached: Array<{ username: string; cachedAtTime: number }> } {
+  const neverCached: string[] = [];
+  const staleCached: Array<{ username: string; cachedAtTime: number }> = [];
+  for (const student of input.students) {
+    const lower = student.github.toLowerCase();
+    if (input.excluded.has(lower)) continue;
+    const cachedAtStr = input.cacheMap.get(lower);
+    if (cachedAtStr) {
+      const cachedAtTime = new Date(cachedAtStr).getTime();
+      if (input.now - cachedAtTime >= input.staleMs) staleCached.push({ username: student.github, cachedAtTime });
+      continue;
+    }
+    const lastAttemptStr = input.failState[lower] ?? student.unresolvedSince;
+    if (lastAttemptStr) {
+      const lastAttemptTime = new Date(lastAttemptStr).getTime();
+      if (Number.isFinite(lastAttemptTime) && input.now - lastAttemptTime >= input.staleMs) {
+        staleCached.push({ username: student.github, cachedAtTime: lastAttemptTime });
+      }
+      // else: tried recently; its turn comes next cycle
+    } else {
+      neverCached.push(student.github);
+    }
+  }
+  return { neverCached, staleCached };
+}
 // Tracks, per username, the last time a fetch was *attempted* for a student
 // who has never once had a successful fetch (no real cachedAt yet). Without
 // this, a student whose fetch keeps failing (private/restricted profile,
@@ -1743,40 +1787,14 @@ export async function updateStaleProfiles(
       );
     }
 
-    // Classify students who are not already excluded
-    const neverCached: string[] = [];
-    const staleCached: Array<{ username: string; cachedAtTime: number }> = [];
-
-    for (const student of students) {
-      const lower = student.github.toLowerCase();
-      if (excludedSet.has(lower)) continue;
-
-      const cachedAtStr = cacheMap.get(lower);
-      if (cachedAtStr) {
-        const cachedAtTime = new Date(cachedAtStr).getTime();
-        if (now - cachedAtTime >= STALE_THRESHOLD_MS) {
-          staleCached.push({ username: student.github, cachedAtTime });
-        }
-        continue;
-      }
-
-      // Never successfully cached. If we've never even attempted it, it's
-      // genuinely first-priority. If we have, treat that attempt like any
-      // other stale profile — eligible again after STALE_THRESHOLD_MS since
-      // the attempt — instead of retrying it first on every single tick.
-      const lastAttemptStr = failState[lower];
-      if (lastAttemptStr) {
-        const lastAttemptTime = new Date(lastAttemptStr).getTime();
-        if (now - lastAttemptTime >= STALE_THRESHOLD_MS) {
-          staleCached.push({
-            username: student.github,
-            cachedAtTime: lastAttemptTime,
-          });
-        }
-      } else {
-        neverCached.push(student.github);
-      }
-    }
+    const { neverCached, staleCached } = classifyRefreshCandidates({
+      students,
+      cacheMap,
+      failState,
+      excluded: excludedSet,
+      now,
+      staleMs: STALE_THRESHOLD_MS,
+    });
 
     // Prioritize never-cached targets first
     const neverCachedTargets = neverCached.slice(0, remainingCount);
@@ -1806,6 +1824,7 @@ export async function updateStaleProfiles(
   //    bounded by one group's duration (they all run in parallel), while
   //    total throughput scales with however many tokens exist.
   const updatedUsernames: string[] = [];
+  const attemptedUsernames: string[] = [];
   // Guard against the (unlikely) case of zero available tokens — fall back to
   // a single worker with no explicit token, which still works via
   // getGitHubHeaders()'s existing cookie/pool/system fallback chain.
@@ -1836,6 +1855,7 @@ export async function updateStaleProfiles(
           break;
         }
         const lower = username.toLowerCase();
+        attemptedUsernames.push(username);
         try {
           const profile = await refreshStudentCache(username, token);
           updatedUsernames.push(username);
@@ -1879,13 +1899,12 @@ export async function updateStaleProfiles(
                   `${username} cannot be found on GitHub (deleted or suspended); kept on the roster as unresolved.`,
                 );
               }
-              // Processed either way: drop from the refresh queue and the
-              // never-cached lane so the rest of the roster gets its turn.
+              // Processed either way: drop from the refresh queue, and stamp
+              // the attempt so the login waits a full cycle before the loop
+              // looks at it again instead of leading every tick.
               updatedUsernames.push(username);
-              if (failState[lower]) {
-                delete failState[lower];
-                failStateChanged = true;
-              }
+              failState[lower] = new Date().toISOString();
+              failStateChanged = true;
             } catch (resolveErr) {
               // Rate limit or network trouble while resolving: decide nothing
               // this tick, retry like any other failure.
@@ -1933,9 +1952,11 @@ export async function updateStaleProfiles(
     }
   }
 
-  // 5. Update the queue in KV by removing the successfully processed users
+  // 5. Update the queue in KV by removing every login this tick attempted:
+  //    a failure is stamped in the fail state and comes back next cycle,
+  //    instead of sitting at the head of the queue and failing every tick.
   if (validQueue.length > 0) {
-    const processedSet = new Set(updatedUsernames.map((u) => u.toLowerCase()));
+    const processedSet = new Set(attemptedUsernames.map((u) => u.toLowerCase()));
     const remainingQueue = validQueue.filter(
       (username) => !processedSet.has(username.toLowerCase()),
     );
