@@ -131,7 +131,10 @@ export function prExcludedBy(
  *  repos. Built once per scoring pass; see OrgPrior in repo-score.ts. */
 export function buildOrgPriors(map: RepoCacheMap, nowMs: number = Date.now()): (repoFullName: string) => OrgPrior {
   const best = new Map<string, number>();
+  const maxStars = new Map<string, number>();
   for (const [name, entry] of Object.entries(map)) {
+    const starsOwner = name.split('/')[0]?.toLowerCase();
+    if (starsOwner && !entry.signals?.isFork) maxStars.set(starsOwner, Math.max(maxStars.get(starsOwner) ?? 0, entry.stars ?? 0));
     if (!entry.signals || entry.schemaVersion !== REPO_SCHEMA_VERSION) continue;
     const owner = name.split('/')[0]?.toLowerCase();
     if (!owner) continue;
@@ -142,6 +145,6 @@ export function buildOrgPriors(map: RepoCacheMap, nowMs: number = Date.now()): (
   }
   return (repoFullName: string) => {
     const owner = repoFullName.split('/')[0]?.toLowerCase() ?? '';
-    return { programOrg: isProgramOrg(owner), bestInOrg: best.get(owner) };
+    return { programOrg: isProgramOrg(owner), bestInOrg: best.get(owner), maxStarsInOrg: maxStars.get(owner) };
   };
 }

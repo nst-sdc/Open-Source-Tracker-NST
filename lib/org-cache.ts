@@ -58,6 +58,8 @@ export function unclassifiedOwners(
 export interface ClassifyDeps {
   fetch?: (url: string, init?: RequestInit) => Promise<Response>;
   now?: () => Date;
+  /** Called with the owners classified in this pass, after the cache is saved. */
+  onClassified?: (owners: string[]) => Promise<unknown>;
 }
 
 /**
@@ -80,6 +82,7 @@ export async function classifyUnknownOwners(
   let checked = 0;
   let organisations = 0;
   let stoppedBy: string | undefined;
+  const classified: string[] = [];
   const headers = await getGitHubHeaders();
   for (const owner of todo.slice(0, Math.max(0, limit))) {
     let res: Response;
@@ -115,8 +118,22 @@ export async function classifyUnknownOwners(
       continue; // transient; leave unclassified for a later pass
     }
     checked++;
+    classified.push(owner);
   }
-  if (checked > 0) await saveOrgCache(map);
+  if (checked > 0) {
+    await saveOrgCache(map);
+    // The verdict on an owner's repos was decided while its kind was unknown
+    // (the organisation bar). Now that it is known, re-decide those repos at
+    // once instead of when each one ages out of the cache a week later: a
+    // 179-star personal repo sat valid for days because of that gap.
+    if (deps.onClassified) {
+      try {
+        await deps.onClassified(classified);
+      } catch (err) {
+        console.error('[org-cache] re-gating repos of newly classified owners failed:', err);
+      }
+    }
+  }
   return { checked, organisations, remaining: Math.max(0, todo.length - checked), ...(stoppedBy ? { stoppedBy } : {}) };
 }
 

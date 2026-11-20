@@ -16,13 +16,13 @@ describe('vouched organisations', () => {
   beforeEach(() => { (kv as unknown as { __reset: () => void }).__reset(); _resetVouchedMemory(); });
 
   it('adds, normalises and dedupes logins, and the scorer sees them once primed', async () => {
-    expect(isProgramOrg('jenkins-infra')).toBe(false);
-    expect((await addVouchedOrg('https://github.com/jenkins-infra/', 'Jenkins project infra org')).ok).toBe(true);
-    expect((await addVouchedOrg('@Jenkins-Infra')).ok).toBe(false);
+    expect(isProgramOrg('uyuni-project')).toBe(false);
+    expect((await addVouchedOrg('https://github.com/uyuni-project/', 'SUSE Uyuni')).ok).toBe(true);
+    expect((await addVouchedOrg('@Uyuni-Project')).ok).toBe(false);
     expect((await addVouchedOrg('not a login!')).ok).toBe(false);
-    expect((await getVouchedOrgs()).map((v) => v.login)).toEqual(['jenkins-infra']);
-    expect(isProgramOrg('JENKINS-INFRA')).toBe(true);
-    expect(isVouchedOrg('jenkins-infra')).toBe(true);
+    expect((await getVouchedOrgs()).map((v) => v.login)).toEqual(['uyuni-project']);
+    expect(isProgramOrg('UYUNI-PROJECT')).toBe(true);
+    expect(isVouchedOrg('uyuni-project')).toBe(true);
     expect(isProgramOrg('jenkinsci')).toBe(true); // still on the program list
   });
 

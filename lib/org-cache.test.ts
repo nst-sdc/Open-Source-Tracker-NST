@@ -376,3 +376,22 @@ describe('owner classification', () => {
     expect((await getOrgCache()).big.isOrganization).toBe(true);
   });
 });
+
+describe('classifyUnknownOwners onClassified', () => {
+  const pr = (repo: string, n: number) => ({ number: n, repository_url: `https://api.github.com/repos/${repo}`, pull_request: { merged_at: '2026-01-01T00:00:00Z' } });
+  const user = (login: string, type: 'Organization' | 'User') =>
+    new Response(JSON.stringify({ login, name: `${login} name`, type, avatar_url: `https://a/${login}` }), { status: 200 });
+  it('hands the owners it classified to the callback after saving, and survives a failing callback', async () => {
+    const index: OrgIndex = {};
+    indexStudentContributions(index, 'alice', { prs: [pr('scribe-org/Scribe-iOS', 1), pr('vmDeshpande/ai-agent-automation', 2)] } as never);
+    await writeOrgIndex(index);
+    const got: string[][] = [];
+    const r = await classifyUnknownOwners(10, {
+      fetch: async (url) => user(url.split('/users/')[1], url.includes('scribe-org') ? 'Organization' : 'User'),
+      onClassified: async (owners) => { got.push(owners); throw new Error('boom'); },
+    });
+    expect(r.checked).toBe(2);
+    expect(got).toHaveLength(1);
+    expect(got[0].map((o) => o.toLowerCase()).sort()).toEqual(['scribe-org', 'vmdeshpande']);
+  });
+});
