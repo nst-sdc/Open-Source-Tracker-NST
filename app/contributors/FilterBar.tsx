@@ -44,7 +44,7 @@ const PRESETS = [
 ];
 
 const YEARS = ["1st year", "2nd year", "3rd year", "4th year"] as const;
-const CAMPUSES = ["ADYPU", "Rishihood", "SVYASA"] as const;
+const CAMPUSES = ["ADYPU", "Rishihood", "SVYASA", "SMRU"] as const;
 
 function Spinner({ className = "text-brand-500" }: { className?: string }) {
   return (

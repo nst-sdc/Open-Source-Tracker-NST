@@ -879,7 +879,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
 interface Student {
   github: string;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA';
+  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU';
   githubId?: number;
   unresolvedSince?: string;
   previousLogins?: string[];
@@ -890,7 +890,7 @@ function StudentsTab() {
   const [loading, setLoading] = useState(true);
   const [newGithub, setNewGithub] = useState('');
   const [newYear, setNewYear] = useState<'1st year' | '2nd year' | '3rd year' | '4th year' | ''>('');
-  const [newCampus, setNewCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | ''>('');
+  const [newCampus, setNewCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU' | ''>('');
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -898,7 +898,7 @@ function StudentsTab() {
   // Editing state
   const [editingGithub, setEditingGithub] = useState<string | null>(null);
   const [editYear, setEditYear] = useState<'1st year' | '2nd year' | '3rd year' | '4th year' | ''>('');
-  const [editCampus, setEditCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | ''>('');
+  const [editCampus, setEditCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU' | ''>('');
   const [saving, setSaving] = useState(false);
 
   // Search & Filter state
@@ -1018,6 +1018,7 @@ function StudentsTab() {
           <option value="Rishihood">Rishihood</option>
           <option value="ADYPU">ADYPU</option>
           <option value="SVYASA">SVYASA</option>
+          <option value="SMRU">SMRU</option>
         </select>
 
         <button type="submit" disabled={adding || !newGithub.trim()} id="add-student-btn"
@@ -1072,6 +1073,7 @@ function StudentsTab() {
           <option value="Rishihood">Rishihood</option>
           <option value="ADYPU">ADYPU</option>
           <option value="SVYASA">SVYASA</option>
+          <option value="SMRU">SMRU</option>
         </select>
 
         {(searchQuery || filterYear || filterCampus) && (
@@ -1186,6 +1188,7 @@ function StudentsTab() {
                         <option value="Rishihood">Rishihood</option>
                         <option value="ADYPU">ADYPU</option>
                         <option value="SVYASA">SVYASA</option>
+                        <option value="SMRU">SMRU</option>
                       </select>
                     </div>
                     <div className="flex items-end gap-1.5 h-full pt-5">
@@ -1926,7 +1929,7 @@ interface JoinRequest {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA';
+  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU';
 }
 
 function RequestsTab({ onCountChange }: { onCountChange: (count: number) => void }) {
