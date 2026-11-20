@@ -1,10 +1,15 @@
 import programOrgs from '@/data/program-orgs.json';
 
 /**
- * GitHub orgs that run a mentorship program (GSoC 2025 and 2026, LFX, CNCF,
- * NumFOCUS, Eclipse, Apache), lowercased. data/program-orgs.json is a
- * snapshot of the programs' own published org lists, taken October 2026;
- * refresh it from the same sources when a new cycle's orgs are announced.
+ * GitHub orgs of well-known open-source organisations, lowercased: those
+ * that run or take part in a mentorship programme (GSoC 2016–2021 archive,
+ * GSoC 2025 and 2026, LFX, NumFOCUS), every CNCF landscape project, every
+ * Eclipse Foundation project, Apache, and a curated list of foundations and
+ * flagship communities (PSF, VideoLAN, OpenJS, GNOME, KDE, Wikimedia …).
+ * data/program-orgs.json is a snapshot of the programmes' own published
+ * lists (GSoC archive API, CNCF landscape.yml, Eclipse projects API), taken
+ * October–November 2026; refresh it from the same sources when a new
+ * cycle's orgs are announced.
  *
  * Used as a quality prior by the repo scorer: a repo under one of these orgs
  * is always valid and never priced below PROGRAM_ORG_FLOOR, whatever its own
