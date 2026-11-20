@@ -786,21 +786,46 @@ export async function getStudentReviews(
   return all;
 }
 
+/** GitHub Search answers at most this many results for one query, however
+ *  many pages are asked for. */
+const SEARCH_RESULT_CAP = 1000;
+/** How many capped queries to chain for one student (5,000 PRs). */
+const MAX_SEARCH_WINDOWS = 5;
+
 export async function getStudentPRs(
   username: string,
   token?: string,
 ): Promise<StudentPR[] | null> {
-  const allPRs: StudentPR[] = [];
-  let page = 1;
+  const byId = new Map<number, StudentPR>();
   const maxPages = token || GITHUB_TOKEN ? 10 : 3;
 
-  while (page <= maxPages) {
-    const data = await searchPRs(username, "", page, 100, token);
-    if (!data) return null;
-    allPRs.push(...data.items);
-    if (allPRs.length >= data.total_count || data.items.length < 100) break;
-    page++;
+  // Results come newest first, and a query stops at SEARCH_RESULT_CAP. Two
+  // students have more PRs than that; the older ones (17 and 20 merges in
+  // counted repos, found by a full crawl on 2026-11-20) never reached the
+  // cache. When a window fills up, ask again for PRs created on or before
+  // the oldest one seen; the boundary PR comes back twice and is deduped.
+  let extra = "";
+  for (let window = 0; window < MAX_SEARCH_WINDOWS; window++) {
+    let page = 1;
+    let fetched = 0;
+    let totalCount = 0;
+    let oldest: string | undefined;
+    while (page <= maxPages) {
+      const data = await searchPRs(username, extra, page, 100, token);
+      if (!data) return null;
+      totalCount = data.total_count;
+      fetched += data.items.length;
+      for (const pr of data.items) {
+        byId.set(pr.id, pr);
+        if (!oldest || pr.created_at < oldest) oldest = pr.created_at;
+      }
+      if (fetched >= totalCount || data.items.length < 100) break;
+      page++;
+    }
+    if (fetched >= totalCount || fetched < SEARCH_RESULT_CAP || !oldest) break;
+    extra = `created:<=${oldest}`;
   }
+  const allPRs = [...byId.values()];
 
   // Admin-approved own-repo PRs (see lib/kv-own-repo-exceptions.ts) — merged
   // in here so every caller (leaderboard refresh, /check-work, achiever
