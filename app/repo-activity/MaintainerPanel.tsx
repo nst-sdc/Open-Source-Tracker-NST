@@ -56,8 +56,19 @@ export function MaintainerPanel({ contributor: c, events, repoUrl, since, until,
   until: string;
   mergesKnown: boolean;
 }) {
-  const mine = useMemo(() => events.filter((e) => e.who.toLowerCase() === c.username.toLowerCase()), [events, c.username]);
+  const me = c.username.toLowerCase();
+  const mine = useMemo(() => events.filter((e) => e.who.toLowerCase() === me), [events, me]);
   const merges = useMemo(() => mine.filter((e) => e.kind === 'merged').sort((a, b) => b.t.localeCompare(a.t)), [mine]);
+  // The number that matters: pull requests OTHER people wrote that this
+  // maintainer merged. Someone merging their own work tells you nothing
+  // about whether tagging them on your PR will get it reviewed.
+  const fromOthers = useMemo(() => merges.filter((e) => !e.by || e.by.toLowerCase() !== me), [merges, me]);
+  const ownMerged = merges.length - fromOthers.length;
+  const authors = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of fromOthers) if (e.by) m.set(e.by, (m.get(e.by) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [fromOthers]);
   const heat = useMemo(() => buildHeatmap(mine, new Date(since), new Date(until)), [mine, since, until]);
   const lastActive = mine.length ? mine.reduce((m, e) => (e.t > m ? e.t : m), mine[0].t) : null;
   const opened = [...c.prs].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -70,9 +81,9 @@ export function MaintainerPanel({ contributor: c, events, repoUrl, since, until,
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <Tile label={mergesKnown ? 'PRs they merged' : 'PRs they merged (needs token)'} value={merges.length} tone="text-success-600" />
-        <Tile label="PRs they opened" value={c.prsCount} />
-        <Tile label="of those merged" value={c.mergedPRs} tone="text-success-600" />
+        <Tile label={mergesKnown ? "Others' PRs they merged" : "Others' PRs merged (needs token)"} value={fromOthers.length} tone="text-success-600" />
+        <Tile label="Different authors" value={authors.length} />
+        <Tile label="Own PRs they merged" value={ownMerged} />
         <Tile label="Issues they opened" value={c.issuesCount} tone="text-violet-600" />
       </div>
       {pattern && (
@@ -82,25 +93,36 @@ export function MaintainerPanel({ contributor: c, events, repoUrl, since, until,
       )}
 
       <div>
-        <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Merged by @{c.username} · {merges.length}</h4>
-        {merges.length === 0 ? (
-          <p className="text-sm text-ink-soft italic">{mergesKnown ? 'Merged nothing in this period.' : 'Merges cannot be attributed without a GitHub token.'}</p>
+        <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Merged from others · {fromOthers.length}</h4>
+        {authors.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {authors.slice(0, 12).map(([login, n]) => (
+              <span key={login} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-panel-2 border border-line text-ink-mid">
+                @{login} <span className="font-[650] text-ink tabular-nums">{n}</span>
+              </span>
+            ))}
+            {authors.length > 12 && <span className="text-[11px] text-ink-faint self-center">and {authors.length - 12} more authors</span>}
+          </div>
+        )}
+        {fromOthers.length === 0 ? (
+          <p className="text-sm text-ink-soft italic">{mergesKnown ? "Merged nobody else's pull request in this period." : 'Merges cannot be attributed without a GitHub token.'}</p>
         ) : (
           <div className="space-y-2">
-            {merges.slice(0, 40).map((e) => (
-              <Row key={e.n} href={`${repoUrl}/pull/${e.n}`} number={e.n} title={e.title} when={`merged ${dateShort(e.t)}`} badge="merged" tone="bg-success-0 border-success-100 text-success-600" />
+            {fromOthers.slice(0, 40).map((e) => (
+              <Row key={e.n} href={`${repoUrl}/pull/${e.n}`} number={e.n} title={e.title} when={`by @${e.by ?? 'unknown'} · merged ${dateShort(e.t)}`} badge="merged" tone="bg-success-0 border-success-100 text-success-600" />
             ))}
-            {merges.length > 40 && <p className="text-[11px] text-ink-faint">and {merges.length - 40} more</p>}
+            {fromOthers.length > 40 && <p className="text-[11px] text-ink-faint">and {fromOthers.length - 40} more</p>}
           </div>
         )}
       </div>
 
-      <div>
-        <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Opened by @{c.username} · {opened.length}</h4>
-        {opened.length === 0 ? (
-          <p className="text-sm text-ink-soft italic">Opened no pull request in this period.</p>
-        ) : (
-          <div className="space-y-2">
+      {opened.length > 0 && (
+        <details className="group">
+          <summary className="cursor-pointer text-xs font-[650] text-ink-mid uppercase tracking-wider list-none flex items-center gap-2">
+            <span className="transition-transform group-open:rotate-90">▸</span> Their own pull requests · {opened.length}
+            <span className="normal-case tracking-normal font-[450] text-ink-faint">({c.mergedPRs} merged, {c.openPRs} open)</span>
+          </summary>
+          <div className="space-y-2 mt-3">
             {opened.map((pr) => (
               <Row
                 key={pr.number}
@@ -113,8 +135,8 @@ export function MaintainerPanel({ contributor: c, events, repoUrl, since, until,
               />
             ))}
           </div>
-        )}
-      </div>
+        </details>
+      )}
 
       {c.issues.length > 0 && (
         <div>

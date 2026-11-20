@@ -366,7 +366,7 @@ export async function GET(request: Request) {
     for (const e of mergeEvents ?? []) {
       if (new Date(e.mergedAt) <= filterDate) continue;
       if (isBotAccount({ login: e.mergedBy })) continue;
-      maintainerEvents.push({ t: e.mergedAt, who: e.mergedBy, kind: 'merged', n: e.number, title: clip(e.title, 80) });
+      maintainerEvents.push({ t: e.mergedAt, who: e.mergedBy, kind: 'merged', n: e.number, title: clip(e.title, 80), ...(e.author ? { by: e.author } : {}) });
     }
     for (const pr of pullRequests) {
       const login = pr.user?.login;

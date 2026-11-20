@@ -36,6 +36,8 @@ describe('buildHeatmap', () => {
     expect(tue.raised).toBe(1);
     expect(tue.people.map((p) => [p.login, p.merged, p.raised])).toEqual([['alice', 2, 0], ['bob', 0, 1]]);
     expect(tue.people[0].prs.map((p) => p.n)).toEqual([1, 2]);
+    const withAuthor = buildHeatmap([{ ...events[0], by: 'dev1' }], since, until);
+    expect(withAuthor.weeks[0][1]!.people[0].prs[0]).toEqual({ n: 1, kind: 'merged', title: 'pr 1', by: 'dev1' });
     expect(h.weeks[1][1]!.people[0].login).toBe('Alice'); // display case of the first event that day
   });
 

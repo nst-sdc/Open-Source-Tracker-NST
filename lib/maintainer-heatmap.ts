@@ -19,13 +19,15 @@ export interface MaintainerEvent {
   /** PR number. */
   n: number;
   title: string;
+  /** For a merge: who wrote the PR (absent when GitHub no longer knows). */
+  by?: string;
 }
 
 export interface HeatPerson {
   login: string;
   merged: number;
   raised: number;
-  prs: Array<{ n: number; kind: MaintainerEventKind; title: string }>;
+  prs: Array<{ n: number; kind: MaintainerEventKind; title: string; by?: string }>;
 }
 
 export interface HeatDay {
@@ -88,7 +90,7 @@ export function buildHeatmap(events: readonly MaintainerEvent[], since: Date, un
       day.people.push(p);
     }
     p[e.kind]++;
-    p.prs.push({ n: e.n, kind: e.kind, title: e.title });
+    p.prs.push({ n: e.n, kind: e.kind, title: e.title, ...(e.by ? { by: e.by } : {}) });
   }
   for (const day of byDay.values()) day.people.sort((a, b) => b.merged + b.raised - (a.merged + a.raised));
 

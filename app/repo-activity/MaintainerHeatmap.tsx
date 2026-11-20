@@ -18,8 +18,9 @@ const LEVEL_BG = [
   'var(--color-success-400)',
   'var(--color-success-600)',
 ];
-const CELL = 13;
 const GAP = 3;
+/** Bigger squares when the window is short: a month is five columns, not fifty-three. */
+const cellSize = (weeks: number) => (weeks <= 6 ? 24 : weeks <= 14 ? 18 : 13);
 
 const longDate = (key: string) =>
   new Date(`${key}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
@@ -47,6 +48,7 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
     return () => window.removeEventListener('scroll', clear, true);
   }, [hover]);
 
+  const CELL = cellSize(heat.weeks.length);
   const weekdayMax = Math.max(1, ...heat.weekdayTotals);
   const gridW = heat.weeks.length * (CELL + GAP) - GAP;
   const monthMarks = heat.weeks.map((week, i) => {
@@ -78,7 +80,7 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
       <div className="flex gap-5 flex-col lg:flex-row lg:items-start">
         {/* Calendar */}
         <div className="relative overflow-x-auto pb-1 flex-1 min-w-0" onPointerLeave={() => setHover(null)}>
-          <div className="flex gap-2 w-max ml-auto">
+          <div className="flex gap-2 w-max">
             <div className="flex flex-col text-[10px] text-ink-soft tabular-nums shrink-0" style={{ paddingTop: 16 }}>
               {WEEKDAY_SHORT.map((d, i) => (
                 <div key={d} className={`leading-none ${i >= 5 ? 'text-ink-faint' : ''}`} style={{ height: CELL, marginBottom: i === 6 ? 0 : GAP, marginTop: i === 5 ? 4 : 0, lineHeight: `${CELL}px` }}>{d}</div>
@@ -140,6 +142,7 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
                     <div key={`${pr.kind}-${pr.n}`} className="text-ink-soft truncate leading-5">
                       <span className={pr.kind === 'merged' ? 'text-success-600 font-[600]' : 'text-violet-600 font-[600]'}>{pr.kind}</span>
                       {' '}<span className="text-ink-faint">#{pr.n}</span> {pr.title}
+                      {pr.by && <span className="text-ink-faint"> · by @{pr.by}</span>}
                     </div>
                   ))}
                   {p.prs.length > 4 && <div className="text-ink-faint leading-5">and {p.prs.length - 4} more</div>}
