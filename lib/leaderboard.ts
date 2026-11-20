@@ -46,6 +46,28 @@ export interface LeaderboardQuery {
   org: string;
   year: string;
   campus: string;
+  /** Order of the ranked list: by score (default) or by average impact. */
+  sort?: LeaderboardSort;
+}
+
+export type LeaderboardSort = 'rating' | 'impact';
+
+/** By impact: highest average project value first; students without an
+ *  impact figure (under five merged PRs) after everyone who has one, each
+ *  group tie-broken by score. Rank numbers follow the chosen order. */
+export function sortSummaries<T extends { scoreMergedPRs: number; avgScore?: number }>(summaries: T[], sort: LeaderboardSort | undefined): T[] {
+  const out = [...summaries];
+  if (sort === 'impact') {
+    out.sort((a, b) => {
+      const ai = a.avgScore ?? -1;
+      const bi = b.avgScore ?? -1;
+      if (bi !== ai) return bi - ai;
+      return b.scoreMergedPRs - a.scoreMergedPRs;
+    });
+  } else {
+    out.sort((a, b) => b.scoreMergedPRs - a.scoreMergedPRs);
+  }
+  return out;
 }
 
 /** What a leaderboard row needs and nothing more. */
@@ -90,6 +112,7 @@ export function parseLeaderboardQuery(p: Record<string, string | string[] | unde
     org: one(p.org),
     year: one(p.year),
     campus: one(p.campus),
+    ...(one(p.sort) === 'impact' ? { sort: 'impact' as const } : {}),
   };
 }
 
@@ -227,8 +250,9 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
     total: students.length,
   };
 
-  // Global immutable leaderboard for the selected period.
-  const ranked: Array<StudentSummary & { rank: number }> = allSummaries.filter(hasActivity).map((s, i) => ({ ...s, rank: i + 1 }));
+  // Global immutable leaderboard for the selected period, in the chosen
+  // order; filtering below never renumbers anyone.
+  const ranked: Array<StudentSummary & { rank: number }> = sortSummaries(allSummaries.filter(hasActivity), q.sort).map((s, i) => ({ ...s, rank: i + 1 }));
 
   const cleanOrg = q.org.trim().replace(/^@/, '');
   const matchedOrg = cleanOrg ? await resolveOrganization(cleanOrg) : null;
