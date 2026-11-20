@@ -148,16 +148,24 @@ export default function RepoActivityPage() {
     if (filterType === 'issues') return c.issuesCount > 0;
     return c.prsCount > 0 || c.issuesCount > 0;
   };
-  const scoreOf = (c: Contributor) =>
-    filterType === 'prs' ? c.prsCount : filterType === 'issues' ? c.issuesCount : c.prsCount + c.issuesCount;
+  // Merged PRs rank first: a contributor whose work landed sits above one who
+  // only opened PRs, whatever the volume. Then opened PRs, then issues.
+  // The Issues filter alone ranks by issues, since that is what it shows.
   const byActivity = (a: Contributor, b: Contributor) => {
-    const d = scoreOf(b) - scoreOf(a);
-    return d !== 0 ? d : b.prsCount - a.prsCount; // tiebreaker: prs first
+    if (filterType === 'issues') {
+      if (b.issuesCount !== a.issuesCount) return b.issuesCount - a.issuesCount;
+      return b.mergedPRs - a.mergedPRs;
+    }
+    if (b.mergedPRs !== a.mergedPRs) return b.mergedPRs - a.mergedPRs;
+    if (b.prsCount !== a.prsCount) return b.prsCount - a.prsCount;
+    return b.issuesCount - a.issuesCount;
   };
   const sortedContributors = contributors.filter((c) => !c.isMaintainer && !c.isBot && matchesFilter(c)).sort(byActivity);
   const maintainersAndBots = contributors.filter((c) => (c.isMaintainer || c.isBot) && matchesFilter(c)).sort(byActivity);
 
-  const maxActivity = Math.max(...contributors.map(scoreOf), 1);
+  // The share bar follows the ranking: merged PRs unless the Issues filter is on.
+  const shareOf = (c: Contributor) => (filterType === 'issues' ? c.issuesCount : c.mergedPRs);
+  const maxActivity = Math.max(...contributors.filter((c) => !c.isMaintainer && !c.isBot).map(shareOf), 1);
 
   return (
     <main className="min-h-screen bg-panel text-ink py-12 px-4 relative overflow-hidden">
@@ -354,14 +362,7 @@ export default function RepoActivityPage() {
               {/* Leaderboard Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sortedContributors.map((c, index) => {
-                  const score =
-                    filterType === 'prs'
-                      ? c.prsCount
-                      : filterType === 'issues'
-                      ? c.issuesCount
-                      : c.prsCount + c.issuesCount;
-
-                  const widthPercent = (score / maxActivity) * 100;
+                  const widthPercent = (shareOf(c) / maxActivity) * 100;
 
                   // Gold, Silver, Bronze styling
                   const rankIcon = index < 3 ? String(index + 1) : null;
@@ -438,7 +439,7 @@ export default function RepoActivityPage() {
                         {/* Progress Visual */}
                         <div className="space-y-1">
                           <div className="flex justify-between text-[10px] text-ink-soft">
-                            <span>Contribution share</span>
+                            <span>{filterType === 'issues' ? 'Issue share' : 'Merged share'}</span>
                             <span>{Math.round(widthPercent)}%</span>
                           </div>
                           <div className="w-full h-1.5 bg-ground rounded-full overflow-hidden">
