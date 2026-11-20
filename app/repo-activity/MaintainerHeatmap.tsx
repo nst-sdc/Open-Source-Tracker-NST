@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { buildHeatmap, heatLevel, WEEKDAY_LONG, WEEKDAY_SHORT, type HeatDay, type MaintainerEvent } from '@/lib/maintainer-heatmap';
 
@@ -38,19 +38,49 @@ export function MaintainerHeatmap({ activity, repoUrl }: { activity: MaintainerA
     () => buildHeatmap(activity.events, new Date(activity.since), new Date(activity.until)),
     [activity],
   );
-  // The tooltip is portalled to <body> with fixed coordinates: inside the
-  // scrolling calendar it was clipped by overflow and sat under the cards.
-  const [hover, setHover] = useState<{ day: HeatDay; x: number; y: number; above: boolean } | null>(null);
-  // A click pins the day: the full list opens under the calendar, every PR a
-  // link, and stays until closed. The hover card is only a preview.
-  // The page remounts this component (key) on every new scan, which drops the pin.
-  const [pinned, setPinned] = useState<HeatDay | null>(null);
+  // The day card is portalled to <body> at fixed coordinates next to the
+  // square (inside the scrolling grid it was clipped and sat under the
+  // cards). It opens on hover and stays while the pointer is on the square
+  // or on the card itself, so every PR in it can be clicked; a click on the
+  // square pins it until Close, Escape, or a click elsewhere.
+  const [card, setCard] = useState<{ day: HeatDay; x: number; y: number; above: boolean } | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; } };
+  const scheduleClose = () => {
+    if (pinned) return;
+    cancelClose();
+    closeTimer.current = setTimeout(() => setCard(null), 180);
+  };
+  const placeFor = (el: HTMLElement, day: HeatDay) => {
+    const r = el.getBoundingClientRect();
+    const above = r.bottom + 360 > window.innerHeight && r.top > 360;
+    return { day, x: r.left + r.width / 2, y: above ? r.top - 6 : r.bottom + 6, above };
+  };
   useEffect(() => {
-    if (!hover) return;
-    const clear = () => setHover(null);
-    window.addEventListener('scroll', clear, true);
-    return () => window.removeEventListener('scroll', clear, true);
-  }, [hover]);
+    if (!card) return;
+    const onScroll = (e: Event) => {
+      if (cardRef.current && e.target instanceof Node && cardRef.current.contains(e.target)) return; // scrolling the list itself
+      setCard(null); setPinned(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setCard(null); setPinned(false); } };
+    const onDown = (e: PointerEvent) => {
+      if (!pinned) return;
+      if (cardRef.current?.contains(e.target as Node)) return;
+      if ((e.target as HTMLElement).closest?.('[data-heat-cell]')) return;
+      setCard(null); setPinned(false);
+    };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onDown, true);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onDown, true);
+    };
+  }, [card, pinned]);
+  useEffect(() => cancelClose, []);
 
   const CELL = cellSize(heat.weeks.length);
   const weekdayMax = Math.max(1, ...heat.weekdayTotals);
@@ -83,7 +113,7 @@ export function MaintainerHeatmap({ activity, repoUrl }: { activity: MaintainerA
 
       <div className="flex gap-5 flex-col lg:flex-row lg:items-start">
         {/* Calendar */}
-        <div className="relative overflow-x-auto pb-1 flex-1 min-w-0" onPointerLeave={() => setHover(null)}>
+        <div className="relative overflow-x-auto pb-1 flex-1 min-w-0">
           <div className="flex gap-2 w-max">
             <div className="flex flex-col text-[10px] text-ink-soft tabular-nums shrink-0" style={{ paddingTop: 16 }}>
               {WEEKDAY_SHORT.map((d, i) => (
@@ -104,21 +134,25 @@ export function MaintainerHeatmap({ activity, repoUrl }: { activity: MaintainerA
                         <button
                           type="button"
                           key={di}
+                          data-heat-cell
                           tabIndex={day ? 0 : -1}
                           aria-label={day ? `${day.date}: ${count} ${count === 1 ? 'event' : 'events'}` : undefined}
-                          aria-pressed={!!day && pinned?.date === day.date}
-                          onClick={() => {
+                          aria-pressed={!!day && pinned && card?.day.date === day.date}
+                          onClick={(e) => {
                             if (!day) return;
-                            setPinned((p) => (p?.date === day.date ? null : day));
-                            setHover(null);
+                            cancelClose();
+                            if (pinned && card?.day.date === day.date) { setPinned(false); setCard(null); return; }
+                            setCard(placeFor(e.currentTarget, day));
+                            setPinned(true);
                           }}
                           onPointerEnter={(e) => {
-                            if (!day) return;
-                            const r = e.currentTarget.getBoundingClientRect();
-                            const above = r.bottom + 320 > window.innerHeight && r.top > 320;
-                            setHover({ day, x: r.left + r.width / 2, y: above ? r.top - 8 : r.bottom + 8, above });
+                            if (!day || pinned) return;
+                            cancelClose();
+                            setCard(placeFor(e.currentTarget, day));
                           }}
-                          className={`rounded-[3px] p-0 block ${day ? 'cursor-pointer' : 'opacity-0 pointer-events-none'} ${day && (hover?.day.date === day.date || pinned?.date === day.date) ? 'ring-2 ring-success-600 ring-offset-1 ring-offset-ground' : ''}`}
+                          onPointerLeave={scheduleClose}
+                          onFocus={(e) => { if (day && !pinned) setCard(placeFor(e.currentTarget, day)); }}
+                          className={`rounded-[3px] p-0 block ${day ? 'cursor-pointer' : 'opacity-0 pointer-events-none'} ${day && card?.day.date === day.date ? 'ring-2 ring-success-600 ring-offset-1 ring-offset-ground' : ''}`}
                           style={{ width: CELL, height: CELL, marginTop: di === 5 ? 4 : 0, backgroundColor: day ? LEVEL_BG[level] : 'transparent', border: level === 0 && day ? '1px solid var(--color-line)' : undefined }}
                         />
                       );
@@ -129,39 +163,57 @@ export function MaintainerHeatmap({ activity, repoUrl }: { activity: MaintainerA
             </div>
           </div>
 
-          {/* hover is only ever set by a pointer event, so this never renders on the server */}
-          {hover && !pinned && typeof document !== 'undefined' && createPortal(
+          {/* card is only ever set by a pointer or focus event, so this never renders on the server */}
+          {card && typeof document !== 'undefined' && createPortal(
             <div
-              className={`pointer-events-none fixed z-[70] -translate-x-1/2 ${hover.above ? '-translate-y-full' : ''} rounded-xl border border-line bg-ground/95 backdrop-blur px-3.5 py-3 shadow-pop text-[12px] w-[320px] max-w-[calc(100vw-24px)]`}
-              style={{ left: `clamp(172px, ${hover.x}px, calc(100vw - 172px))`, top: hover.y }}
-              role="tooltip"
+              ref={cardRef}
+              role="dialog"
+              aria-label={`Maintainer activity on ${longDate(card.day.date)}`}
+              onPointerEnter={cancelClose}
+              onPointerLeave={scheduleClose}
+              className={`fixed z-[70] -translate-x-1/2 ${card.above ? '-translate-y-full' : ''} rounded-xl border border-line bg-ground/95 backdrop-blur shadow-pop text-[12px] w-[360px] max-w-[calc(100vw-24px)] flex flex-col`}
+              style={{ left: `clamp(192px, ${card.x}px, calc(100vw - 192px))`, top: card.y, maxHeight: 'min(60vh, 480px)' }}
             >
-              <div className="font-[650] text-ink">{longDate(hover.day.date)}</div>
-              <div className="text-ink-mid mb-2 tabular-nums">
-                {hover.day.merged + hover.day.raised === 0
-                  ? 'No maintainer activity'
-                  : `${hover.day.merged} merged · ${hover.day.raised} raised · ${hover.day.people.length} maintainer${hover.day.people.length === 1 ? '' : 's'}`}
-              </div>
-              {hover.day.people.slice(0, 6).map((p) => (
-                <div key={p.login} className="mb-2 last:mb-0 border-t border-line pt-1.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-[600] text-ink truncate">@{p.login}</span>
-                    <span className="text-ink-soft tabular-nums shrink-0">
-                      {p.merged > 0 && `${p.merged} merged`}{p.merged > 0 && p.raised > 0 && ' · '}{p.raised > 0 && `${p.raised} raised`}
-                    </span>
+              <div className="flex items-start justify-between gap-3 px-3.5 pt-3 pb-2 border-b border-line shrink-0">
+                <div>
+                  <div className="font-[650] text-ink">{longDate(card.day.date)}</div>
+                  <div className="text-ink-mid tabular-nums">
+                    {card.day.merged + card.day.raised === 0
+                      ? 'No maintainer activity'
+                      : `${card.day.merged} merged · ${card.day.raised} raised · ${card.day.people.length} maintainer${card.day.people.length === 1 ? '' : 's'}`}
                   </div>
-                  {p.prs.slice(0, 4).map((pr) => (
-                    <div key={`${pr.kind}-${pr.n}`} className="text-ink-soft truncate leading-5">
-                      <span className={pr.kind === 'merged' ? 'text-success-600 font-[600]' : 'text-violet-600 font-[600]'}>{pr.kind}</span>
-                      {' '}<span className="text-ink-faint">#{pr.n}</span> {pr.title}
-                      {pr.by && <span className="text-ink-faint"> · by @{pr.by}</span>}
-                    </div>
-                  ))}
-                  {p.prs.length > 4 && <div className="text-ink-faint leading-5">and {p.prs.length - 4} more</div>}
                 </div>
-              ))}
-              {hover.day.people.length > 6 && <div className="text-ink-faint">and {hover.day.people.length - 6} more maintainers</div>}
-              <div className="text-ink-faint mt-1.5 pt-1.5 border-t border-line">Click the square for the full list with links.</div>
+                {pinned ? (
+                  <button type="button" onClick={() => { setPinned(false); setCard(null); }} className="text-ink-soft hover:text-ink text-[11px] font-[550] px-2 py-0.5 rounded-md border border-line bg-ground cursor-pointer shrink-0">Close</button>
+                ) : (
+                  <span className="text-[10px] text-ink-faint shrink-0 text-right leading-tight">click the square<br />to keep this open</span>
+                )}
+              </div>
+              <div className="overflow-y-auto overscroll-contain px-3.5 py-2 scrollbar-thin" data-lenis-prevent>
+                {card.day.people.map((p) => (
+                  <div key={p.login} className="py-1.5 border-b border-line last:border-b-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="font-[600] text-ink hover:text-violet-600 truncate">@{p.login}</a>
+                      <span className="text-ink-soft tabular-nums shrink-0">
+                        {p.merged > 0 && `${p.merged} merged`}{p.merged > 0 && p.raised > 0 && ' · '}{p.raised > 0 && `${p.raised} raised`}
+                      </span>
+                    </div>
+                    {p.prs.map((pr) => (
+                      <a
+                        key={`${pr.kind}-${pr.n}`}
+                        href={`${repoUrl}/pull/${pr.n}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`${pr.title}${pr.by ? ` · by @${pr.by}` : ''}`}
+                        className="flex items-start gap-1.5 leading-5 rounded-md px-1.5 -mx-1.5 text-ink-soft hover:bg-panel-2 hover:text-ink transition-colors"
+                      >
+                        <span className={`shrink-0 font-[600] ${pr.kind === 'merged' ? 'text-success-600' : 'text-violet-600'}`}>{pr.kind}</span>
+                        <span className="min-w-0 truncate"><span className="text-ink-faint">#{pr.n}</span> {pr.title}{pr.by && <span className="text-ink-faint"> · by @{pr.by}</span>}</span>
+                      </a>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>,
             document.body,
           )}
@@ -183,55 +235,11 @@ export function MaintainerHeatmap({ activity, repoUrl }: { activity: MaintainerA
             less
             {LEVEL_BG.map((bg, i) => <span key={i} className="inline-block rounded-[3px]" style={{ width: 11, height: 11, backgroundColor: bg, border: i === 0 ? '1px solid var(--color-line)' : undefined }} />)}
             more
-            <span className="ml-2">· click a square for that day&apos;s list</span>
+            <span className="ml-2">· hover a square for the day, click to keep it open</span>
           </div>
         </div>
       </div>
 
-      {pinned && (
-        <div className="mt-5 pt-4 border-t border-line" aria-live="polite">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div>
-              <div className="font-[650] text-ink text-sm">{longDate(pinned.date)}</div>
-              <div className="text-xs text-ink-mid tabular-nums">
-                {pinned.merged + pinned.raised === 0
-                  ? 'No maintainer merged or raised a pull request that day.'
-                  : `${pinned.merged} merged · ${pinned.raised} raised · ${pinned.people.length} maintainer${pinned.people.length === 1 ? '' : 's'}. Open a pull request to read the review comments and commits.`}
-              </div>
-            </div>
-            <button type="button" onClick={() => setPinned(null)} className="text-ink-soft hover:text-ink text-xs font-[550] px-2.5 py-1 rounded-lg border border-line bg-ground cursor-pointer shrink-0">Close</button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {pinned.people.map((p) => (
-              <div key={p.login} className="bg-ground border border-line rounded-xl p-3">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="font-[650] text-ink text-sm hover:text-violet-600 truncate">@{p.login}</a>
-                  <span className="text-[11px] text-ink-soft tabular-nums shrink-0">
-                    {p.merged > 0 && `${p.merged} merged`}{p.merged > 0 && p.raised > 0 && ' · '}{p.raised > 0 && `${p.raised} raised`}
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  {p.prs.map((pr) => (
-                    <a
-                      key={`${pr.kind}-${pr.n}`}
-                      href={`${repoUrl}/pull/${pr.n}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-2 text-xs rounded-lg px-2 py-1.5 -mx-2 hover:bg-panel-2 transition-colors"
-                    >
-                      <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-[650] uppercase border ${pr.kind === 'merged' ? 'bg-success-0 border-success-100 text-success-600' : 'bg-violet-0 border-violet-100 text-violet-600'}`}>{pr.kind}</span>
-                      <span className="min-w-0 text-ink">
-                        <span className="text-ink-faint font-mono mr-1">#{pr.n}</span>{pr.title}
-                        {pr.by && <span className="text-ink-faint"> · by @{pr.by}</span>}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
