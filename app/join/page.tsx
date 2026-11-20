@@ -20,7 +20,7 @@ export default function JoinRequestPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [year, setYear] = useState<'1st year' | '2nd year' | '3rd year' | '4th year' | ''>('');
-  const [campus, setCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | ''>('');
+  const [campus, setCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU' | ''>('');
 
   // Debounced profile verification and status check as the user types
   useEffect(() => {
@@ -238,6 +238,7 @@ export default function JoinRequestPage() {
                     <option value="Rishihood" className="bg-ground text-ink">Rishihood</option>
                     <option value="ADYPU" className="bg-ground text-ink">ADYPU</option>
                     <option value="SVYASA" className="bg-ground text-ink">SVYASA</option>
+                    <option value="SMRU" className="bg-ground text-ink">SMRU</option>
                   </select>
                 </div>
               </div>

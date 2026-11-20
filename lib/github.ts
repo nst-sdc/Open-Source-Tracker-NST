@@ -333,7 +333,7 @@ export interface StudentSummary {
   avgScore?: number;
   issuesCount: number;
   year?: "1st year" | "2nd year" | "3rd year" | "4th year";
-  campus?: "Rishihood" | "ADYPU" | "SVYASA";
+  campus?: "Rishihood" | "ADYPU" | "SVYASA" | "SMRU";
   cachedAt?: string;
 }
 

@@ -21,7 +21,7 @@ const KV_KEY = 'students_list';
 export interface Student {
   github: string;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA';
+  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU';
   /** GitHub's numeric user id. Stable across renames, so it is how a 404ed
    *  login is resolved to its new name. Learned on the first successful fetch. */
   githubId?: number;
@@ -190,7 +190,7 @@ export function _resetRosterMemory(): void {
 export async function addStudent(
   github: string,
   year?: '1st year' | '2nd year' | '3rd year' | '4th year',
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA'
+  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU'
 ): Promise<{ ok: boolean; message?: string }> {
   const lower = github.toLowerCase().trim();
   if (!lower) return { ok: false, message: 'GitHub username cannot be empty' };
@@ -205,7 +205,7 @@ export async function addStudent(
 export async function updateStudentDetails(
   github: string,
   year?: '1st year' | '2nd year' | '3rd year' | '4th year',
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA'
+  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU'
 ): Promise<{ ok: boolean; message?: string }> {
   const list = await readRosterForWrite();
   const lower = github.toLowerCase().trim();
