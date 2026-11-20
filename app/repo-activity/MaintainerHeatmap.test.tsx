@@ -21,9 +21,9 @@ describe('MaintainerHeatmap', () => {
     expect(html).toContain('When maintainers are active');
     for (const d of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) expect(html).toContain(`>${d}<`);
     // 14 real days in two weeks; each real day carries a title
-    expect(html.match(/title="2026-11-\d\d: \d+ events?"/g)?.length).toBe(14);
-    expect(html).toContain('title="2026-11-03: 2 events"');
-    expect(html).toContain('title="2026-11-08: 1 event"');
+    expect(html.match(/aria-label="2026-11-\d\d: \d+ events?"/g)?.length).toBe(14);
+    expect(html).toContain('aria-label="2026-11-03: 2 events"');
+    expect(html).toContain('aria-label="2026-11-08: 1 event"');
   });
 
   it('summarises the busiest weekday and the weekend share', () => {

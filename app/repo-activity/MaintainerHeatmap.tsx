@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { buildHeatmap, heatLevel, WEEKDAY_LONG, WEEKDAY_SHORT, type HeatDay, type MaintainerEvent } from '@/lib/maintainer-heatmap';
 
 export interface MaintainerActivity {
@@ -36,7 +37,15 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
     () => buildHeatmap(activity.events, new Date(activity.since), new Date(activity.until)),
     [activity],
   );
-  const [hover, setHover] = useState<{ day: HeatDay; x: number; y: number } | null>(null);
+  // The tooltip is portalled to <body> with fixed coordinates: inside the
+  // scrolling calendar it was clipped by overflow and sat under the cards.
+  const [hover, setHover] = useState<{ day: HeatDay; x: number; y: number; above: boolean } | null>(null);
+  useEffect(() => {
+    if (!hover) return;
+    const clear = () => setHover(null);
+    window.addEventListener('scroll', clear, true);
+    return () => window.removeEventListener('scroll', clear, true);
+  }, [hover]);
 
   const weekdayMax = Math.max(1, ...heat.weekdayTotals);
   const gridW = heat.weeks.length * (CELL + GAP) - GAP;
@@ -88,13 +97,12 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
                       return (
                         <div
                           key={di}
-                          title={day ? `${day.date}: ${count} ${count === 1 ? 'event' : 'events'}` : undefined}
+                          aria-label={day ? `${day.date}: ${count} ${count === 1 ? 'event' : 'events'}` : undefined}
                           onPointerEnter={(e) => {
                             if (!day) return;
-                            const host = e.currentTarget.offsetParent as HTMLElement | null;
                             const r = e.currentTarget.getBoundingClientRect();
-                            const hr = host?.getBoundingClientRect();
-                            setHover({ day, x: r.left - (hr?.left ?? 0) + r.width / 2 + (host?.scrollLeft ?? 0), y: r.bottom - (hr?.top ?? 0) + 6 });
+                            const above = r.bottom + 320 > window.innerHeight && r.top > 320;
+                            setHover({ day, x: r.left + r.width / 2, y: above ? r.top - 8 : r.bottom + 8, above });
                           }}
                           className={`rounded-[3px] ${day ? '' : 'opacity-0'} ${day && hover?.day.date === day.date ? 'ring-2 ring-success-600 ring-offset-1 ring-offset-ground' : ''}`}
                           style={{ width: CELL, height: CELL, marginTop: di === 5 ? 4 : 0, backgroundColor: day ? LEVEL_BG[level] : 'transparent', border: level === 0 && day ? '1px solid var(--color-line)' : undefined }}
@@ -107,35 +115,39 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
             </div>
           </div>
 
-          {hover && (
+          {/* hover is only ever set by a pointer event, so this never renders on the server */}
+          {hover && typeof document !== 'undefined' && createPortal(
             <div
-              className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-xl border border-line bg-ground/95 backdrop-blur px-3 py-2.5 shadow-pop text-[12px] w-[260px]"
-              style={{ left: `clamp(130px, ${hover.x}px, calc(100% - 130px))`, top: hover.y }}
+              className={`pointer-events-none fixed z-[70] -translate-x-1/2 ${hover.above ? '-translate-y-full' : ''} rounded-xl border border-line bg-ground/95 backdrop-blur px-3.5 py-3 shadow-pop text-[12px] w-[320px] max-w-[calc(100vw-24px)]`}
+              style={{ left: `clamp(172px, ${hover.x}px, calc(100vw - 172px))`, top: hover.y }}
+              role="tooltip"
             >
               <div className="font-[650] text-ink">{longDate(hover.day.date)}</div>
-              <div className="text-ink-mid mb-1.5 tabular-nums">
+              <div className="text-ink-mid mb-2 tabular-nums">
                 {hover.day.merged + hover.day.raised === 0
                   ? 'No maintainer activity'
-                  : `${hover.day.merged} merged · ${hover.day.raised} raised`}
+                  : `${hover.day.merged} merged · ${hover.day.raised} raised · ${hover.day.people.length} maintainer${hover.day.people.length === 1 ? '' : 's'}`}
               </div>
-              {hover.day.people.slice(0, 5).map((p) => (
-                <div key={p.login} className="mb-1.5 last:mb-0">
+              {hover.day.people.slice(0, 6).map((p) => (
+                <div key={p.login} className="mb-2 last:mb-0 border-t border-line pt-1.5">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-[600] text-ink truncate">@{p.login}</span>
                     <span className="text-ink-soft tabular-nums shrink-0">
                       {p.merged > 0 && `${p.merged} merged`}{p.merged > 0 && p.raised > 0 && ' · '}{p.raised > 0 && `${p.raised} raised`}
                     </span>
                   </div>
-                  {p.prs.slice(0, 3).map((pr) => (
+                  {p.prs.slice(0, 4).map((pr) => (
                     <div key={`${pr.kind}-${pr.n}`} className="text-ink-soft truncate leading-5">
-                      <span className="text-ink-faint">#{pr.n}</span> {pr.title} <span className="text-ink-faint">· {pr.kind}</span>
+                      <span className={pr.kind === 'merged' ? 'text-success-600 font-[600]' : 'text-violet-600 font-[600]'}>{pr.kind}</span>
+                      {' '}<span className="text-ink-faint">#{pr.n}</span> {pr.title}
                     </div>
                   ))}
-                  {p.prs.length > 3 && <div className="text-ink-faint leading-5">and {p.prs.length - 3} more</div>}
+                  {p.prs.length > 4 && <div className="text-ink-faint leading-5">and {p.prs.length - 4} more</div>}
                 </div>
               ))}
-              {hover.day.people.length > 5 && <div className="text-ink-faint">and {hover.day.people.length - 5} more maintainers</div>}
-            </div>
+              {hover.day.people.length > 6 && <div className="text-ink-faint">and {hover.day.people.length - 6} more maintainers</div>}
+            </div>,
+            document.body,
           )}
         </div>
 

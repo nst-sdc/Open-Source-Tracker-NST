@@ -4,6 +4,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { RepoActivityChart, type RepoMonth } from './RepoActivityChart';
 import { MaintainerHeatmap, type MaintainerActivity } from './MaintainerHeatmap';
+import { MaintainerPanel } from './MaintainerPanel';
 
 /** Marks a GitHub account that belongs to one of our students. */
 type SectionId = 'contributors' | 'maintainers';
@@ -182,9 +183,17 @@ export default function RepoActivityPage() {
 
   async function handleContributorClick(username: string) {
     setSelectedUser(username);
-    setLoadingUser(true);
     setUserError('');
     setUserActivity(null);
+    // A maintainer's panel is about this repository (what they merged and
+    // opened here, when they are around); their PRs elsewhere are noise for
+    // someone deciding how to work with them. No cross-GitHub fetch.
+    const who = contributors.find((c) => c.username.toLowerCase() === username.toLowerCase());
+    if (who && (who.isMaintainer || who.isBot)) {
+      setLoadingUser(false);
+      return;
+    }
+    setLoadingUser(true);
     try {
       const res = await fetch(`/api/user-activity?username=${encodeURIComponent(username)}&period=all`);
       const data = await res.json();
@@ -223,7 +232,9 @@ export default function RepoActivityPage() {
   };
   const sortedContributors = contributors.filter((c) => !c.isMaintainer && !c.isBot && matchesFilter(c)).sort(byActivity);
   const maintainersAndBots = contributors.filter((c) => (c.isMaintainer || c.isBot) && matchesFilter(c)).sort(byActivity);
-  const selectedTracked = selectedUser ? contributors.find((c) => c.username.toLowerCase() === selectedUser.toLowerCase())?.tracked ?? null : null;
+  const selected = selectedUser ? contributors.find((c) => c.username.toLowerCase() === selectedUser.toLowerCase()) ?? null : null;
+  const selectedTracked = selected?.tracked ?? null;
+  const selectedIsMaintainer = !!selected && (selected.isMaintainer || !!selected.isBot);
 
   // The share bar follows the ranking: merged PRs unless the Issues filter is on.
   const shareOf = (c: Contributor) => (filterType === 'issues' ? c.issuesCount : c.mergedPRs);
@@ -634,9 +645,11 @@ export default function RepoActivityPage() {
             <div className="p-6 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div>
-                  <h3 className="text-lg font-[650] text-ink">Contributor Details</h3>
+                  <h3 className="text-lg font-[650] text-ink">{selectedIsMaintainer ? (selected?.isBot && !selected.isMaintainer ? 'Bot' : 'Maintainer') : 'Contributor Details'}</h3>
                   <p className="text-xs text-ink-soft">
-                    @{selectedUser}&apos;s pull request history across GitHub
+                    {selectedIsMaintainer
+                      ? <>@{selectedUser} in {repoInfo?.fullName ?? 'this repository'}, selected period</>
+                      : <>@{selectedUser}&apos;s pull request history across GitHub</>}
                     {selectedTracked && (
                       <>
                         {' · '}
@@ -663,6 +676,16 @@ export default function RepoActivityPage() {
 
             {/* Modal Content */}
             <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin overscroll-contain" data-lenis-prevent>
+              {selectedIsMaintainer && selected && (
+                <MaintainerPanel
+                  contributor={selected}
+                  events={maintainerActivity?.events ?? []}
+                  repoUrl={repoInfo?.url ?? `https://github.com/${repoInfo?.fullName ?? ''}`}
+                  since={maintainerActivity?.since ?? new Date(0).toISOString()}
+                  until={maintainerActivity?.until ?? new Date().toISOString()}
+                  mergesKnown={maintainerActivity?.mergesKnown ?? false}
+                />
+              )}
               {loadingUser && (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <svg className="w-8 h-8 text-brand-500 animate-spin" fill="none" viewBox="0 0 24 24">
