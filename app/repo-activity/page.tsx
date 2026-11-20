@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RepoActivityChart, type RepoMonth } from './RepoActivityChart';
 import { MaintainerHeatmap, type MaintainerActivity } from './MaintainerHeatmap';
 import { MaintainerPanel } from './MaintainerPanel';
+import { ContributorInRepo } from './ContributorInRepo';
 
 /** Marks a GitHub account that belongs to one of our students. */
 type SectionId = 'contributors' | 'maintainers';
@@ -235,6 +236,10 @@ export default function RepoActivityPage() {
   const selected = selectedUser ? contributors.find((c) => c.username.toLowerCase() === selectedUser.toLowerCase()) ?? null : null;
   const selectedTracked = selected?.tracked ?? null;
   const selectedIsMaintainer = !!selected && (selected.isMaintainer || !!selected.isBot);
+  // The across-GitHub lists leave this repository out: it is shown first, in full, from the scan.
+  const here = (repoInfo?.fullName ?? '').toLowerCase();
+  const otherRepos = (userActivity?.repositories ?? []).filter((r) => r.repoName.toLowerCase() !== here);
+  const otherPRs = (userActivity?.pullRequests ?? []).filter((pr) => pr.repoName.toLowerCase() !== here);
 
   // The share bar follows the ranking: merged PRs unless the Issues filter is on.
   const shareOf = (c: Contributor) => (filterType === 'issues' ? c.issuesCount : c.mergedPRs);
@@ -649,7 +654,7 @@ export default function RepoActivityPage() {
                   <p className="text-xs text-ink-soft">
                     {selectedIsMaintainer
                       ? <>@{selectedUser} in {repoInfo?.fullName ?? 'this repository'}, selected period</>
-                      : <>@{selectedUser}&apos;s pull request history across GitHub</>}
+                      : <>@{selectedUser} here first, then across GitHub</>}
                     {selectedTracked && (
                       <>
                         {' · '}
@@ -686,8 +691,14 @@ export default function RepoActivityPage() {
                   mergesKnown={maintainerActivity?.mergesKnown ?? false}
                 />
               )}
+              {!selectedIsMaintainer && selected && (
+                <ContributorInRepo contributor={selected} repoName={repoInfo?.fullName ?? 'this repository'} />
+              )}
+              {!selectedIsMaintainer && selected && (userActivity || loadingUser || userError) && (
+                <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider border-t border-line pt-5">Elsewhere on GitHub</h4>
+              )}
               {loadingUser && (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
                   <svg className="w-8 h-8 text-brand-500 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -709,12 +720,12 @@ export default function RepoActivityPage() {
                 <>
                   {/* Repositories breakdown */}
                   <div>
-                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Repositories Contributed To</h4>
-                    {userActivity.repositories.length === 0 ? (
-                      <p className="text-sm text-ink-soft italic">No pull requests found in this period.</p>
+                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Other repositories</h4>
+                    {otherRepos.length === 0 ? (
+                      <p className="text-sm text-ink-soft italic">No pull requests in other repositories.</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {userActivity.repositories.map((repo) => (
+                        {otherRepos.map((repo) => (
                           <div key={repo.repoName} className="bg-ground border border-line rounded-2xl p-4 space-y-3">
                             <div className="font-[650] text-sm text-ink truncate" title={repo.repoName}>
                               {repo.repoName}
@@ -745,12 +756,12 @@ export default function RepoActivityPage() {
 
                   {/* Recent PRs Timeline */}
                   <div>
-                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Pull Request History</h4>
-                    {userActivity.pullRequests.length === 0 ? (
-                      <p className="text-sm text-ink-soft italic">No recent work to display.</p>
+                    <h4 className="text-xs font-[650] text-ink-mid uppercase tracking-wider mb-3">Pull requests elsewhere</h4>
+                    {otherPRs.length === 0 ? (
+                      <p className="text-sm text-ink-soft italic">No recent work elsewhere to display.</p>
                     ) : (
                       <div className="space-y-2">
-                        {userActivity.pullRequests.map((pr) => (
+                        {otherPRs.map((pr) => (
                           <a
                             key={pr.url}
                             href={pr.url}

@@ -18,9 +18,9 @@ export interface PanelContributor {
 }
 
 const list = (names: string[]) => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
-const dateShort = (iso: string) => new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+export const dateShort = (iso: string) => new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 
-function Tile({ label, value, tone = 'text-ink' }: { label: string; value: number; tone?: string }) {
+export function Tile({ label, value, tone = 'text-ink' }: { label: string; value: number; tone?: string }) {
   return (
     <div className="bg-ground border border-line rounded-xl px-3 py-2.5 text-center">
       <div className="text-[10px] text-ink-soft">{label}</div>
@@ -29,7 +29,7 @@ function Tile({ label, value, tone = 'text-ink' }: { label: string; value: numbe
   );
 }
 
-function Row({ href, number, title, when, badge, tone }: { href: string; number: number; title: string; when: string; badge: string; tone: string }) {
+export function Row({ href, number, title, when, badge, tone }: { href: string; number: number; title: string; when: string; badge: string; tone: string }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className="flex items-start justify-between gap-4 p-3 rounded-xl bg-ground border border-line hover:border-line-strong transition-all text-xs text-ink">
       <div className="min-w-0 space-y-1">
