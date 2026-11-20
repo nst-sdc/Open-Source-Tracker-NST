@@ -633,6 +633,8 @@ Use the admin list for what the program list cannot know, for example a project'
 
 `E` runs from 0.4 to 2.0. The size term is log-scaled over the lines changed in code and test files, 0.6 for one line, 1.0 at about twenty, 1.4 at five hundred or more. Added tests give +0.3, new code files (or additions far outweighing deletions) +0.2, six or more code files +0.2, two or more reviews +0.1. A PR made only of documentation files scales inside 0.4–0.7, one made only of images, data, config or lockfiles inside 0.4–0.5; a "documentation" or "typo" label on a code change under thirty lines is treated as docs. Files are bucketed by path: `tests/`, `__tests__/`, `*_test.go`, `*.spec.ts` are tests; `.md`, `.rst`, `docs/` are docs; images, `.json`, `.yaml`, lockfiles, `locales/`, `assets/` are content; everything else is code.
 
+Shown out of 10 everywhere (`lib/display-scale.ts`: value × 5, so 2..10 with 5 neutral; project impact is the multiplier × 10/3, so 0.5..10). The model keeps the ranges above; only rendering scales.
+
 Values are measured by the refresh (`measurePRContributions`, GraphQL `pullRequest { additions deletions changedFiles reviews files }`, 25 PRs per query, at most 150 per student per pass, only for PRs into repositories the gate counts) and stored on the cached PR as `contribution` with the rule version `v`; bump `PR_VALUE_VERSION` to remeasure everything after a rule change. The contributor profile shows each measured PR's value as a chip with its reasons. Impact (the average project value) is unaffected.
 
 ## 12. Flagging Queue System

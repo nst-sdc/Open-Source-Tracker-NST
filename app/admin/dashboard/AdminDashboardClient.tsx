@@ -1391,9 +1391,9 @@ function PrValueCard() {
       <div>
         <h3 className="text-base font-[650] text-ink">Contribution value of each pull request</h3>
         <p className="text-sm text-ink-soft mt-1">
-          Off: a merged PR scores by the project it went into, as always. On: the PR&apos;s own value multiplies that, from 0.4 to 2.0 with 1.0 as a typical twenty-line code change.
-          Docs-only PRs stay at or below 0.7, images, data and config at or below 0.5; added tests give +0.3, new code +0.2, six or more code files +0.2, two or more reviews +0.1.
-          Values are measured from the files each merged PR changed, during the normal refresh, so they fill in over about a day; an unmeasured PR counts as 1.0 meanwhile.
+          Off: a merged PR scores by the project it went into, as always. On: the PR&apos;s own value multiplies that. Shown out of 10, a typical twenty-line code change is 5 and the most substantial change 10; a 10 doubles the PR&apos;s points, a 2 (the floor) cuts them to 40%.
+          Docs-only PRs stay at or below 3.5, images, data and config at or below 2.5; added tests give +1.5, new code +1, six or more code files +1, two or more reviews +0.5.
+          Values are measured from the files each merged PR changed, during the normal refresh, so they fill in over about a day; an unmeasured PR counts as 5 (neutral) meanwhile.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">

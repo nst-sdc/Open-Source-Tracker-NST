@@ -178,17 +178,22 @@ export default function DocumentationPage() {
               for being new.
             </P>
             <P>
-              A second, secondary number — <strong className="text-ink">Impact</strong> — is{' '}
-              <Code>Score ÷ merged PRs</Code>, shown only once someone has 5+ merged PRs (below that, one lucky merge
-              into a big repo would read as a perfect average). Individual PRs on a profile show the repo&apos;s
-              first-PR value (<Code>10·M<sup>0.75</sup></Code>) as their Impact badge.
+              A second, secondary number — <strong className="text-ink">Impact</strong> — is the plain average of M
+              over someone&apos;s merged PRs, shown out of 10 (M = 3 reads as 10) and only once they have 5+ merged PRs
+              (below that, one lucky merge into a big repo would read as a perfect average). Each PR on a profile
+              carries two badges, both out of 10: <strong className="text-ink">Impact</strong>, the project&apos;s M, and{' '}
+              <strong className="text-ink">Value</strong>, what the change itself did — the effort term E, from the
+              files and lines it touched (tests, new code and breadth raise it; docs-only and image/config-only
+              changes sit low). A typical twenty-line code change is a 5; points are{' '}
+              <Code>10·M<sup>0.75</sup>·E</Code>, so a Value of 10 doubles a PR and a 2 cuts it to 40%. E counts on the
+              leaderboard once the admin turns the weighting on; until then it is shown but reads as neutral.
             </P>
             <Callout tone="warn">
               <strong>Why it changed:</strong> the previous formula (<Code>1 + log₁₀(stars + 3·forks + 1)</Code>)
               trusted forks — and farm repos accumulate forks mechanically, because every participant forks to open a
               PR. A repo with 2 stars and 60 farmed forks scored half of <Code>react</Code>. Full analysis and the
-              measured numbers are in issue #4. Not implemented from that issue yet: the per-PR effort term E and
-              dependency counts (its step 8), and the admin review queue for low-M repos (step 7).
+              measured numbers are in issue #4. Not implemented from that issue yet: dependency counts (its step 8)
+              and the admin review queue for low-M repos (step 7).
             </Callout>
           </section>
 
