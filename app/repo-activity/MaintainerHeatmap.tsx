@@ -33,7 +33,7 @@ const list = (names: string[]) => (names.length <= 1 ? names.join('') : `${names
  * the bottom, darker green is a busier day. Hovering a day names who was
  * active and on which PRs. Days are the viewer's own calendar days.
  */
-export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }) {
+export function MaintainerHeatmap({ activity, repoUrl }: { activity: MaintainerActivity; repoUrl: string }) {
   const heat = useMemo(
     () => buildHeatmap(activity.events, new Date(activity.since), new Date(activity.until)),
     [activity],
@@ -41,6 +41,10 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
   // The tooltip is portalled to <body> with fixed coordinates: inside the
   // scrolling calendar it was clipped by overflow and sat under the cards.
   const [hover, setHover] = useState<{ day: HeatDay; x: number; y: number; above: boolean } | null>(null);
+  // A click pins the day: the full list opens under the calendar, every PR a
+  // link, and stays until closed. The hover card is only a preview.
+  // The page remounts this component (key) on every new scan, which drops the pin.
+  const [pinned, setPinned] = useState<HeatDay | null>(null);
   useEffect(() => {
     if (!hover) return;
     const clear = () => setHover(null);
@@ -97,16 +101,24 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
                       const count = day ? day.merged + day.raised : 0;
                       const level = heatLevel(count, heat.maxDay);
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={di}
+                          tabIndex={day ? 0 : -1}
                           aria-label={day ? `${day.date}: ${count} ${count === 1 ? 'event' : 'events'}` : undefined}
+                          aria-pressed={!!day && pinned?.date === day.date}
+                          onClick={() => {
+                            if (!day) return;
+                            setPinned((p) => (p?.date === day.date ? null : day));
+                            setHover(null);
+                          }}
                           onPointerEnter={(e) => {
                             if (!day) return;
                             const r = e.currentTarget.getBoundingClientRect();
                             const above = r.bottom + 320 > window.innerHeight && r.top > 320;
                             setHover({ day, x: r.left + r.width / 2, y: above ? r.top - 8 : r.bottom + 8, above });
                           }}
-                          className={`rounded-[3px] ${day ? '' : 'opacity-0'} ${day && hover?.day.date === day.date ? 'ring-2 ring-success-600 ring-offset-1 ring-offset-ground' : ''}`}
+                          className={`rounded-[3px] p-0 block ${day ? 'cursor-pointer' : 'opacity-0 pointer-events-none'} ${day && (hover?.day.date === day.date || pinned?.date === day.date) ? 'ring-2 ring-success-600 ring-offset-1 ring-offset-ground' : ''}`}
                           style={{ width: CELL, height: CELL, marginTop: di === 5 ? 4 : 0, backgroundColor: day ? LEVEL_BG[level] : 'transparent', border: level === 0 && day ? '1px solid var(--color-line)' : undefined }}
                         />
                       );
@@ -118,7 +130,7 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
           </div>
 
           {/* hover is only ever set by a pointer event, so this never renders on the server */}
-          {hover && typeof document !== 'undefined' && createPortal(
+          {hover && !pinned && typeof document !== 'undefined' && createPortal(
             <div
               className={`pointer-events-none fixed z-[70] -translate-x-1/2 ${hover.above ? '-translate-y-full' : ''} rounded-xl border border-line bg-ground/95 backdrop-blur px-3.5 py-3 shadow-pop text-[12px] w-[320px] max-w-[calc(100vw-24px)]`}
               style={{ left: `clamp(172px, ${hover.x}px, calc(100vw - 172px))`, top: hover.y }}
@@ -149,6 +161,7 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
                 </div>
               ))}
               {hover.day.people.length > 6 && <div className="text-ink-faint">and {hover.day.people.length - 6} more maintainers</div>}
+              <div className="text-ink-faint mt-1.5 pt-1.5 border-t border-line">Click the square for the full list with links.</div>
             </div>,
             document.body,
           )}
@@ -170,9 +183,55 @@ export function MaintainerHeatmap({ activity }: { activity: MaintainerActivity }
             less
             {LEVEL_BG.map((bg, i) => <span key={i} className="inline-block rounded-[3px]" style={{ width: 11, height: 11, backgroundColor: bg, border: i === 0 ? '1px solid var(--color-line)' : undefined }} />)}
             more
+            <span className="ml-2">· click a square for that day&apos;s list</span>
           </div>
         </div>
       </div>
+
+      {pinned && (
+        <div className="mt-5 pt-4 border-t border-line" aria-live="polite">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div>
+              <div className="font-[650] text-ink text-sm">{longDate(pinned.date)}</div>
+              <div className="text-xs text-ink-mid tabular-nums">
+                {pinned.merged + pinned.raised === 0
+                  ? 'No maintainer merged or raised a pull request that day.'
+                  : `${pinned.merged} merged · ${pinned.raised} raised · ${pinned.people.length} maintainer${pinned.people.length === 1 ? '' : 's'}. Open a pull request to read the review comments and commits.`}
+              </div>
+            </div>
+            <button type="button" onClick={() => setPinned(null)} className="text-ink-soft hover:text-ink text-xs font-[550] px-2.5 py-1 rounded-lg border border-line bg-ground cursor-pointer shrink-0">Close</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {pinned.people.map((p) => (
+              <div key={p.login} className="bg-ground border border-line rounded-xl p-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="font-[650] text-ink text-sm hover:text-violet-600 truncate">@{p.login}</a>
+                  <span className="text-[11px] text-ink-soft tabular-nums shrink-0">
+                    {p.merged > 0 && `${p.merged} merged`}{p.merged > 0 && p.raised > 0 && ' · '}{p.raised > 0 && `${p.raised} raised`}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {p.prs.map((pr) => (
+                    <a
+                      key={`${pr.kind}-${pr.n}`}
+                      href={`${repoUrl}/pull/${pr.n}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-2 text-xs rounded-lg px-2 py-1.5 -mx-2 hover:bg-panel-2 transition-colors"
+                    >
+                      <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-[650] uppercase border ${pr.kind === 'merged' ? 'bg-success-0 border-success-100 text-success-600' : 'bg-violet-0 border-violet-100 text-violet-600'}`}>{pr.kind}</span>
+                      <span className="min-w-0 text-ink">
+                        <span className="text-ink-faint font-mono mr-1">#{pr.n}</span>{pr.title}
+                        {pr.by && <span className="text-ink-faint"> · by @{pr.by}</span>}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

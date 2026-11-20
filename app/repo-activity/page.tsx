@@ -581,7 +581,7 @@ export default function RepoActivityPage() {
                 <p className="text-ink-soft text-xs mb-4">
                   People with merge access and automation accounts. Their activity is real, but it says nothing about who is contributing, so it stays out of the ranking and the chart.
                 </p>
-                {maintainerActivity && <MaintainerHeatmap activity={maintainerActivity} />}
+                {maintainerActivity && <MaintainerHeatmap key={`${maintainerActivity.since}:${maintainerActivity.until}:${maintainerActivity.events.length}`} activity={maintainerActivity} repoUrl={repoInfo?.url ?? `https://github.com/${repoInfo?.fullName ?? ''}`} />}
                 {maintainersAndBots.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {maintainersAndBots.map((c) => (

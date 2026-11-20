@@ -15,7 +15,7 @@ describe('MaintainerHeatmap', () => {
       { t: at(2026, 11, 8), who: 'zara', kind: 'raised' as const, n: 3, title: 'Sunday idea' }, // Sunday
     ],
   };
-  const html = renderToStaticMarkup(<MaintainerHeatmap activity={activity} />);
+  const html = renderToStaticMarkup(<MaintainerHeatmap activity={activity} repoUrl="https://github.com/o/r" />);
 
   it('renders a Monday-to-Sunday grid with one column per week and a weekday pattern', () => {
     expect(html).toContain('When maintainers are active');
@@ -24,6 +24,8 @@ describe('MaintainerHeatmap', () => {
     expect(html.match(/aria-label="2026-11-\d\d: \d+ events?"/g)?.length).toBe(14);
     expect(html).toContain('aria-label="2026-11-03: 2 events"');
     expect(html).toContain('aria-label="2026-11-08: 1 event"');
+    // squares are buttons, so a click can pin the day's full list
+    expect(html.match(/<button[^>]*aria-label="2026-11-/g)?.length).toBe(14);
   });
 
   it('summarises the busiest weekday and the weekend share', () => {
@@ -33,7 +35,7 @@ describe('MaintainerHeatmap', () => {
   });
 
   it('says so when merges could not be attributed', () => {
-    const noToken = renderToStaticMarkup(<MaintainerHeatmap activity={{ ...activity, mergesKnown: false, events: [] }} />);
+    const noToken = renderToStaticMarkup(<MaintainerHeatmap activity={{ ...activity, mergesKnown: false, events: [] }} repoUrl="https://github.com/o/r" />);
     expect(noToken).toContain('merges unknown without a GitHub token');
     expect(noToken).toContain('No pull request raised by a maintainer in this period.');
   });
