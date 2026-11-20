@@ -503,6 +503,9 @@ Student → /join page → Fill form (github, year, campus)
 | `GET` | `/api/admin/join-requests` | List join requests |
 | `PATCH` | `/api/admin/join-requests` | Update request status |
 | `POST` | `/api/admin/approve` | Approve request → add to students |
+| `GET` | `/api/admin/gate-rules` | The ownership rules of the validity gate (NST owners, keywords, practice repos/keywords, star bars) |
+| `PUT` | `/api/admin/gate-rules` | Save the rules and re-gate every cached repository |
+| `POST` | `/api/admin/gate-rules` | Re-gate every cached repository with the current rules |
 | `GET` | `/api/admin/vouched-orgs` | Organisations an admin vouched for (every repo under them passes the validity gate) |
 | `POST` | `/api/admin/vouched-orgs` | Vouch for `{ login, note? }` and re-gate that org's cached repos at once |
 | `DELETE` | `/api/admin/vouched-orgs?login=x` | Un-vouch and re-gate |
@@ -602,6 +605,21 @@ scoreMergedPRs = mergedPRs - flaggedMergedPRs
 3. Flagged PRs still appear in the profile but don't count toward the score
 
 ---
+
+### The validity gate, in order
+
+`lib/repo-score.ts` `gateDecision` decides whether merged PRs into a repository count, and records why not (`RepoCacheEntry.reason`, shown on the student's page):
+
+1. **Fork** → out.
+2. **NST-owned** (`lib/gate-rules.ts`: owner list or owner keyword) → out as "NST internal". Real work, but not open source.
+3. **Peer-owned** (the owner is a tracked student) → out, unless an admin own-repo exception vouches for that student and repo.
+4. **Listed practice ground** (exact owner/name) → out, even under a vouching owner.
+5. **Vouched or program organisation** → in, whatever the stars or topics: meshery and sympy carry the hacktoberfest topic and are not practice grounds.
+6. **Practice by keyword**: a practice keyword in the name or owner (hacktoberfest, first-contribution, 100-days, interview, roadmap, tutorial…) → out; a narrower topic keyword list applies only below `practiceTopicMaxStars` (1,000), because good-first-issue and best-practices are normal topics on serious projects.
+7. **Star bar by owner kind**: a personal account's repo needs `minStarsPersonal` (200), an organisation's `minStarsOrg` (50). Owner kind comes from `org_cache_map`, filled by the refresh tick; an unclassified owner gets the organisation bar.
+8. **Audience**: above the bar, a repo still needs an audience ratio of `VALIDITY_MIN_AUDIENCE` or a release.
+
+Steps 2–4, 6 and 7 are editable under **Gate rules** in the admin dashboard; saving re-gates every cached repository and marks the summary caches stale. Measured on 2026-11-20 on a copy of the live data, these rules take counted merged PRs from about 6,960 to about 4,090 and students with a counted merge from 661 to 449; the removed work is peer-owned, practice, NST-internal and small personal repos.
 
 ### Vouched organisations
 

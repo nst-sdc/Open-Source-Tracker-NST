@@ -435,7 +435,7 @@ interface Props {
   students: string[];
 }
 
-type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'vouchedOrgs';
+type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'vouchedOrgs' | 'gateRules';
 
 export default function AdminDashboardClient({ flaggedPRs: initialFlagged, reviewedPRIds: initialReviewed, students }: Props) {
   const router = useRouter();
@@ -618,6 +618,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             { id: 'achievers',label: 'Achievers',badge: null },
             { id: 'ownRepos', label: 'Own-Repo PRs', badge: null },
             { id: 'vouchedOrgs', label: 'Vouched orgs', badge: null },
+            { id: 'gateRules', label: 'Gate rules', badge: null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
               className={`relative px-4 py-2 rounded-lg text-sm font-[500] transition-all ${
@@ -864,6 +865,8 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
         {tab === 'ownRepos' && <OwnReposTab />}
 
         {tab === 'vouchedOrgs' && <VouchedOrgsTab />}
+
+        {tab === 'gateRules' && <GateRulesTab />}
       </div>
 
       {/* Flag modal */}
@@ -1241,6 +1244,129 @@ interface OwnRepoException {
 }
 
 interface VouchedOrg { login: string; addedAt: string; note?: string }
+
+interface GateRulesShape {
+  nstOwners: string[];
+  nstOwnerKeywords: string[];
+  practiceRepos: string[];
+  practiceKeywords: string[];
+  practiceTopicKeywords: string[];
+  practiceTopicMaxStars: number;
+  minStarsPersonal: number;
+  minStarsOrg: number;
+  updatedAt?: string;
+}
+
+function GateRulesTab() {
+  const [rules, setRules] = useState<GateRulesShape | null>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const toDraft = (r: GateRulesShape) => ({
+    nstOwners: r.nstOwners.join('\n'), nstOwnerKeywords: r.nstOwnerKeywords.join('\n'),
+    practiceRepos: r.practiceRepos.join('\n'), practiceKeywords: r.practiceKeywords.join('\n'),
+    practiceTopicKeywords: (r.practiceTopicKeywords ?? []).join('\n'), practiceTopicMaxStars: String(r.practiceTopicMaxStars ?? 1000),
+    minStarsPersonal: String(r.minStarsPersonal), minStarsOrg: String(r.minStarsOrg),
+  });
+
+  async function load() {
+    const res = await fetch('/api/admin/gate-rules');
+    if (res.ok) { const d = await res.json(); setRules(d.rules); setDraft(toDraft(d.rules)); }
+  }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+  useEffect(() => { load(); }, []);
+
+  const lines = (k: string) => (draft[k] ?? '').split('\n').map((x) => x.trim()).filter(Boolean);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setError(''); setSuccess('');
+    const res = await fetch('/api/admin/gate-rules', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nstOwners: lines('nstOwners'), nstOwnerKeywords: lines('nstOwnerKeywords'),
+        practiceRepos: lines('practiceRepos'), practiceKeywords: lines('practiceKeywords'),
+        practiceTopicKeywords: lines('practiceTopicKeywords'), practiceTopicMaxStars: Number(draft.practiceTopicMaxStars),
+        minStarsPersonal: Number(draft.minStarsPersonal), minStarsOrg: Number(draft.minStarsOrg),
+      }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      const r = d.reclassified ?? {};
+      setSuccess(`Saved. ${r.repos ?? 0} repositories re-checked, ${r.changed ?? 0} changed, ${r.nowValid ?? 0} count now. The leaderboard rebuilds on its next view.`);
+      setRules(d.rules); setDraft(toDraft(d.rules));
+    } else setError(d.error ?? 'Could not save the rules');
+    setBusy(false);
+  }
+
+  async function reclassify() {
+    setBusy(true); setError(''); setSuccess('');
+    const res = await fetch('/api/admin/gate-rules', { method: 'POST' });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { const r = d.reclassified ?? {}; setSuccess(`Re-checked ${r.repos ?? 0} repositories, ${r.changed ?? 0} changed, ${r.nowValid ?? 0} count now.`); }
+    else setError(d.error ?? 'Could not reclassify');
+    setBusy(false);
+  }
+
+  const area = (k: keyof GateRulesShape, label: string, help: string) => (
+    <label className="block">
+      <span className="block text-sm font-[550] text-ink">{label}</span>
+      <span className="block text-xs text-ink-soft mb-1.5">{help}</span>
+      <textarea value={draft[k] ?? ''} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))} rows={6} spellCheck={false}
+        className="w-full bg-ground border border-line rounded-xl px-3 py-2 text-[13px] font-mono text-ink focus:outline-none focus:border-violet-100" />
+    </label>
+  );
+
+  if (!rules) return <div className="text-ink-soft text-sm py-8 text-center">Loading…</div>;
+  return (
+    <form onSubmit={save} className="space-y-5">
+      <div>
+        <h2 className="text-ink font-[550]">Gate rules</h2>
+        <p className="text-ink-soft text-sm mt-0.5">
+          What a repository must be for merged PRs into it to count. Ownership is decided first (NST-owned, another
+          student&apos;s, practice grounds), then the star bar by owner kind, then audience. Saving re-checks every cached
+          repository, so the public numbers move when you save.
+          {rules.updatedAt && <span className="text-ink-faint"> Last saved {new Date(rules.updatedAt).toLocaleString()}.</span>}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {area('nstOwners', 'NST owners', 'One GitHub login per line. Their repositories are internal: shown on profiles, never scored.')}
+        {area('nstOwnerKeywords', 'NST owner keywords', 'An owner whose login contains one of these is internal. Four letters or fewer must match a whole word.')}
+        {area('practiceRepos', 'Practice repositories', 'Exact owner/name of practice grounds.')}
+        {area('practiceKeywords', 'Practice keywords (name)', 'A repository whose name or owner contains one of these is a practice ground.')}
+        {area('practiceTopicKeywords', 'Practice keywords (topics)', 'A repository whose GitHub topics contain one of these is a practice ground, below the star limit on the right. Kept narrow: good-first-issue and best-practices are normal topics on serious projects.')}
+      </div>
+      <div className="grid grid-cols-2 gap-5 max-w-md">
+        <label className="block">
+          <span className="block text-sm font-[550] text-ink">Topic rule applies below this many stars</span>
+          <input type="number" min={0} value={draft.practiceTopicMaxStars ?? ''} onChange={(e) => setDraft((d) => ({ ...d, practiceTopicMaxStars: e.target.value }))}
+            className="mt-1.5 w-full bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-violet-100" />
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-5 max-w-md">
+        <label className="block">
+          <span className="block text-sm font-[550] text-ink">Minimum stars, personal repos</span>
+          <input type="number" min={0} value={draft.minStarsPersonal ?? ''} onChange={(e) => setDraft((d) => ({ ...d, minStarsPersonal: e.target.value }))}
+            className="mt-1.5 w-full bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-violet-100" />
+        </label>
+        <label className="block">
+          <span className="block text-sm font-[550] text-ink">Minimum stars, organisation repos</span>
+          <input type="number" min={0} value={draft.minStarsOrg ?? ''} onChange={(e) => setDraft((d) => ({ ...d, minStarsOrg: e.target.value }))}
+            className="mt-1.5 w-full bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-violet-100" />
+        </label>
+      </div>
+      <p className="text-xs text-ink-soft">Vouched and program organisations pass the star bar regardless; the audience rule still applies above the bar.</p>
+      {error && <div className="text-error-600 text-sm bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</div>}
+      {success && <div className="text-success-600 text-sm bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</div>}
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" disabled={busy} className="bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-40 text-white font-[550] px-5 py-2.5 rounded-xl text-sm cursor-pointer">{busy ? 'Working…' : 'Save & re-check everything'}</button>
+        <button type="button" onClick={reclassify} disabled={busy} className="bg-ground border border-line-strong hover:bg-panel text-ink font-[550] px-5 py-2.5 rounded-xl text-sm cursor-pointer">Re-check with current rules</button>
+      </div>
+    </form>
+  );
+}
 
 function VouchedOrgsTab() {
   const [orgs, setOrgs] = useState<VouchedOrg[]>([]);
