@@ -1,6 +1,6 @@
 # Deploying to the NST SDC Cluster
 
-This is a step-by-step walkthrough for taking this repo from "runs on my laptop" to "live at `https://oss-tracker.nstsdc.org`". It assumes **no prior experience with this specific app** — just basic `git`/`docker`/`kubectl` familiarity.
+This is a step-by-step walkthrough for taking this repo from "runs on my laptop" to "live at `https://os.nstsdc.org`". It assumes **no prior experience with this specific app** — just basic `git`/`docker`/`kubectl` familiarity.
 
 If something here doesn't work exactly as written, that's useful information, not a sign you did something wrong — infrastructure docs go stale. Open an issue or ask in the SDC channels rather than guessing silently. Nothing you do in the steps below can affect the production Vercel deployment; they're completely separate systems.
 
@@ -30,8 +30,8 @@ This deployment must use its **own** Redis instance, never the production one �
 This powers the "Sign in with GitHub" button. Skippable at first — the app runs fine without it (see the local dev shortcuts in CONTRIBUTING.md) — but you'll want it for a real deployment eventually.
 
 1. [github.com/settings/developers](https://github.com/settings/developers) → **New OAuth App**.
-2. Homepage URL: `https://oss-tracker.nstsdc.org`
-3. Authorization callback URL: `https://oss-tracker.nstsdc.org/api/auth/github/callback`
+2. Homepage URL: `https://os.nstsdc.org`
+3. Authorization callback URL: `https://os.nstsdc.org/api/auth/github/callback` (the old `oss-tracker.nstsdc.org` host redirects to this one with the query string intact, so a callback registered there keeps working during the switch)
 4. Save the generated **Client ID** and **Client Secret** for step 6.
 
 ## 3. Let CI build the image
@@ -109,7 +109,7 @@ Before applying the Ingress, double-check the hostname isn't already claimed by 
 kubectl get ingress -A
 ```
 
-Look for `oss-tracker.nstsdc.org` anywhere in the output. If it's taken, edit the `host:` field in `k8s/04-ingress.yaml` (in your own fork/clone) to something else before applying.
+Look for `os.nstsdc.org` anywhere in the output. If it's taken, edit the `host:` field in `k8s/04-ingress.yaml` (in your own fork/clone) to something else before applying.
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/nst-sdc/Open-Source-Tracker-NST/main/k8s/04-ingress.yaml
@@ -124,7 +124,7 @@ kubectl -n opensource-tracker get pods
 Wait for `Running` and `1/1 Ready`, then just try the real URL directly — the Cloudflare Tunnel routing is already live cluster-wide, so there's no DNS/cert step to wait on:
 
 ```bash
-curl -i https://oss-tracker.nstsdc.org/api/health
+curl -i https://os.nstsdc.org/api/health
 ```
 
 You should get back `{"ok":true}`. If not:
@@ -156,7 +156,7 @@ kubectl -n opensource-tracker logs job/test-refresh-1
 
 **Why not GitHub Actions, like the Vercel deployment uses?** This repo's `.github/workflows/refresh-cache.yml` is set up identically (pointed at `secrets.APP_URL`/`secrets.CRON_SECRET`) and manual `workflow_dispatch` triggers do work — but its `schedule:` trigger has never fired on its own, even though the workflow shows as `active`. Most likely an org-level policy restricting scheduled Actions runs specifically (unconfirmed — would need an org owner to check). If you want to try it anyway or investigate further, the same two repo secrets apply:
 
-- `APP_URL` = `https://oss-tracker.nstsdc.org` (or whatever hostname you used)
+- `APP_URL` = `https://os.nstsdc.org` (or whatever hostname you used)
 - `CRON_SECRET` = the exact same value you used for `CRON_SECRET` in step 6's Secret command
 
 **Careful if you're ever tempted to reuse the production `GITHUB_TOKEN`** for a deployment that has any automatic 15-minute trigger wired up (CronJob or Actions): if it shares a GitHub token with the production Vercel app's own 15-minute cron, both will compete for the same rate limit — this is a real, previously-documented incident pattern (see `DOCUMENTATION.md` Section 5.6). Always use your own token when an automatic schedule is live.
@@ -240,7 +240,7 @@ TOKEN=$(sudo kubectl -n opensource-tracker get secret kv-rest-secret -o jsonpath
 sudo kubectl -n opensource-tracker patch secret opensource-tracker-secrets --type=merge -p "$(printf '{"stringData":{"KV_REST_API_URL":"http://kv-rest.opensource-tracker.svc.cluster.local","KV_REST_API_TOKEN":"%s","KV_REST_API_READ_ONLY_TOKEN":"%s"}}' "$TOKEN" "$TOKEN")"
 sudo kubectl -n opensource-tracker rollout restart deployment/opensource-tracker
 sudo kubectl -n opensource-tracker rollout status deployment/opensource-tracker
-curl -s -o /dev/null -w "%{time_total}s\n" https://oss-tracker.nstsdc.org/contributors   # expect ~2 s, not 60
+curl -s -o /dev/null -w "%{time_total}s\n" https://os.nstsdc.org/contributors   # expect ~2 s, not 60
 ```
 
 If the migration Job cannot reach Upstash (which is what broke in the first place), the admin data can instead be re-seeded: the roster, flags, achievers and events also live in `data/*.json` and are loaded on first read when the key is absent; the summary caches are rebuilt by the refresh CronJob within fifteen minutes. Join requests and course progress have no file fallback, so copy those by hand if the migration cannot run.

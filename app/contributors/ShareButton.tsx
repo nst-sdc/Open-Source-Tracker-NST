@@ -193,7 +193,7 @@ export function ShareButton({
       // 8. Footer watermark
       ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.font = '11px sans-serif';
-      ctx.fillText('oss-tracker.nstsdc.org', 45, 410);
+      ctx.fillText('os.nstsdc.org', 45, 410);
 
       // 9. Generate and download image
       const dataUrl = canvas.toDataURL('image/png');

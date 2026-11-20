@@ -131,5 +131,5 @@ jobs:
             echo
             echo "Image: \`${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}\`"
             echo
-            echo "Fleet applies the pinned manifest within about a minute. Check: \`kubectl -n opensource-tracker rollout status deployment/opensource-tracker\` or https://oss-tracker.nstsdc.org/api/health"
+            echo "Fleet applies the pinned manifest within about a minute. Check: \`kubectl -n opensource-tracker rollout status deployment/opensource-tracker\` or https://os.nstsdc.org/api/health"
           } >> "$GITHUB_STEP_SUMMARY"
