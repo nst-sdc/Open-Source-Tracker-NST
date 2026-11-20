@@ -23,14 +23,10 @@ export default function JoinRequestPage() {
   const [campus, setCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU' | ''>('');
 
   // Debounced profile verification and status check as the user types
+  // Clearing the box is handled in the input's onChange; resetting state
+  // from inside the effect only caused an extra render.
   useEffect(() => {
-    if (!github.trim()) {
-      setStatus('idle');
-      setStatusMessage('');
-      setVerifiedProfile(null);
-      setError('');
-      return;
-    }
+    if (!github.trim()) return;
 
     const timer = setTimeout(async () => {
       setVerifying(true);
@@ -155,6 +151,7 @@ export default function JoinRequestPage() {
                     if (!val.trim()) {
                       setVerifiedProfile(null);
                       setStatus('idle');
+                      setStatusMessage('');
                       setError('');
                     }
                   }}
@@ -202,7 +199,7 @@ export default function JoinRequestPage() {
                   <select
                     id="year-select"
                     value={year}
-                    onChange={(e) => setYear(e.target.value as any)}
+                    onChange={(e) => setYear(e.target.value as typeof year)}
                     className="w-full bg-ground border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
                     style={{
                       backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(140,149,166,0.95)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
@@ -225,7 +222,7 @@ export default function JoinRequestPage() {
                   <select
                     id="campus-select"
                     value={campus}
-                    onChange={(e) => setCampus(e.target.value as any)}
+                    onChange={(e) => setCampus(e.target.value as typeof campus)}
                     className="w-full bg-ground border border-line rounded-2xl px-4 py-3.5 text-ink text-sm focus:outline-none focus:border-violet-100 transition-all cursor-pointer appearance-none"
                     style={{
                       backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(140,149,166,0.95)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
