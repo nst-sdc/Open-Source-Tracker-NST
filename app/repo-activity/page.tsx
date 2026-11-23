@@ -161,6 +161,28 @@ export default function RepoActivityPage() {
     }
   }
 
+  // Arriving with ?repo=owner/name (the organisations page links here) scans
+  // it straight away; ?period= picks the window. Runs once, after mount.
+  function openFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('repo');
+    if (!fromUrl) return;
+    const parsed = parseRepoInput(fromUrl);
+    if (!parsed) return;
+    const p = params.get('period');
+    const periods = ['all', '1day', 'week', 'month', '2months', '3months'] as const;
+    const chosen = periods.find((x) => x === p) ?? 'month';
+    setRepoInput(parsed);
+    setPeriod(chosen);
+    void performSearch(parsed, chosen);
+  }
+  useEffect(() => {
+    // Deferred a tick: the open sets state, and setting state synchronously
+    // inside an effect is what the lint rule (rightly) rejects.
+    queueMicrotask(openFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally once
+  }, []);
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const parsed = parseRepoInput(repoInput);
