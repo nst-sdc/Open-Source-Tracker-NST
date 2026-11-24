@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
-import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, gsocHistoryUrl, goodFirstIssuesUrl } from '@/lib/org-explorer-types';
+import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, gsocHistoryUrl, goodFirstIssuesUrl } from '@/lib/org-explorer-types';
 import { OrgLogo, YearsLine } from './OrgCardView';
 import { languageColor, LANGUAGE_MIN_SHARE, type OrgLanguageProfile } from '@/lib/org-languages-shared';
 
@@ -95,6 +95,9 @@ export function OrgSheet({ card: c, meta, years, profile, onClose, onPick }: {
             </section>
           )}
 
+          {/* LFX Mentorship history */}
+          {c.lfx && <LfxHistorySection lfx={c.lfx} onPick={onPick} />}
+
           {/* Languages, as GitHub measures them */}
           {!c.site && (
             <section>
@@ -178,6 +181,56 @@ function Facet({ title, items, onPick, tone }: { title: string; items: ReadonlyA
           <button key={t} type="button" onClick={() => onPick(t)} title={`Show organisations with ${t}`} className={`text-[11px] font-[600] px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${cls}`}>{t}</button>
         ))}
       </div>
+    </section>
+  );
+}
+
+const LFX_YEARS = Array.from({ length: LFX_LAST_YEAR - LFX_FIRST_YEAR + 1 }, (_, i) => LFX_FIRST_YEAR + i);
+
+function LfxHistorySection({ lfx, onPick }: { lfx: NonNullable<OrgCard['lfx']>; onPick: (kind: 'tech', value: string) => void }) {
+  const max = Math.max(1, ...Object.values(lfx.projectsByYear));
+  return (
+    <section>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h3 className="text-ink font-[650] text-sm">LFX Mentorship history</h3>
+        <YearsLine years={lfx.years} label="LFX" />
+      </div>
+      {lfx.orgs.length > 0 && <p className="text-xs text-ink-soft mb-2">On LFX as {lfx.orgs.join(', ')}.</p>}
+      <div className="grid grid-cols-8 gap-1 items-end h-16">
+        {LFX_YEARS.map((y) => {
+          const n = lfx.projectsByYear[String(y)] ?? 0;
+          const terms = lfx.termsByYear[String(y)] ?? [];
+          return (
+            <div key={y} className="flex flex-col items-center justify-end h-full" title={n ? `${y}: ${n} project${n === 1 ? '' : 's'}${terms.length ? `, term${terms.length === 1 ? '' : 's'} ${terms.join(', ')}` : ''}` : `${y}: no LFX projects`}>
+              <div className={`w-full rounded-sm ${n ? 'bg-violet-500' : 'bg-panel-2'}`} style={{ height: `${n ? Math.max(14, Math.round((n / max) * 100)) : 6}%` }} />
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-8 gap-1 mt-1">
+        {LFX_YEARS.map((y) => <div key={y} className="text-center text-[9px] text-ink-faint tabular-nums">{String(y).slice(2)}</div>)}
+      </div>
+      <p className="text-xs text-ink-soft mt-2 tabular-nums">{lfx.projects} mentorship project{lfx.projects === 1 ? '' : 's'} over {lfx.years.length} year{lfx.years.length === 1 ? '' : 's'}; up to three terms a year. History covers 2019–2023.</p>
+      {lfx.skills.length > 0 && (
+        <div className="mt-3">
+          <div className="text-[11px] text-ink-soft mb-1.5">Skills the projects asked for</div>
+          <div className="flex flex-wrap gap-1.5">
+            {lfx.skills.map((t) => (
+              <button key={t} type="button" onClick={() => onPick('tech', t)} title={`Show organisations asking for ${t}`} className="text-[11px] font-[600] px-2.5 py-1 rounded-full border transition-colors cursor-pointer bg-violet-0 text-violet-600 border-violet-100 hover:bg-violet-100">{t}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {lfx.recent.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {lfx.recent.slice(0, 5).map((p) => (
+            <li key={`${p.year}-${p.term}-${p.name}`} className="text-xs flex items-baseline gap-2 min-w-0">
+              <span className="text-ink-faint tabular-nums whitespace-nowrap">{p.year} T{p.term}</span>
+              <a href={p.repo} target="_blank" rel="noopener noreferrer" className="text-ink-mid hover:text-brand-600 hover:underline underline-offset-2 truncate" title={p.name}>{p.name}</a>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

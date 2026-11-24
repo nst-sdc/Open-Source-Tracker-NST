@@ -61,8 +61,29 @@ export function metaOf(card: OrgCard, gsoc: GsocMap): GsocOrg | undefined {
   return card.gsocSlug ? gsoc.get(card.gsocSlug) : undefined;
 }
 
-export function yearsOf(card: OrgCard, gsoc: GsocMap): number[] {
-  return metaOf(card, gsoc)?.years ?? card.years ?? [];
+/** Programme years that count for the current view: GSoC's under the GSoC
+ *  chip, LFX's under the LFX chip, every programme's otherwise. */
+export function yearsOf(card: OrgCard, gsoc: GsocMap, program: ProgramKey | 'all' = 'all'): number[] {
+  const g = metaOf(card, gsoc)?.years ?? card.years ?? [];
+  const l = card.lfx?.years ?? [];
+  if (program === 'lfx') return l;
+  if (program === 'gsoc') return g;
+  return [...new Set([...g, ...l])].sort((a, b) => a - b);
+}
+
+/** Projects (slots) run in the programmes that count for the current view. */
+export function projectsOf(card: OrgCard, gsoc: GsocMap, program: ProgramKey | 'all' = 'all'): number {
+  const g = metaOf(card, gsoc)?.projects ?? 0;
+  const l = card.lfx?.projects ?? 0;
+  if (program === 'lfx') return l;
+  if (program === 'gsoc') return g;
+  return g + l;
+}
+
+/** What the organisation says it builds with: the GSoC dataset's technologies,
+ *  or the skills its LFX projects asked for. */
+export function techsOf(card: OrgCard, gsoc: GsocMap): string[] | undefined {
+  return metaOf(card, gsoc)?.technologies ?? card.lfx?.skills;
 }
 
 const anyOf = (wanted: ReadonlyArray<string>, have: ReadonlyArray<string> | undefined) =>
@@ -78,15 +99,15 @@ export function matchesCard(card: OrgCard, gsoc: GsocMap, f: ExplorerFilters, la
   }
   const meta = metaOf(card, gsoc);
   if (f.years.length > 0) {
-    const years = yearsOf(card, gsoc);
+    const years = yearsOf(card, gsoc, f.program);
     if (!f.years.some((y) => years.includes(y))) return false;
   }
   if (f.categories.length > 0 && (!meta || !f.categories.includes(meta.category))) return false;
-  if (!anyOf(f.techs, meta?.technologies)) return false;
+  if (!anyOf(f.techs, techsOf(card, gsoc))) return false;
   if (!anyOf(f.topics, meta?.topics)) return false;
   const q = f.search.trim().toLowerCase();
   if (q) {
-    const hay = [card.login, card.name, card.description ?? '', meta?.category ?? '', ...(meta?.technologies ?? []), ...(meta?.topics ?? [])].join('\n').toLowerCase();
+    const hay = [card.login, card.name, card.description ?? '', meta?.category ?? '', ...(techsOf(card, gsoc) ?? []), ...(meta?.topics ?? []), ...(card.lfx?.orgs ?? [])].join('\n').toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;
@@ -96,11 +117,11 @@ export function filterCards(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, f: Exp
   return cards.filter((c) => matchesCard(c, gsoc, f, langs));
 }
 
-export function sortCards(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, sort: SortKey, langs: LangMap = NO_LANGS, picked: ReadonlyArray<string> = []): OrgCard[] {
-  const years = (c: OrgCard) => yearsOf(c, gsoc).length;
-  const projects = (c: OrgCard) => metaOf(c, gsoc)?.projects ?? 0;
-  const first = (c: OrgCard) => { const y = yearsOf(c, gsoc); return y.length ? Math.min(...y) : 0; };
-  const last = (c: OrgCard) => { const y = yearsOf(c, gsoc); return y.length ? Math.max(...y) : 0; };
+export function sortCards(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, sort: SortKey, langs: LangMap = NO_LANGS, picked: ReadonlyArray<string> = [], program: ProgramKey | 'all' = 'all'): OrgCard[] {
+  const years = (c: OrgCard) => yearsOf(c, gsoc, program).length;
+  const projects = (c: OrgCard) => projectsOf(c, gsoc, program);
+  const first = (c: OrgCard) => { const y = yearsOf(c, gsoc, program); return y.length ? Math.min(...y) : 0; };
+  const last = (c: OrgCard) => { const y = yearsOf(c, gsoc, program); return y.length ? Math.max(...y) : 0; };
   const share = (c: OrgCard) => combinedShare(langsOf(c, langs), picked);
   const byName = (a: OrgCard, b: OrgCard) => a.name.localeCompare(b.name);
   const recommended = (a: OrgCard, b: OrgCard) => b.contributors - a.contributors || b.mergedPRs - a.mergedPRs || years(b) - years(a) || projects(b) - projects(a) || byName(a, b);
@@ -135,7 +156,7 @@ export interface Facets {
 /** How many of the given cards each facet value would keep. Computed over the
  *  cards matching everything except the facets themselves, so counts stay
  *  honest as the search and programme change. */
-export function facetsOf(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, langs: LangMap = NO_LANGS): Facets {
+export function facetsOf(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, langs: LangMap = NO_LANGS, program: ProgramKey | 'all' = 'all'): Facets {
   const years = new Map<number, number>();
   const categories = new Map<string, number>();
   const techs = new Map<string, number>();
@@ -143,13 +164,13 @@ export function facetsOf(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, langs: La
   const languages = new Map<string, number>();
   const bump = <K,>(m: Map<K, number>, k: K) => m.set(k, (m.get(k) ?? 0) + 1);
   for (const c of cards) {
-    for (const y of yearsOf(c, gsoc)) bump(years, y);
+    for (const y of yearsOf(c, gsoc, program)) bump(years, y);
     const profile = langsOf(c, langs);
     if (profile) for (const [name] of profile.languages) if (combinedShare(profile, [name]) > 0) bump(languages, name);
+    for (const t of new Set(techsOf(c, gsoc) ?? [])) bump(techs, t);
     const meta = metaOf(c, gsoc);
     if (!meta) continue;
     bump(categories, meta.category);
-    for (const t of new Set(meta.technologies)) bump(techs, t);
     for (const t of new Set(meta.topics)) bump(topics, t);
   }
   const list = (m: Map<string, number>) => [...m].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));

@@ -2,16 +2,18 @@
 
 import { useState } from 'react';
 import type { ExplorerFilters, Facets } from '@/lib/org-explorer-filter';
+import type { ProgramKey } from '@/lib/org-explorer-types';
 import { LANGUAGE_QUICK_PICKS, languageColor } from '@/lib/org-languages-shared';
 
 /** The filter column: quick technology picks, GSoC years, categories,
  *  technologies and topics, each with how many organisations it keeps. */
-export function FacetPanel({ facets, filters, loading, measured, onToggle, onClear }: {
+export function FacetPanel({ facets, filters, loading, measured, program, onToggle, onClear }: {
   facets: Facets;
   filters: ExplorerFilters;
   loading: boolean;
   /** Organisations with a GitHub language profile so far. */
   measured: number;
+  program: ProgramKey | 'all';
   onToggle: (kind: 'years' | 'categories' | 'techs' | 'topics' | 'langs', value: string | number) => void;
   onClear: () => void;
 }) {
@@ -46,7 +48,7 @@ export function FacetPanel({ facets, filters, loading, measured, onToggle, onCle
       <CheckList title="Language in the code" items={facets.langs} selected={filters.langs} onToggle={(v) => onToggle('langs', v)} initial={10} searchable loading={loading} swatch />
 
       <section>
-        <h3 className="text-[11px] uppercase tracking-wider text-ink-soft font-[650] mb-2">GSoC year</h3>
+        <h3 className="text-[11px] uppercase tracking-wider text-ink-soft font-[650] mb-2">{program === 'lfx' ? 'LFX year' : program === 'gsoc' ? 'GSoC year' : 'Programme year'}</h3>
         <div className="grid grid-cols-4 gap-1.5">
           {facets.years.map((y) => {
             const on = filters.years.includes(y.value);
@@ -58,11 +60,11 @@ export function FacetPanel({ facets, filters, loading, measured, onToggle, onCle
             );
           })}
         </div>
-        {facets.years.length === 0 && <p className="text-xs text-ink-faint">No GSoC organisations in this selection.</p>}
+        {facets.years.length === 0 && <p className="text-xs text-ink-faint">No mentorship history in this selection.</p>}
       </section>
 
       <CheckList title="Category" items={facets.categories} selected={filters.categories} onToggle={(v) => onToggle('categories', v)} initial={14} />
-      <CheckList title="Technology (as the org describes it)" items={facets.techs} selected={filters.techs} onToggle={(v) => onToggle('techs', v)} initial={12} searchable loading={loading} />
+      <CheckList title={program === 'lfx' ? 'Skills the LFX projects asked for' : 'Technology (as the org describes it)'} items={facets.techs} selected={filters.techs} onToggle={(v) => onToggle('techs', v)} initial={12} searchable loading={loading} />
       <CheckList title="Topic" items={facets.topics} selected={filters.topics} onToggle={(v) => onToggle('topics', v)} initial={12} searchable loading={loading} />
     </div>
   );

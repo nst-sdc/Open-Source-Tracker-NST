@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
-import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR } from '@/lib/org-explorer-types';
+import type { GsocOrg, OrgCard, ProgramKey } from '@/lib/org-explorer-types';
+import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR } from '@/lib/org-explorer-types';
 import { yearRanges } from '@/lib/org-explorer-filter';
 import { languageColor, shareOf, type OrgLanguageProfile } from '@/lib/org-languages-shared';
 
@@ -43,7 +43,7 @@ export function OrgLogo({ card, meta, size = 'w-12 h-12' }: { card: OrgCard; met
 }
 
 /** "11 yrs · 2016–26" with a highlight when the organisation is in the current year. */
-export function YearsLine({ years }: { years: ReadonlyArray<number> }) {
+export function YearsLine({ years, label = 'GSoC' }: { years: ReadonlyArray<number>; label?: string }) {
   if (years.length === 0) return null;
   const current = years.includes(GSOC_LAST_YEAR);
   const first = Math.min(...years);
@@ -52,17 +52,27 @@ export function YearsLine({ years }: { years: ReadonlyArray<number> }) {
       {first === GSOC_LAST_YEAR ? (
         <span className="font-[650] px-1.5 py-0.5 rounded-md bg-success-600/10 text-success-600">New in {GSOC_LAST_YEAR}</span>
       ) : current ? (
-        <span className="font-[650] px-1.5 py-0.5 rounded-md bg-success-600/10 text-success-600">GSoC {GSOC_LAST_YEAR}</span>
+        <span className="font-[650] px-1.5 py-0.5 rounded-md bg-success-600/10 text-success-600">{label} {GSOC_LAST_YEAR}</span>
       ) : null}
-      <span className="tabular-nums">{years.length} {years.length === 1 ? 'yr' : 'yrs'} · {yearRanges(years)}</span>
+      <span className="tabular-nums">{label !== 'GSoC' ? `${label} · ` : ''}{years.length} {years.length === 1 ? 'yr' : 'yrs'} · {yearRanges(years)}</span>
     </span>
   );
 }
 
-export function OrgCardView({ card: c, meta, years, profile, picked, onOpen, onPickTech, onPickLang }: {
+/** Which programme's history a card shows: the selected one, else GSoC, else LFX. */
+function historyProgram(card: OrgCard, program: ProgramKey | 'all', hasGsoc: boolean): 'gsoc' | 'lfx' | null {
+  if (program === 'lfx' && card.lfx) return 'lfx';
+  if (hasGsoc) return 'gsoc';
+  if (card.lfx) return 'lfx';
+  return null;
+}
+
+export function OrgCardView({ card: c, meta, years, program, profile, picked, onOpen, onPickTech, onPickLang }: {
   card: OrgCard;
   meta?: GsocOrg;
+  /** Years for the current view (see yearsOf). */
   years: ReadonlyArray<number>;
+  program: ProgramKey | 'all';
   /** GitHub-measured languages, when the organisation has been measured. */
   profile?: OrgLanguageProfile;
   /** Languages the user filtered on. */
@@ -72,10 +82,14 @@ export function OrgCardView({ card: c, meta, years, profile, picked, onOpen, onP
   onPickLang: (lang: string) => void;
 }) {
   const hasOurs = c.contributors > 0;
-  const techs = meta?.technologies.slice(0, 4) ?? [];
+  const allTechs = meta?.technologies ?? c.lfx?.skills ?? [];
+  const techs = allTechs.slice(0, 4);
+  const more = allTechs.length - techs.length;
   const pickedShare = picked.length > 0 && profile ? picked.map((l) => `${l} ${shareOf(profile, l)}%`).join(' · ') : null;
-  const more = (meta?.technologies.length ?? 0) - techs.length;
-  const flips = years.length > 0;
+  const gsocYears = meta?.years ?? c.years ?? [];
+  const which = historyProgram(c, program, gsocYears.length > 0);
+  const flips = which !== null;
+  const yearsLabel = which === 'lfx' ? 'LFX' : 'GSoC';
   const face = 'bg-ground border border-line rounded-2xl shadow-card group-hover:shadow-card-hover group-hover:border-line-heavy transition-[box-shadow,border-color] duration-300';
 
   const front = (
@@ -110,8 +124,11 @@ export function OrgCardView({ card: c, meta, years, profile, picked, onOpen, onP
       </div>
 
       <div className="flex items-center justify-between gap-2 pointer-events-none">
-        <YearsLine years={years} />
-        {meta && meta.projects > 0 && <span className="text-[11px] text-ink-soft tabular-nums whitespace-nowrap">{meta.projects} GSoC projects</span>}
+        <YearsLine years={which === 'lfx' ? (c.lfx?.years ?? []) : years} label={yearsLabel} />
+        <span className="text-[11px] text-ink-soft tabular-nums whitespace-nowrap">
+          {which === 'lfx' && c.lfx ? `${c.lfx.projects} LFX project${c.lfx.projects === 1 ? '' : 's'}` : meta && meta.projects > 0 ? `${meta.projects} GSoC projects` : ''}
+          {which === 'gsoc' && c.lfx ? ` · ${c.lfx.projects} LFX` : ''}
+        </span>
       </div>
 
       {profile && (
@@ -172,7 +189,7 @@ export function OrgCardView({ card: c, meta, years, profile, picked, onOpen, onP
     <div className="group org-flip h-full">
       <div className="org-flip-inner">
         {front}
-        <SlotsBack card={c} meta={meta} years={years} onOpen={onOpen} face={face} />
+        <SlotsBack card={c} meta={meta} years={which === 'lfx' ? (c.lfx?.years ?? []) : gsocYears} program={which ?? 'gsoc'} onOpen={onOpen} face={face} />
       </div>
     </div>
   );
@@ -181,22 +198,26 @@ export function OrgCardView({ card: c, meta, years, profile, picked, onOpen, onP
 /** The back of the card: the organisation's GSoC slots per year, 2016–2026,
  *  a box per year with the number of projects (or a tick when the count is
  *  unknown), so histories can be compared at a glance without opening each one. */
-function SlotsBack({ card: c, meta, years, onOpen, face }: { card: OrgCard; meta?: GsocOrg; years: ReadonlyArray<number>; onOpen: () => void; face: string }) {
-  const allYears = Array.from({ length: GSOC_LAST_YEAR - GSOC_FIRST_YEAR + 1 }, (_, i) => GSOC_FIRST_YEAR + i);
-  const total = meta?.projects ?? 0;
+function SlotsBack({ card: c, meta, years, program, onOpen, face }: { card: OrgCard; meta?: GsocOrg; years: ReadonlyArray<number>; program: 'gsoc' | 'lfx'; onOpen: () => void; face: string }) {
+  const lfx = program === 'lfx';
+  const [firstYear, lastYear] = lfx ? [LFX_FIRST_YEAR, LFX_LAST_YEAR] : [GSOC_FIRST_YEAR, GSOC_LAST_YEAR];
+  const allYears = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => firstYear + i);
+  const byYear = lfx ? c.lfx?.projectsByYear : meta?.projectsByYear;
+  const total = (lfx ? c.lfx?.projects : meta?.projects) ?? 0;
+  const label = lfx ? 'LFX' : 'GSoC';
   return (
     <button type="button" onClick={onOpen} aria-hidden="true" tabIndex={-1} className={`${face} org-flip-face org-flip-back p-4 flex flex-col text-left cursor-pointer w-full`}>
       <div className="text-center min-w-0">
         <div className="text-ink font-[650] text-[14.5px] leading-snug truncate">{c.name}</div>
-        <div className="text-[10px] uppercase tracking-wider text-ink-soft font-[650] mt-0.5">GSoC slots by year</div>
+        <div className="text-[10px] uppercase tracking-wider text-ink-soft font-[650] mt-0.5">{label} slots by year</div>
       </div>
       <div className="flex flex-wrap justify-center gap-1.5 my-auto py-3">
         {allYears.map((y) => {
           const active = years.includes(y);
-          const n = meta?.projectsByYear[String(y)];
+          const n = byYear?.[String(y)];
           return (
-            <div key={y} title={active ? `${y}: ${n ?? 'some'} project${n === 1 ? '' : 's'}` : `${y}: not in GSoC`}
-              className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center tabular-nums ${active ? 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm' : 'bg-panel-2 text-ink-faint border border-line'}`}>
+            <div key={y} title={active ? `${y}: ${n ?? 'some'} project${n === 1 ? '' : 's'}` : `${y}: not in ${label}`}
+              className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center tabular-nums ${active ? (lfx ? 'bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-sm' : 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm') : 'bg-panel-2 text-ink-faint border border-line'}`}>
               <span className={`text-[9px] leading-none ${active ? 'text-white/80' : ''}`}>{y}</span>
               <span className="text-[13px] font-[700] leading-tight mt-0.5">{active ? (n ?? '✓') : '–'}</span>
             </div>
@@ -204,7 +225,7 @@ function SlotsBack({ card: c, meta, years, onOpen, face }: { card: OrgCard; meta
         })}
       </div>
       <div className="flex items-center justify-between text-[11px] text-ink-soft tabular-nums">
-        <span>{total > 0 ? `${total} projects over ${years.length} yr${years.length === 1 ? '' : 's'}` : `${years.length} yr${years.length === 1 ? '' : 's'} in GSoC`}</span>
+        <span>{total > 0 ? `${total} projects over ${years.length} yr${years.length === 1 ? '' : 's'}` : `${years.length} yr${years.length === 1 ? '' : 's'} in ${label}`}</span>
         <span className="text-brand-600 font-[600]">Click for details →</span>
       </div>
     </button>

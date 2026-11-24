@@ -13,8 +13,9 @@
 import programOrgs from '@/data/program-orgs.json';
 import explorerPrograms from '@/data/explorer-programs.json';
 import gsocOrgsJson from '@/data/gsoc-orgs.json';
+import lfxOrgsJson from '@/data/lfx-orgs.json';
 import { busiestRepo, type OrgIndex } from './org-index';
-import { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg } from './org-explorer-types';
+import { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg, type LfxHistory } from './org-explorer-types';
 
 export { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg } from './org-explorer-types';
 
@@ -23,6 +24,10 @@ export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
 
 /** Dataset record by lower-case GitHub login, for organisations that have one. */
 const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(GSOC_ORGS.filter((o) => o.github).map((o) => [o.github!.toLowerCase(), o]));
+
+/** LFX Mentorship history (2019–2023 from the LFX Mentorship Metrics dump) by lower-case login. */
+export const LFX_ORGS: ReadonlyArray<LfxHistory & { login: string }> = lfxOrgsJson as unknown as Array<LfxHistory & { login: string }>;
+const LFX_BY_LOGIN: ReadonlyMap<string, LfxHistory> = new Map(LFX_ORGS.map(({ login, ...h }) => [login.toLowerCase(), h]));
 import type { OrgCacheMap } from './org-cache';
 import type { RepoCacheMap } from './repo-cache';
 
@@ -123,6 +128,8 @@ export function buildOrgExplorer(input: {
     };
     if (years.size) card.years = [...years].sort((a, b) => a - b);
     if (gsoc) card.gsocSlug = gsoc.slug;
+    const lfx = LFX_BY_LOGIN.get(lower);
+    if (lfx) card.lfx = lfx;
     cards.set(lower, card);
     return card;
   };

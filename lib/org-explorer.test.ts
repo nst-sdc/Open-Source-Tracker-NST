@@ -60,5 +60,10 @@ describe('org explorer', () => {
     expect(mailman.site).toBe(true);
     expect(mailman.programs).toEqual(['gsoc']);
     expect(mailman.url).toMatch(/^https?:\/\//);
+    // LFX history rides on the card
+    const hl = data.cards.find((c) => c.login.toLowerCase() === 'hyperledger')!;
+    expect(hl.programs).toContain('lfx');
+    expect(hl.lfx?.projects).toBeGreaterThan(50);
+    expect(hl.lfx?.years).toContain(2023);
   });
 });

@@ -70,16 +70,16 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
 
   // Facet counts ignore the facets themselves so each option shows what it would keep.
   const base = useMemo(() => filterCards(data.cards, gsoc, { ...filters, ...EMPTY_FACETS }, langs), [data.cards, gsoc, filters, langs]);
-  const facets = useMemo(() => facetsOf(base, gsoc, langs), [base, gsoc, langs]);
+  const facets = useMemo(() => facetsOf(base, gsoc, langs, filters.program), [base, gsoc, langs, filters.program]);
   const sort = effectiveSort(filters);
-  const shown = useMemo(() => sortCards(filterCards(data.cards, gsoc, filters, langs), gsoc, sort, langs, filters.langs), [data.cards, gsoc, filters, langs, sort]);
+  const shown = useMemo(() => sortCards(filterCards(data.cards, gsoc, filters, langs), gsoc, sort, langs, filters.langs, filters.program), [data.cards, gsoc, filters, langs, sort]);
   const measured = useMemo(() => Object.keys(langs).length, [langs]);
 
   const visible = shown.slice(0, limit);
   const totalContributors = new Set(shown.flatMap((c) => c.people)).size;
   const withOurs = shown.filter((c) => c.contributors > 0).length;
   const current = filters.program === 'all' ? null : PROGRAM_FILTERS.find((f) => f.key === filters.program) ?? null;
-  const showFacets = filters.program === 'all' || filters.program === 'gsoc';
+  const showFacets = filters.program === 'all' || filters.program === 'gsoc' || filters.program === 'lfx';
   const open = openLogin ? data.cards.find((c) => c.login === openLogin) ?? null : null;
   const facetCount = activeFacetCount(filters);
 
@@ -92,7 +92,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
 
   const chips: Array<{ label: string; clear: () => void }> = [
     ...filters.langs.map((v) => ({ label: `${v} code`, clear: () => toggle('langs', v) })),
-    ...filters.years.map((y) => ({ label: `GSoC ${y}`, clear: () => toggle('years', y) })),
+    ...filters.years.map((y) => ({ label: `${filters.program === 'lfx' ? 'LFX' : filters.program === 'gsoc' ? 'GSoC' : 'Year'} ${y}`, clear: () => toggle('years', y) })),
     ...filters.categories.map((v) => ({ label: v, clear: () => toggle('categories', v) })),
     ...filters.techs.map((v) => ({ label: v, clear: () => toggle('techs', v) })),
     ...filters.topics.map((v) => ({ label: v, clear: () => toggle('topics', v) })),
@@ -161,7 +161,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         {showFacets && (
           <aside className="hidden lg:block">
             <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 -mr-2 bg-ground border border-line rounded-2xl p-4">
-              <FacetPanel facets={facets} filters={filters} loading={loading} measured={measured} onToggle={toggle} onClear={() => update(EMPTY_FACETS)} />
+              <FacetPanel facets={facets} filters={filters} loading={loading} measured={measured} program={filters.program} onToggle={toggle} onClear={() => update(EMPTY_FACETS)} />
             </div>
           </aside>
         )}
@@ -175,7 +175,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {visible.map((c) => (
-                <OrgCardView key={c.login} card={c} meta={c.gsocSlug ? gsoc.get(c.gsocSlug) : undefined} years={yearsOf(c, gsoc)} profile={langsOf(c, langs)} picked={filters.langs}
+                <OrgCardView key={c.login} card={c} meta={c.gsocSlug ? gsoc.get(c.gsocSlug) : undefined} years={yearsOf(c, gsoc, filters.program)} program={filters.program} profile={langsOf(c, langs)} picked={filters.langs}
                   onOpen={() => setOpenLogin(c.login)} onPickTech={(t) => { if (!filters.techs.includes(t)) toggle('techs', t); }} onPickLang={(l) => { if (!filters.langs.includes(l)) toggle('langs', l); }} />
               ))}
             </div>
@@ -190,13 +190,13 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         </div>
       </div>
 
-      {open && <OrgSheet card={open} meta={open.gsocSlug ? gsoc.get(open.gsocSlug) : undefined} years={yearsOf(open, gsoc)} profile={langsOf(open, langs)} onClose={() => setOpenLogin(null)} onPick={pickFromSheet} />}
+      {open && <OrgSheet card={open} meta={open.gsocSlug ? gsoc.get(open.gsocSlug) : undefined} years={yearsOf(open, gsoc, 'gsoc')} profile={langsOf(open, langs)} onClose={() => setOpenLogin(null)} onPick={pickFromSheet} />}
 
       {drawer && showFacets && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
           <button type="button" aria-label="Close filters" onClick={() => setDrawer(false)} className="absolute inset-0 bg-ink/40 cursor-default" />
           <div className="absolute left-0 top-0 h-full w-[88%] max-w-sm bg-ground border-r border-line overflow-y-auto p-4">
-            <FacetPanel facets={facets} filters={filters} loading={loading} measured={measured} onToggle={toggle} onClear={() => update(EMPTY_FACETS)} />
+            <FacetPanel facets={facets} filters={filters} loading={loading} measured={measured} program={filters.program} onToggle={toggle} onClear={() => update(EMPTY_FACETS)} />
             <button type="button" onClick={() => setDrawer(false)} className="mt-5 w-full bg-brand-500 text-white font-[600] rounded-xl py-2.5 text-sm cursor-pointer">Show {shown.length} organisation{shown.length === 1 ? '' : 's'}</button>
           </div>
         </div>

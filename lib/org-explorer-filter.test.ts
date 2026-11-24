@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { GsocOrg, OrgCard } from './org-explorer-types';
-import { DEFAULT_FILTERS, effectiveSort, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, yearRanges } from './org-explorer-filter';
+import { DEFAULT_FILTERS, NO_LANGS, effectiveSort, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, yearRanges } from './org-explorer-filter';
 import type { OrgLanguageMap } from './org-languages-shared';
 
 const card = (login: string, extra: Partial<OrgCard> = {}): OrgCard => ({
@@ -21,6 +21,7 @@ const cards: OrgCard[] = [
   card('oldweb', { gsocSlug: 'oldweb' }),
   card('listed-only', { years: [2026] }), // on the programme list, no dataset record
   card('KDE', { programs: ['sok'], tags: ['Season of KDE'] }),
+  card('hyperledger', { programs: ['lfx'], tags: ['LFX'], lfx: { years: [2020, 2021, 2022, 2023], projects: 72, projectsByYear: { 2020: 10, 2021: 20, 2022: 22, 2023: 20 }, orgs: ['Hyperledger'], logo: null, skills: ['go', 'blockchain'], termsByYear: { 2023: [1, 2, 3] }, recent: [] } }),
 ];
 
 describe('org explorer filters', () => {
@@ -30,6 +31,11 @@ describe('org explorer filters', () => {
     // the year filter also works for listed organisations without a dataset record
     expect(filterCards(cards, gsoc, { ...f, years: [2026] }).map((c) => c.login)).toEqual(['sympy', 'newbie', 'listed-only']);
     expect(filterCards(cards, gsoc, { ...f, years: [2017, 2026] }).map((c) => c.login)).toEqual(['sympy', 'newbie', 'oldweb', 'listed-only']);
+    // LFX years and skills count under the LFX chip (and everywhere)
+    expect(filterCards(cards, gsoc, { ...f, program: 'lfx', years: [2023] }).map((c) => c.login)).toEqual(['hyperledger']);
+    expect(filterCards(cards, gsoc, { ...f, years: [2020] }).map((c) => c.login)).toEqual(['sympy', 'hyperledger']);
+    expect(filterCards(cards, gsoc, { ...f, techs: ['blockchain'] }).map((c) => c.login)).toEqual(['hyperledger']);
+    expect(filterCards(cards, gsoc, { ...f, search: 'Hyperledger' }).map((c) => c.login)).toEqual(['hyperledger']);
     expect(filterCards(cards, gsoc, { ...f, techs: ['python', 'react'] }).map((c) => c.login)).toEqual(['sympy', 'newbie']);
     expect(filterCards(cards, gsoc, { ...f, categories: ['Web'] }).map((c) => c.login)).toEqual(['newbie', 'oldweb']);
     expect(filterCards(cards, gsoc, { ...f, topics: ['mathematics'] }).map((c) => c.login)).toEqual(['sympy']);
@@ -48,6 +54,13 @@ describe('org explorer filters', () => {
     expect(sortCards(g, gsoc, 'oldest').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']); // 2016 (8 yrs), 2016 (2 yrs), 2026
     expect(sortCards(g, gsoc, 'name').map((c) => c.login)).toEqual(['newbie', 'oldweb', 'sympy']);
     expect(sortCards(g, gsoc, 'name-desc').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']);
+    // slots and years count LFX projects too; under the LFX chip only LFX counts
+    const all = [...g, cards[5]];
+    expect(sortCards(all, gsoc, 'slots').map((c) => c.login)).toEqual(['hyperledger', 'sympy', 'oldweb', 'newbie']);
+    expect(sortCards(all, gsoc, 'slots', NO_LANGS, [], 'gsoc').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie', 'hyperledger']);
+    expect(sortCards(all, gsoc, 'recent', NO_LANGS, [], 'lfx')[0].login).toBe('hyperledger');
+    expect(facetsOf(all, gsoc, NO_LANGS, 'lfx').years).toEqual([{ value: 2023, count: 1 }, { value: 2022, count: 1 }, { value: 2021, count: 1 }, { value: 2020, count: 1 }]);
+    expect(facetsOf(all, gsoc).techs.find((t) => t.value === 'blockchain')?.count).toBe(1);
   });
 
   it('filters by measured GitHub languages and sorts by their share', () => {
@@ -73,6 +86,7 @@ describe('org explorer filters', () => {
   it('counts facets over the given cards', () => {
     const fx = facetsOf(cards, gsoc);
     expect(fx.years[0]).toEqual({ value: 2026, count: 3 });
+    expect(fx.years.find((y) => y.value === 2020)?.count).toBe(2); // sympy (GSoC) and hyperledger (LFX)
     expect(fx.techs.find((t) => t.value === 'python')).toEqual({ value: 'python', count: 1 });
     expect(fx.categories.map((c) => c.value)).toEqual(['Web', 'Science and medicine']);
     expect(fx.topics.find((t) => t.value === 'web')?.count).toBe(2);

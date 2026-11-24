@@ -51,7 +51,32 @@ export interface OrgCard {
   gsocSlug?: string;
   /** No GitHub organisation: `login` is the dataset slug, `url` the project website. */
   site?: boolean;
+  /** LFX Mentorship history of this organisation's repositories (data/lfx-orgs.json). */
+  lfx?: LfxHistory;
 }
+
+/** Mentorship history of one organisation in one programme: the years it took
+ *  part and how many projects (slots) it ran each year. */
+export interface ProgramHistory {
+  years: number[];
+  projects: number;
+  projectsByYear: Record<string, number>;
+}
+
+export interface LfxHistory extends ProgramHistory {
+  /** LFX parent organisation names (e.g. "Hyperledger Foundation"). */
+  orgs: string[];
+  logo: string | null;
+  /** Skills the projects asked for, lower-case, most asked first. */
+  skills: string[];
+  /** Terms (1–3) the organisation ran projects in, per year. */
+  termsByYear: Record<string, number[]>;
+  /** Newest projects first. */
+  recent: Array<{ name: string; year: number; term: number; repo: string; lfx: string | null }>;
+}
+
+export const LFX_FIRST_YEAR = 2019;
+export const LFX_LAST_YEAR = 2026;
 
 /** One organisation of the GSoC dataset (data/gsoc-orgs.json), 2016–2026. */
 export interface GsocOrg {
