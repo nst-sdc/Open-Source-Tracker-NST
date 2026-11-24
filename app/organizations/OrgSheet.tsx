@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
-import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, gsocOfficialOrgUrl, goodFirstIssuesUrl } from '@/lib/org-explorer-types';
+import type { GsocOrg, OrgCard, UmbrellaParent } from '@/lib/org-explorer-types';
+import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, PROGRAM_FILTERS, gsocOfficialOrgUrl, goodFirstIssuesUrl, umbrellaMembers } from '@/lib/org-explorer-types';
 import { GsocProjects } from './GsocProjects';
 import { OrgLogo, YearsLine } from './OrgCardView';
 import { languageColor, LANGUAGE_MIN_SHARE, type OrgLanguageProfile } from '@/lib/org-languages-shared';
 
 /** The side panel for one organisation: what it is, its GSoC history,
  *  what it builds with, who from NST is already there, and where to start. */
-export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, onPick }: {
+export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, onPick, onOpen }: {
   card: OrgCard;
   meta?: GsocOrg;
   years: ReadonlyArray<number>;
@@ -19,13 +19,15 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
   onMeasured: (login: string, profile: OrgLanguageProfile) => void;
   onClose: () => void;
   onPick: (kind: 'tech' | 'topic' | 'category' | 'lang', value: string) => void;
+  /** Open another organisation's sheet by login, when the explorer has a card for it. */
+  onOpen?: (login: string) => boolean;
 }) {
   // The organisation's current GSoC ideas list, once the projects section has read it from the official site.
   const [ideasList, setIdeasList] = useState<string | null>(null);
   // No profile yet: ask the server to measure this organisation now.
   const [measuring, setMeasuring] = useState<'idle' | 'busy' | 'none' | 'failed'>('idle');
   useEffect(() => {
-    if (profile || c.site) return;
+    if (profile || c.site || c.umbrella) return;
     let alive = true;
     queueMicrotask(() => { if (alive) setMeasuring('busy'); });
     fetch(`/api/org-languages?login=${encodeURIComponent(c.login)}`)
@@ -37,7 +39,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
       .catch(() => { if (alive) setMeasuring('failed'); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per organisation
-  }, [c.login, c.site]);
+  }, [c.login, c.site, c.umbrella]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -91,6 +93,12 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
 
           {c.description && <p className="text-ink-mid text-sm leading-relaxed">{c.description}</p>}
 
+          {/* Umbrella: where the slots actually go */}
+          {c.umbrella && <UmbrellaSection card={c} meta={meta} onOpen={onOpen} />}
+
+          {/* Member project: which umbrella it ran GSoC projects under */}
+          {c.via && !c.umbrella && <ViaSection card={c} parents={c.via} onOpen={onOpen} />}
+
           {/* GSoC history */}
           {years.length > 0 && (
             <section>
@@ -119,13 +127,19 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
             </section>
           )}
 
-          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} onIdeasList={setIdeasList} />}
+          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} onIdeasList={setIdeasList} members={c.umbrella ? new Set(umbrellaMembers(meta).map((m) => m.login.toLowerCase())) : undefined} />}
 
           {/* LFX Mentorship history */}
           {c.lfx && <LfxHistorySection lfx={c.lfx} onPick={onPick} />}
 
           {/* Languages, as GitHub measures them */}
-          {!c.site && (
+          {c.umbrella && !c.site && (
+            <section>
+              <h3 className="text-ink font-[650] text-sm mb-1">Languages in the code</h3>
+              <p className="text-xs text-ink-soft">Each member project has its own stack, so there is no single profile for an umbrella. Open a member project above to see its languages.</p>
+            </section>
+          )}
+          {!c.site && !c.umbrella && (
             <section>
               <div className="flex items-baseline justify-between gap-2 mb-2">
                 <h3 className="text-ink font-[650] text-sm">Languages in the code</h3>
@@ -216,6 +230,84 @@ function Facet({ title, items, onPick, tone }: { title: string; items: ReadonlyA
 }
 
 const LFX_YEARS = Array.from({ length: LFX_LAST_YEAR - LFX_FIRST_YEAR + 1 }, (_, i) => LFX_FIRST_YEAR + i);
+
+/** An umbrella's member organisations, as the GSoC projects' code links name
+ *  them. Partial by nature: many projects link a blog post or nothing. */
+function UmbrellaSection({ card, meta, onOpen }: { card: OrgCard; meta: GsocOrg | undefined; onOpen?: (login: string) => boolean }) {
+  const members = meta ? umbrellaMembers(meta) : [];
+  const shown = members.slice(0, 24);
+  const programLabel = card.umbrella?.program ? PROGRAM_FILTERS.find((p) => p.key === card.umbrella!.program)?.label : undefined;
+  return (
+    <section className="rounded-xl border border-brand-100 bg-brand-0/60 p-3">
+      <h3 className="text-ink font-[650] text-sm">Umbrella organisation</h3>
+      <p className="text-xs text-ink-mid mt-1 leading-relaxed">
+        GSoC counts the slots for {card.name} as one organisation, but each project is mentored inside a member project, and that is where the code and the maintainers are.
+      </p>
+      {shown.length > 0 && (
+        <>
+          <p className="text-[11px] text-ink-faint mt-2">Member projects seen in the projects&rsquo; code links, most projects first. Projects that linked no code are not counted.</p>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {shown.map((m) => (
+              <MemberChip key={m.login} login={m.login} title={`${m.projects} project${m.projects === 1 ? '' : 's'} · ${m.years.join(', ')}${Object.keys(m.repos).length ? ` · in ${Object.keys(m.repos).slice(0, 4).join(', ')}` : ''}`} onOpen={onOpen}>
+                {m.login}<span className="text-ink-faint tabular-nums font-[500]">{m.projects}</span>
+              </MemberChip>
+            ))}
+            {members.length > shown.length && <span className="text-[11px] px-1.5 py-0.5 text-ink-faint">+{members.length - shown.length} more</span>}
+          </div>
+        </>
+      )}
+      {card.umbrella?.program && (
+        <Link href={`/organizations?program=${card.umbrella.program}`} className="inline-block mt-2 text-xs font-[600] text-brand-600 hover:underline underline-offset-2">Browse every {programLabel ?? 'member'} project here →</Link>
+      )}
+    </section>
+  );
+}
+
+/** A chip that opens the organisation's sheet here when there is one, and its GitHub page otherwise. */
+function MemberChip({ login, title, onOpen, children }: { login: string; title: string; onOpen?: (login: string) => boolean; children: React.ReactNode }) {
+  const cls = 'inline-flex items-center gap-1 text-[11px] font-[600] px-2 py-0.5 rounded-full bg-ground border border-line text-ink-mid hover:text-ink hover:border-line-strong transition-colors cursor-pointer';
+  return (
+    <a href={`https://github.com/${login}`} target="_blank" rel="noopener noreferrer" title={title} className={cls}
+      onClick={(e) => { if (onOpen && onOpen(login)) e.preventDefault(); }}>
+      {children}
+    </a>
+  );
+}
+
+/** The umbrellas a member project ran its GSoC projects under. */
+function ViaSection({ card, parents, onOpen }: { card: OrgCard; parents: ReadonlyArray<UmbrellaParent>; onOpen?: (login: string) => boolean }) {
+  return (
+    <section className="rounded-xl border border-line bg-panel/60 p-3">
+      <h3 className="text-ink font-[650] text-sm">GSoC through an umbrella</h3>
+      <p className="text-xs text-ink-mid mt-1 leading-relaxed">GSoC lists these projects under the umbrella organisation; the mentoring, the code and the maintainers were here. Counted from the projects&rsquo; code links, so projects that linked no code are missing.</p>
+      <ul className="mt-2 space-y-1">
+        {parents.map((p) => (
+          <li key={p.slug} className="flex items-baseline justify-between gap-3 text-xs">
+            {p.login ? (
+              <MemberChip login={p.login} title={`Open ${p.name}`} onOpen={onOpen}>{p.name}</MemberChip>
+            ) : (
+              <span className="font-[600] text-ink-mid">{p.name}</span>
+            )}
+            <span className="text-ink-soft tabular-nums whitespace-nowrap">{p.projects} project{p.projects === 1 ? '' : 's'} · {p.years.join(', ')}</span>
+          </li>
+        ))}
+      </ul>
+      {parents.some((p) => Object.keys(p.repos).length > 0) && (
+        <div className="mt-2">
+          <p className="text-[11px] text-ink-faint">Repositories those projects were in:</p>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {parents.flatMap((p) => Object.entries(p.repos).map(([repo, n]) => ({ p, repo, n }))).slice(0, 12).map(({ p, repo, n }) => (
+              <a key={`${p.slug}/${repo}`} href={`https://github.com/${card.login}/${repo}`} target="_blank" rel="noopener noreferrer" title={`${n} project${n === 1 ? '' : 's'}`}
+                className="inline-flex items-center gap-1 text-[11px] font-[600] px-2 py-0.5 rounded-full bg-ground border border-line text-ink-mid hover:text-ink hover:border-line-strong transition-colors">
+                {repo}<span className="text-ink-faint tabular-nums font-[500]">{n}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function LfxHistorySection({ lfx, onPick }: { lfx: NonNullable<OrgCard['lfx']>; onPick: (kind: 'tech', value: string) => void }) {
   const max = Math.max(1, ...Object.values(lfx.projectsByYear));

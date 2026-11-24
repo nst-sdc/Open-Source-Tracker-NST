@@ -38,6 +38,21 @@ describe('org explorer', () => {
     expect(sympy.programs).toContain('gsoc');
     expect(sympy.topRepo).toEqual({ repo: 'sympy/sympy', merged: 3 });
     expect(data.cards.find((c) => c.login === 'KDE')?.programs).toEqual(expect.arrayContaining(['sok', 'outreachy']));
+    // Umbrellas carry their own login, not a member's, and know their member projects.
+    const numfocus = data.cards.find((c) => c.login === 'numfocus')!;
+    expect(numfocus.gsocSlug).toBe('numfocus');
+    expect(numfocus.umbrella).toEqual({ members: expect.any(Number), program: 'numfocus' });
+    expect(numfocus.umbrella!.members).toBeGreaterThan(10);
+    expect(numfocus.gsocSlots?.['2025']).toBe(31);
+    expect(data.cards.find((c) => c.login === 'psf')?.umbrella).toEqual({ members: expect.any(Number) });
+    // ...and the member projects point back: pvlib ran GSoC projects under NumFOCUS.
+    const pvlib = data.cards.find((c) => c.login.toLowerCase() === 'pvlib')!;
+    expect(pvlib.via?.map((p) => p.slug)).toEqual(['numfocus']);
+    expect(pvlib.programs).toContain('gsoc');
+    expect(pvlib.gsocSlots).toBeDefined();
+    expect(Object.values(pvlib.gsocSlots!).reduce((a, n) => a + n, 0)).toBe(pvlib.via![0].projects);
+    expect(Object.keys(pvlib.via![0].repos)).toContain('pvlib-python');
+    expect(numfocus.via).toBeUndefined();
     expect(data.counts.sob.orgs).toBeGreaterThan(10);
     expect(data.cards.find((c) => c.login === 'someuser')).toBeUndefined();
     expect(data.cards.find((c) => c.login === 'firstcontributions')).toBeUndefined(); // only excluded repos

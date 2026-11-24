@@ -14,6 +14,8 @@ import { FacetPanel } from './Facets';
 
 const PAGE = 48;
 const PROGRAM_KEYS: ReadonlySet<string> = new Set(PROGRAM_FILTERS.map((f) => f.key));
+/** Programme chips with fewer organisations than this stay hidden (still reachable by URL). */
+const MIN_CHIP_ORGS = 5;
 const EMPTY: GsocMap = new Map();
 
 /** Mirror the selection into the address bar without a server round trip:
@@ -80,6 +82,12 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
   // Every programme gets the language facets; the history facets appear per programme inside the panel.
   const showFacets = true;
   const open = openLogin ? data.cards.find((c) => c.login === openLogin) ?? null : null;
+  // From one sheet to another (an umbrella to a member and back), by login in any case.
+  const openByLogin = (login: string) => {
+    const hit = data.cards.find((c) => c.login.toLowerCase() === login.toLowerCase());
+    if (hit) setOpenLogin(hit.login);
+    return !!hit;
+  };
   const facetCount = activeFacetCount(filters);
 
   const pickFromSheet = (kind: 'tech' | 'topic' | 'category' | 'lang', value: string) => {
@@ -104,6 +112,8 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         {[{ key: 'all' as const, label: 'All', hint: 'Every organisation' }, ...PROGRAM_FILTERS].map((f) => {
           const n = data.counts[f.key];
           const active = filters.program === f.key;
+          // A programme with a handful of organisations is not worth a chip; its tag still shows on the cards.
+          if (n.orgs < MIN_CHIP_ORGS && !active) return null;
           return (
             <button key={f.key} type="button" role="radio" aria-checked={active} title={f.hint} onClick={() => update({ program: f.key })}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-[550] border transition-colors cursor-pointer ${active ? 'bg-brand-500/15 text-brand-600 border-brand-100' : 'bg-ground text-ink-mid border-line hover:text-ink hover:border-line-strong'}`}>
@@ -192,7 +202,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
       {open && (
         <OrgSheet card={open} meta={open.gsocSlug ? gsoc.get(open.gsocSlug) : undefined} years={yearsOf(open, gsoc, 'gsoc')} profile={langsOf(open, langs)}
           onMeasured={(login, profile) => setLangs((m) => ({ ...m, [login.toLowerCase()]: profile }))}
-          onClose={() => setOpenLogin(null)} onPick={pickFromSheet} />
+          onClose={() => setOpenLogin(null)} onPick={pickFromSheet} onOpen={openByLogin} />
       )}
 
       {drawer && showFacets && (

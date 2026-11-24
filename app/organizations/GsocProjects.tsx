@@ -8,7 +8,11 @@ type State = { status: 'loading' } | { status: 'ok'; projects: GsocProject[]; so
 
 /** An organisation's GSoC projects by year, from the official GSoC site:
  *  pick a year, read the titles, open the project or its code. */
-export function GsocProjects({ slug, years, onIdeasList }: { slug: string; years: ReadonlyArray<number>; onIdeasList?: (url: string) => void }) {
+/** `members`: for an umbrella, the lower-case logins of its member projects; a
+ *  project's code owner is shown only when it is one of them, since the other
+ *  owners are the contributors' own forks. */
+export function GsocProjects({ slug, years, onIdeasList, members }: { slug: string; years: ReadonlyArray<number>; onIdeasList?: (url: string) => void; members?: ReadonlySet<string> }) {
+  const member = (owner: string | undefined) => !!owner && !!members && members.has(owner.toLowerCase());
   const sorted = [...years].sort((a, b) => b - a);
   const [year, setYear] = useState<number>(sorted[0]);
   const [state, setState] = useState<Record<number, State>>({});
@@ -69,8 +73,10 @@ export function GsocProjects({ slug, years, onIdeasList }: { slug: string; years
                     </a>
                   )}
                 </div>
-                {(p.contributor || p.mentors?.length) && (
+                {(member(p.codeOwner) || p.contributor || p.mentors?.length) && (
                   <div className="text-ink-faint mt-0.5 truncate">
+                    {member(p.codeOwner) && <a href={`https://github.com/${p.codeOwner}`} target="_blank" rel="noopener noreferrer" title="The member project this was mentored in" className="text-brand-700 font-[600] hover:underline underline-offset-2">{p.codeOwner}</a>}
+                    {member(p.codeOwner) && (p.contributor || p.mentors?.length) ? ' · ' : ''}
                     {p.contributor && <span>{p.contributor}</span>}
                     {p.contributor && p.mentors?.length ? ' · ' : ''}
                     {p.mentors?.length ? <span>mentored by {p.mentors.slice(0, 2).join(', ')}{p.mentors.length > 2 ? ` +${p.mentors.length - 2}` : ''}</span> : null}

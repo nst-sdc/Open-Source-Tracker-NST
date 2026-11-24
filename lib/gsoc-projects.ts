@@ -43,6 +43,12 @@ export function officialProjectUrl(year: number, id: string): string {
 }
 
 /** The official answer, trimmed to what the sheet shows. */
+/** The GitHub organisation or account a code link points into, if it is one. */
+export function codeOwner(url: string | null | undefined): string | undefined {
+  const m = /^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\//.exec(url ?? '');
+  return m?.[1];
+}
+
 export function normalizeOfficial(org: OfficialOrg, year: number): GsocProject[] {
   return (org.projects ?? []).map((p) => {
     const out: GsocProject = { title: p.title, url: officialProjectUrl(year, p.id) };
@@ -50,6 +56,8 @@ export function normalizeOfficial(org: OfficialOrg, year: number): GsocProject[]
     if (p.mentor_names?.length) out.mentors = p.mentor_names;
     if (p.abstract_short) out.summary = p.abstract_short;
     if (p.project_code_url) out.codeUrl = p.project_code_url;
+    const owner = codeOwner(p.project_code_url);
+    if (owner) out.codeOwner = owner;
     if (p.tech_tags?.length) out.tech = p.tech_tags;
     return out;
   });
@@ -63,6 +71,8 @@ export function archivedProjects(slug: string, year: number): GsocProject[] | nu
     const out: GsocProject = { title: p.t, url: p.u };
     if (p.s) out.contributor = p.s;
     if (p.c) out.codeUrl = p.c;
+    const owner = codeOwner(p.c);
+    if (owner) out.codeOwner = owner;
     return out;
   });
 }

@@ -72,7 +72,9 @@ export type LangMap = Readonly<OrgLanguageMap>;
 export const NO_LANGS: LangMap = {};
 
 export function langsOf(card: OrgCard, langs: LangMap) {
-  return card.site ? undefined : langs[card.login.toLowerCase()];
+  // An umbrella's own repositories (a website, some templates) say nothing
+  // about the code its member projects write, so it has no language profile.
+  return card.site || card.umbrella ? undefined : langs[card.login.toLowerCase()];
 }
 
 /** The sort that applies: a language pick sorts by share unless another order

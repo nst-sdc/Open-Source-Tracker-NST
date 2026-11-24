@@ -120,6 +120,18 @@ export function OrgCardView({ card: c, meta, years, program, profile, picked, on
             </div>
           </div>
           {c.description && <p className="text-ink-mid text-xs mt-1.5 line-clamp-2 leading-snug">{c.description}</p>}
+          {c.via && !c.umbrella && (
+            <p className="text-[11px] text-ink-soft mt-1.5 leading-snug" title="GSoC projects mentored here under an umbrella organisation, by the projects' code links">
+              GSoC under <span className="font-[650] text-ink-mid">{c.via.map((p) => p.name).join(', ')}</span>
+              {c.gsocSlug ? '' : ` · ${c.via.reduce((a, p) => a + p.projects, 0)} project${c.via.reduce((a, p) => a + p.projects, 0) === 1 ? '' : 's'}`}
+            </p>
+          )}
+          {c.umbrella && (
+            <p className="text-[11px] text-brand-700 mt-1.5 leading-snug" title="GSoC counts the slots for the umbrella; mentees work in its member projects">
+              <span className="font-[650]">Umbrella organisation</span>
+              {c.umbrella.members > 0 ? ` · slots go to ${c.umbrella.members}+ member projects` : ' · slots go to its member projects'}
+            </p>
+          )}
         </div>
       </div>
 

@@ -18,6 +18,7 @@ import { busiestRepo, type OrgIndex } from './org-index';
 import { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg, type LfxHistory } from './org-explorer-types';
 
 export { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg } from './org-explorer-types';
+import { umbrellaMembers, type UmbrellaParent } from './org-explorer-types';
 
 /** The GSoC dataset (2016–2026), one record per organisation. */
 export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
@@ -27,6 +28,46 @@ export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
 const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(
   [...GSOC_ORGS].filter((o) => o.github).sort((a, b) => a.projects - b.projects).map((o) => [o.github!.toLowerCase(), o]),
 );
+
+/** Umbrellas whose whole membership the explorer lists under a programme filter. */
+const UMBRELLA_PROGRAM: Record<string, ProgramKey> = { numfocus: 'numfocus', cncf: 'cncf', 'eclipse-foundation': 'eclipse' };
+
+/** The other direction: for every member project (lower-case login), the
+ *  umbrellas it ran GSoC projects under, most projects first. */
+const GSOC_VIA_BY_LOGIN: ReadonlyMap<string, { login: string; parents: UmbrellaParent[] }> = (() => {
+  const out = new Map<string, { login: string; parents: Map<string, UmbrellaParent> }>();
+  for (const o of GSOC_ORGS) {
+    for (const [year, counts] of Object.entries(o.umbrella?.membersByYear ?? {})) {
+      for (const [login, n] of Object.entries(counts)) {
+        const lower = login.toLowerCase();
+        // A link into the umbrella's own account is not a member project.
+        if (o.github && lower === o.github.toLowerCase()) continue;
+        const e = out.get(lower) ?? { login, parents: new Map<string, UmbrellaParent>() };
+        const p = e.parents.get(o.slug) ?? { slug: o.slug, name: o.name, ...(o.github ? { login: o.github } : {}), years: [], projects: 0, projectsByYear: {}, repos: o.umbrella?.memberRepos?.[login] ?? {} };
+        p.years.push(Number(year));
+        p.projects += n;
+        p.projectsByYear[year] = (p.projectsByYear[year] ?? 0) + n;
+        e.parents.set(o.slug, p);
+        out.set(lower, e);
+      }
+    }
+  }
+  return new Map([...out].map(([lower, e]) => [lower, {
+    login: e.login,
+    parents: [...e.parents.values()].map((p) => ({ ...p, years: [...new Set(p.years)].sort((a, b) => a - b) })).sort((a, b) => b.projects - a.projects || a.name.localeCompare(b.name)),
+  }]));
+})();
+
+function umbrellaOf(o: GsocOrg): OrgCard['umbrella'] | undefined {
+  if (!o.umbrella) return undefined;
+  const program = UMBRELLA_PROGRAM[o.slug];
+  return { members: umbrellaMembers(o).length, ...(program ? { program } : {}) };
+}
+
+/** Lower-case GitHub logins of the GSoC umbrella organisations: their own
+ *  repositories say nothing about the code their mentees write, so they
+ *  are not measured for languages. */
+export const UMBRELLA_LOGINS: ReadonlySet<string> = new Set(GSOC_ORGS.filter((o) => o.umbrella && o.github).map((o) => o.github!.toLowerCase()));
 
 /** Projects per year summed over every record of a login. */
 const GSOC_SLOTS_BY_LOGIN: ReadonlyMap<string, Record<string, number>> = (() => {
@@ -125,8 +166,9 @@ export function buildOrgExplorer(input: {
     const meta = input.orgCache[lower];
     const member = membership.get(lower);
     const gsoc = GSOC_BY_LOGIN.get(lower);
-    const display = meta?.login ?? member?.login ?? gsoc?.github ?? login;
-    const years = new Set<number>([...(member?.years ?? []), ...(gsoc?.years ?? []), ...Object.keys(GSOC_SLOTS_BY_LOGIN.get(lower) ?? {}).map(Number)]);
+    const via = GSOC_VIA_BY_LOGIN.get(lower);
+    const display = meta?.login ?? member?.login ?? gsoc?.github ?? via?.login ?? login;
+    const years = new Set<number>([...(member?.years ?? []), ...(gsoc?.years ?? []), ...Object.keys(GSOC_SLOTS_BY_LOGIN.get(lower) ?? {}).map(Number), ...(via?.parents ?? []).flatMap((p) => p.years)]);
     const card: OrgCard = {
       login: display,
       // GitHub's profile first; the GSoC dataset fills in for organisations the classifier has not reached.
@@ -144,8 +186,22 @@ export function buildOrgExplorer(input: {
     };
     if (years.size) card.years = [...years].sort((a, b) => a - b);
     if (gsoc) card.gsocSlug = gsoc.slug;
+    const umbrella = gsoc ? umbrellaOf(gsoc) : undefined;
+    if (umbrella) card.umbrella = umbrella;
     const slots = GSOC_SLOTS_BY_LOGIN.get(lower);
     if (slots && Object.keys(slots).length) card.gsocSlots = slots;
+    if (via) {
+      // A member project took part in GSoC through its umbrella: it is a GSoC
+      // organisation here too, with the umbrella's slots that went to it.
+      card.via = via.parents;
+      if (!card.programs.includes('gsoc')) card.programs.push('gsoc');
+      if (!card.tags.includes('GSoC')) card.tags.push('GSoC');
+      if (!card.gsocSlots) {
+        const acc: Record<string, number> = {};
+        for (const p of via.parents) for (const [y, n] of Object.entries(p.projectsByYear)) acc[y] = (acc[y] ?? 0) + n;
+        card.gsocSlots = acc;
+      }
+    }
     const lfx = LFX_BY_LOGIN.get(lower);
     if (lfx) card.lfx = lfx;
     cards.set(lower, card);
@@ -183,6 +239,8 @@ export function buildOrgExplorer(input: {
   }
   // Programme organisations nobody has merged into yet: still worth exploring.
   for (const [lower, m] of membership) if (!cards.has(lower)) cardFor(m.login);
+  // Member projects of GSoC umbrellas, by the projects' code links.
+  for (const [lower, v] of GSOC_VIA_BY_LOGIN) if (!cards.has(lower)) cardFor(v.login);
   // GSoC organisations without a GitHub organisation (GNU Mailman, Netfilter, …):
   // listed all the same, pointing at their website.
   for (const o of GSOC_ORGS) {
@@ -204,6 +262,7 @@ export function buildOrgExplorer(input: {
       years: [...o.years],
       gsocSlug: o.slug,
       site: true,
+      ...(umbrellaOf(o) ? { umbrella: umbrellaOf(o) } : {}),
     });
   }
 
