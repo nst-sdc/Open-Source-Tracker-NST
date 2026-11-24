@@ -189,7 +189,11 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         </div>
       </div>
 
-      {open && <OrgSheet card={open} meta={open.gsocSlug ? gsoc.get(open.gsocSlug) : undefined} years={yearsOf(open, gsoc, 'gsoc')} profile={langsOf(open, langs)} onClose={() => setOpenLogin(null)} onPick={pickFromSheet} />}
+      {open && (
+        <OrgSheet card={open} meta={open.gsocSlug ? gsoc.get(open.gsocSlug) : undefined} years={yearsOf(open, gsoc, 'gsoc')} profile={langsOf(open, langs)}
+          onMeasured={(login, profile) => setLangs((m) => ({ ...m, [login.toLowerCase()]: profile }))}
+          onClose={() => setOpenLogin(null)} onPick={pickFromSheet} />
+      )}
 
       {drawer && showFacets && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">

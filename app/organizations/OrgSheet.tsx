@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
 import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, gsocOfficialOrgUrl, goodFirstIssuesUrl } from '@/lib/org-explorer-types';
@@ -10,14 +10,32 @@ import { languageColor, LANGUAGE_MIN_SHARE, type OrgLanguageProfile } from '@/li
 
 /** The side panel for one organisation: what it is, its GSoC history,
  *  what it builds with, who from NST is already there, and where to start. */
-export function OrgSheet({ card: c, meta, years, profile, onClose, onPick }: {
+export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, onPick }: {
   card: OrgCard;
   meta?: GsocOrg;
   years: ReadonlyArray<number>;
   profile?: OrgLanguageProfile;
+  /** A profile measured on demand for this organisation, to merge into the page's map. */
+  onMeasured: (login: string, profile: OrgLanguageProfile) => void;
   onClose: () => void;
   onPick: (kind: 'tech' | 'topic' | 'category' | 'lang', value: string) => void;
 }) {
+  // No profile yet: ask the server to measure this organisation now.
+  const [measuring, setMeasuring] = useState<'idle' | 'busy' | 'none' | 'failed'>('idle');
+  useEffect(() => {
+    if (profile || c.site) return;
+    let alive = true;
+    queueMicrotask(() => { if (alive) setMeasuring('busy'); });
+    fetch(`/api/org-languages?login=${encodeURIComponent(c.login)}`)
+      .then(async (r) => {
+        const body = (await r.json()) as { profile: OrgLanguageProfile | null; measured: boolean };
+        if (!alive) return;
+        if (body.profile) { onMeasured(c.login, body.profile); setMeasuring('idle'); } else setMeasuring(body.measured ? 'none' : 'failed');
+      })
+      .catch(() => { if (alive) setMeasuring('failed'); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per organisation
+  }, [c.login, c.site]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -125,8 +143,12 @@ export function OrgSheet({ card: c, meta, years, profile, onClose, onPick }: {
                     ))}
                   </div>
                 </>
+              ) : measuring === 'busy' || measuring === 'idle' ? (
+                <p className="text-xs text-ink-faint">Reading the repositories on GitHub…</p>
+              ) : measuring === 'none' ? (
+                <p className="text-xs text-ink-faint">GitHub lists no public code for this organisation.</p>
               ) : (
-                <p className="text-xs text-ink-faint">Not measured yet; the background refresh reads the repositories from GitHub within a day.</p>
+                <p className="text-xs text-ink-faint">GitHub did not answer just now; the background refresh will fill this in.</p>
               )}
             </section>
           )}

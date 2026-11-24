@@ -171,6 +171,16 @@ export async function refreshOrgLanguages(
     store[login.toLowerCase()] = out.record;
     measured++;
   }
-  if (measured + missing > 0) await writeOrgLanguages(store);
+  if (measured + missing > 0) {
+    // A sheet may have measured an organisation on demand while this pass ran;
+    // merge the store as it is now so that answer is not overwritten.
+    const latest = await readOrgLanguagesForWrite();
+    const merged: OrgLanguageStore = latest.ok ? { ...latest.store } : {};
+    for (const [k, r] of Object.entries(store)) {
+      const other = merged[k];
+      if (!other || new Date(r.measuredAt).getTime() >= new Date(other.measuredAt).getTime()) merged[k] = r;
+    }
+    await writeOrgLanguages(merged);
+  }
   return { measured, missing, remaining: Math.max(0, due.length - measured - missing), ...(stoppedBy ? { stoppedBy } : {}) };
 }
