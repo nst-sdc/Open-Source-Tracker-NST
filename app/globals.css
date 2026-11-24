@@ -504,3 +504,21 @@ html.lenis, html.lenis body {
   inset: 0;
   transform: rotateY(180deg);
 }
+
+/* Programme-dates ticker: the row is rendered twice and slides by half its
+   width, so the loop never shows a gap. Pauses under the pointer; still
+   when motion is reduced (the row then scrolls by hand). */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@utility ticker-track {
+  width: max-content;
+  animation: ticker-scroll 60s linear infinite;
+  &:hover { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    width: 100%;
+    overflow-x: auto;
+  }
+}

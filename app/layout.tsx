@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Mona_Sans } from "next/font/google";
 import { Nav } from "./components/Nav";
+import { DeadlineTicker } from "./components/DeadlineTicker";
 import AssistantWidget from "./components/AssistantWidget";
 import SmoothScroll from "./components/SmoothScroll";
 import "./globals.css";
@@ -40,6 +41,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-ground text-ink">
+        <DeadlineTicker />
         <Nav />
         <SmoothScroll>
           {children}
