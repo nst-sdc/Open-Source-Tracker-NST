@@ -12,18 +12,25 @@
  */
 import programOrgs from '@/data/program-orgs.json';
 import explorerPrograms from '@/data/explorer-programs.json';
+import gsocOrgsJson from '@/data/gsoc-orgs.json';
 import { busiestRepo, type OrgIndex } from './org-index';
-import { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData } from './org-explorer-types';
+import { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg } from './org-explorer-types';
 
-export { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData } from './org-explorer-types';
+export { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg } from './org-explorer-types';
+
+/** The GSoC dataset (2016–2026), one record per organisation. */
+export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
+
+/** Dataset record by lower-case GitHub login, for organisations that have one. */
+const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(GSOC_ORGS.filter((o) => o.github).map((o) => [o.github!.toLowerCase(), o]));
 import type { OrgCacheMap } from './org-cache';
 import type { RepoCacheMap } from './repo-cache';
 
 /** Which programme filter each section of the data files feeds, and the tag
  *  it shows. GSoC sections are per year (`gsoc2024`) and resolve by pattern. */
 const SECTION_TO_PROGRAM: Record<string, { key: ProgramKey; tag: string }> = {
-  gsoc: { key: 'gsoc', tag: 'GSoC 2025' },
-  'gsoc-archive': { key: 'gsoc', tag: 'GSoC 2016–21' },
+  gsoc: { key: 'gsoc', tag: 'GSoC' },
+  'gsoc-archive': { key: 'gsoc', tag: 'GSoC' },
   lfx: { key: 'lfx', tag: 'LFX' },
   cncf: { key: 'cncf', tag: 'CNCF' },
   eclipse: { key: 'eclipse', tag: 'Eclipse' },
@@ -40,22 +47,35 @@ const SECTION_TO_PROGRAM: Record<string, { key: ProgramKey; tag: string }> = {
   ospp: { key: 'ospp', tag: 'OSPP' },
 };
 
+/** The first sentence or so of a dataset description, for the card. */
+function shortText(text: string | undefined, max = 220): string | undefined {
+  if (!text) return undefined;
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf(' '));
+  return `${cut.slice(0, end > 80 ? end : max).trimEnd()}…`;
+}
+
 /** Programme membership of every listed organisation, keyed by lower-case login. */
-export function programMembership(vouched: ReadonlyArray<string> = []): Map<string, { login: string; programs: Set<ProgramKey>; tags: Set<string> }> {
-  const out = new Map<string, { login: string; programs: Set<ProgramKey>; tags: Set<string> }>();
-  const add = (login: string, key: ProgramKey, tag: string) => {
+export interface Membership { login: string; programs: Set<ProgramKey>; tags: Set<string>; years: Set<number> }
+
+export function programMembership(vouched: ReadonlyArray<string> = []): Map<string, Membership> {
+  const out = new Map<string, Membership>();
+  const add = (login: string, key: ProgramKey, tag: string, year?: number) => {
     const lower = login.toLowerCase();
-    const e = out.get(lower) ?? { login, programs: new Set<ProgramKey>(), tags: new Set<string>() };
+    const e = out.get(lower) ?? { login, programs: new Set<ProgramKey>(), tags: new Set<string>(), years: new Set<number>() };
     e.programs.add(key);
     e.tags.add(tag);
+    if (year) e.years.add(year);
     out.set(lower, e);
   };
   for (const source of [programOrgs, explorerPrograms] as Array<Record<string, unknown>>) {
     for (const [section, logins] of Object.entries(source)) {
       const year = /^gsoc(\d{4})$/.exec(section)?.[1];
-      const m = year ? { key: 'gsoc' as const, tag: `GSoC ${year}` } : SECTION_TO_PROGRAM[section];
+      // GSoC years collapse into one tag; the years themselves ride along for the explorer's year filter.
+      const m = year ? { key: 'gsoc' as const, tag: 'GSoC' } : SECTION_TO_PROGRAM[section];
       if (!m || !Array.isArray(logins)) continue;
-      for (const login of logins as string[]) add(login, m.key, m.tag);
+      for (const login of logins as string[]) add(login, m.key, m.tag, year ? Number(year) : undefined);
     }
   }
   for (const login of vouched) add(login, 'vouched', 'NST vouched');
@@ -83,11 +103,15 @@ export function buildOrgExplorer(input: {
     if (existing) return existing;
     const meta = input.orgCache[lower];
     const member = membership.get(lower);
-    const display = meta?.login ?? member?.login ?? login;
+    const gsoc = GSOC_BY_LOGIN.get(lower);
+    const display = meta?.login ?? member?.login ?? gsoc?.github ?? login;
+    const years = new Set<number>([...(member?.years ?? []), ...(gsoc?.years ?? [])]);
     const card: OrgCard = {
       login: display,
-      name: meta?.name || display,
-      description: meta?.description || undefined,
+      // GitHub's profile first; the GSoC dataset fills in for organisations the classifier has not reached.
+      name: meta?.name || gsoc?.name || display,
+      // The card shows two lines; the sheet reads the full text from the dataset.
+      description: meta?.description || shortText(gsoc?.description) || undefined,
       avatarUrl: meta?.avatarUrl || `https://github.com/${display}.png?size=96`,
       url: `https://github.com/${display}`,
       contributors: 0,
@@ -97,6 +121,8 @@ export function buildOrgExplorer(input: {
       programs: member ? [...member.programs] : [],
       tags: member ? [...member.tags] : [],
     };
+    if (years.size) card.years = [...years].sort((a, b) => a - b);
+    if (gsoc) card.gsocSlug = gsoc.slug;
     cards.set(lower, card);
     return card;
   };
@@ -132,6 +158,29 @@ export function buildOrgExplorer(input: {
   }
   // Programme organisations nobody has merged into yet: still worth exploring.
   for (const [lower, m] of membership) if (!cards.has(lower)) cardFor(m.login);
+  // GSoC organisations without a GitHub organisation (GNU Mailman, Netfilter, …):
+  // listed all the same, pointing at their website.
+  for (const o of GSOC_ORGS) {
+    if (o.github) continue;
+    const key = `gsoc:${o.slug}`;
+    if (cards.has(key)) continue;
+    cards.set(key, {
+      login: o.slug,
+      name: o.name,
+      description: shortText(o.description) || undefined,
+      avatarUrl: o.image ?? '',
+      url: o.url ?? `https://www.gsocorganizations.dev/organization/${o.slug}/`,
+      contributors: 0,
+      mergedPRs: 0,
+      top: [],
+      people: [],
+      programs: ['gsoc'],
+      tags: ['GSoC'],
+      years: [...o.years],
+      gsocSlug: o.slug,
+      site: true,
+    });
+  }
 
   const list = [...cards.values()]
     .filter((c) => c.contributors > 0 || c.programs.length > 0)

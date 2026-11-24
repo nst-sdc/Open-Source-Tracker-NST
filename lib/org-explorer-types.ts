@@ -9,7 +9,7 @@
 export type ProgramKey = 'gsoc' | 'lfx' | 'cncf' | 'eclipse' | 'numfocus' | 'apache' | 'foundations' | 'sok' | 'sob' | 'lfdt' | 'outreachy' | 'esoc' | 'codeheat' | 'ospp' | 'vouched';
 
 export const PROGRAM_FILTERS: ReadonlyArray<{ key: ProgramKey; label: string; hint: string }> = [
-  { key: 'gsoc', label: 'GSoC', hint: 'Google Summer of Code organisations, 2016–2021 and 2025–2026' },
+  { key: 'gsoc', label: 'GSoC', hint: 'Every Google Summer of Code organisation, 2016–2026, with its years, technologies and topics' },
   { key: 'lfx', label: 'LFX', hint: 'Linux Foundation mentorship projects' },
   { key: 'cncf', label: 'CNCF', hint: 'Cloud Native Computing Foundation landscape projects' },
   { key: 'eclipse', label: 'Eclipse', hint: 'Eclipse Foundation projects' },
@@ -45,6 +45,42 @@ export interface OrgCard {
   topRepo?: { repo: string; merged: number };
   programs: ProgramKey[];
   tags: string[];
+  /** GSoC years this organisation mentored in (from the programme lists and the GSoC dataset). */
+  years?: number[];
+  /** Key into the GSoC dataset (/api/gsoc-orgs) for technologies, topics, category and history. */
+  gsocSlug?: string;
+  /** No GitHub organisation: `login` is the dataset slug, `url` the project website. */
+  site?: boolean;
+}
+
+/** One organisation of the GSoC dataset (data/gsoc-orgs.json), 2016–2026. */
+export interface GsocOrg {
+  slug: string;
+  name: string;
+  github: string | null;
+  category: string;
+  description: string;
+  url: string | null;
+  image: string | null;
+  years: number[];
+  /** Lower-case, most used first. */
+  technologies: string[];
+  topics: string[];
+  projects: number;
+  projectsByYear: Record<string, number>;
+}
+
+export const GSOC_FIRST_YEAR = 2016;
+export const GSOC_LAST_YEAR = 2026;
+
+/** The organisation's page on gsocorganizations.dev: every past project, by year. */
+export function gsocHistoryUrl(slug: string): string {
+  return `https://www.gsocorganizations.dev/organization/${encodeURIComponent(slug)}/`;
+}
+
+/** Open issues labelled for newcomers across the organisation, on GitHub. */
+export function goodFirstIssuesUrl(login: string): string {
+  return `https://github.com/search?q=${encodeURIComponent(`org:${login} label:"good first issue" state:open`)}&type=issues&s=created&o=desc`;
 }
 
 export interface OrgExplorerData {

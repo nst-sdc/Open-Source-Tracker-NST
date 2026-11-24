@@ -6,7 +6,8 @@ describe('org explorer', () => {
     const m = programMembership(['Jenkins-Infra']);
     expect(m.get('apache')?.programs.has('apache')).toBe(true);
     expect(m.get('sympy')?.programs.has('gsoc')).toBe(true);
-    expect([...(m.get('sympy')?.tags ?? [])].some((t) => t.startsWith('GSoC'))).toBe(true);
+    expect([...(m.get('sympy')?.tags ?? [])]).toContain('GSoC');
+    expect(m.get('sympy')?.years.has(2026)).toBe(true);
     expect(m.get('jenkins-infra')?.programs.has('vouched')).toBe(true);
   });
 
@@ -47,6 +48,17 @@ describe('org explorer', () => {
     expect(data.cards.some((c) => c.login.toLowerCase() === 'apache' && c.contributors === 0)).toBe(true);
     expect(data.cards[0].login).toBe('sympy'); // most contributors first
     expect(data.counts.all.withContributors).toBe(2);
-    expect(data.counts.gsoc.orgs).toBeGreaterThan(100);
+    expect(data.counts.gsoc.orgs).toBeGreaterThan(500);
+    // the dataset fills in years, slug, and name/description for organisations the org cache lacks
+    const apache = data.cards.find((c) => c.login.toLowerCase() === 'apache')!;
+    expect(apache.gsocSlug).toBeTruthy();
+    expect(apache.years).toContain(2026);
+    expect(apache.description).toBeTruthy();
+    expect(sympy.years?.length).toBeGreaterThan(5);
+    // GSoC organisations without a GitHub organisation are listed too, pointing at their site
+    const mailman = data.cards.find((c) => c.name === 'GNU Mailman Project')!;
+    expect(mailman.site).toBe(true);
+    expect(mailman.programs).toEqual(['gsoc']);
+    expect(mailman.url).toMatch(/^https?:\/\//);
   });
 });

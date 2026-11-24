@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { readOrgIndex } from '@/lib/org-index';
 import { getOrgCache } from '@/lib/org-cache';
 import { getVouchedOrgs } from '@/lib/kv-vouched-orgs';
@@ -39,11 +40,13 @@ export default async function OrganizationsPage() {
           </Link>
           <h1 className="text-3xl md:text-4xl font-[700] text-ink tracking-tight">Organizations</h1>
           <p className="text-ink-soft mt-3 max-w-2xl text-[15px] leading-relaxed">
-            Where NST students contribute, and where they could. Pick a programme to see its organisations, how many of us have merged work there, and who; open any card for the contributors, or jump to the organisation on GitHub.
+            Every organisation in GSoC, LFX, CNCF, Outreachy and the other programmes, with what it builds, the years it mentored, and who from NST is already there. Pick what you know under “I know…”, choose a year, and open any card for its history, links and good first issues.
           </p>
         </div>
       </div>
-      <OrgExplorer data={data} />
+      <Suspense fallback={<div className="max-w-7xl mx-auto px-4 md:px-6 pb-20 text-sm text-ink-soft">Loading organisations…</div>}>
+        <OrgExplorer data={data} />
+      </Suspense>
     </main>
   );
 }
