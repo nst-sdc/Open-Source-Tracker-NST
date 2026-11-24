@@ -3,6 +3,7 @@ import { Mona_Sans } from "next/font/google";
 import { Nav } from "./components/Nav";
 import AssistantWidget from "./components/AssistantWidget";
 import SmoothScroll from "./components/SmoothScroll";
+import UsageBeacon from "./components/UsageBeacon";
 import "./globals.css";
 
 // grauity's own face (see Newton-School/grauity constantGlobalStyle.ts).
@@ -45,6 +46,7 @@ export default function RootLayout({
           {children}
         </SmoothScroll>
         <AssistantWidget />
+        <UsageBeacon />
       </body>
     </html>
   );
