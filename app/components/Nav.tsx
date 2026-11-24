@@ -13,6 +13,7 @@ const LINKS = [
   { href: '/repo-activity', label: 'Repo Activity'},
   { href: '/issues',       label: 'Issues'       },
   { href: '/programs',     label: 'Programs'     },
+  { href: '/organizations', label: 'Orgs'        },
   { href: '/achievers',    label: 'Hall of Fame' },
   { href: '/get-started',  label: 'Get Started'  },
   // "Check My Work" shortened to "My Work": the desktop row is already at
@@ -87,11 +88,15 @@ export function Nav() {
     checkSession();
   }, [path]);
 
-  // Close menus on route change
-  useEffect(() => {
+  // Close menus on route change. Adjusting state during render (React's
+  // "derived state" pattern) instead of in an effect: no extra render pass,
+  // and the lint rule against setState inside effects stays quiet.
+  const [menuPath, setMenuPath] = useState(path);
+  if (menuPath !== path) {
+    setMenuPath(path);
     setOpen(false);
     setDropdownOpen(false);
-  }, [path]);
+  }
 
   // Close profile dropdown on click outside
   useEffect(() => {

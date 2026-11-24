@@ -289,7 +289,7 @@ export default async function ProgramsPage() {
         </div>
 
         <div className="relative max-w-6xl mx-auto text-center">
-          <div className="flex justify-start mb-6">
+          <div className="flex justify-between items-center mb-6">
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-ink-soft hover:text-ink-mid transition-colors text-sm"
@@ -298,6 +298,9 @@ export default async function ProgramsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
               </svg>
               Home
+            </Link>
+            <Link href="/organizations" className="inline-flex items-center gap-2 text-sm font-[600] text-brand-600 hover:underline underline-offset-2">
+              Explore organisations by programme →
             </Link>
           </div>
 

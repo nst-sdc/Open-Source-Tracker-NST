@@ -133,3 +133,18 @@ describe('org index self-healing', () => {
     expect(kvSet.mock.calls.map((c) => c[0])).toEqual(['org_index', 'org_index_rebuilt_at']);
   });
 });
+
+describe('contributorRepos and busiestRepo', () => {
+  it('records each contributor\'s repos and names the busiest one', async () => {
+    const { indexStudentContributions, busiestRepo } = await import('./org-index');
+    const pr = (repo: string, n: number) => ({ number: n, repository_url: `https://api.github.com/repos/${repo}`, pull_request: { merged_at: '2026-01-01T00:00:00Z' } }) as never;
+    const index = {} as Parameters<typeof indexStudentContributions>[0];
+    indexStudentContributions(index, 'alice', { prs: [pr('apache/airflow', 1), pr('apache/airflow', 2), pr('apache/kafka', 3)] });
+    indexStudentContributions(index, 'bob', { prs: [pr('apache/kafka', 4), pr('apache/kafka', 5)] });
+    expect(index.apache.contributorRepos).toEqual({ alice: { 'apache/airflow': 2, 'apache/kafka': 1 }, bob: { 'apache/kafka': 2 } });
+    expect(busiestRepo(index.apache)).toEqual({ repo: 'apache/kafka', merged: 3 });
+    indexStudentContributions(index, 'bob', { prs: [] }); // bob's last PR there removed
+    expect(index.apache.contributorRepos).toEqual({ alice: { 'apache/airflow': 2, 'apache/kafka': 1 } });
+    expect(busiestRepo({})).toBeNull();
+  });
+});

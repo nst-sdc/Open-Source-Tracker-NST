@@ -25,6 +25,7 @@ import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
 import { StoreUnavailableError } from '@/lib/kv';
 import type { Student } from '@/lib/kv-students';
 import { classifyUnknownOwners } from '@/lib/org-cache';
+import { refreshOrgLanguages } from '@/lib/org-languages';
 import { primeVouchedOrgs } from '@/lib/kv-vouched-orgs';
 import { primePrValueWeighting } from '@/lib/kv-pr-value';
 import { buildCommunityTimeline, readCommunityTimeline, writeCommunityTimeline, timelineIsStale } from '@/lib/community-timeline';
@@ -163,6 +164,18 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
       }
     } catch (err) {
       console.error('[Incremental Refresh] owner classification failed:', err);
+    }
+
+    // What each organisation's code is written in, from GitHub, a few
+    // organisations per tick (ours first), re-measured monthly. The explorer's
+    // language filter runs on this rather than on self-descriptions.
+    try {
+      const l = await refreshOrgLanguages(25, { budgetMs: 40_000 });
+      if (l.measured > 0 || l.missing > 0 || l.stoppedBy) {
+        console.log(`[Incremental Refresh] measured languages of ${l.measured} organisations (${l.missing} unknown), ${l.remaining} to go${l.stoppedBy ? `; stopped: ${l.stoppedBy}` : ''}`);
+      }
+    } catch (err) {
+      console.error('[Incremental Refresh] organisation language measurement failed:', err);
     }
   }
 

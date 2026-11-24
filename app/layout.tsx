@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Mona_Sans } from "next/font/google";
 import { Nav } from "./components/Nav";
+import { DeadlinePostcard } from "./components/DeadlinePostcard";
 import AssistantWidget from "./components/AssistantWidget";
 import SmoothScroll from "./components/SmoothScroll";
 import "./globals.css";
@@ -44,6 +45,7 @@ export default function RootLayout({
         <SmoothScroll>
           {children}
         </SmoothScroll>
+        <DeadlinePostcard />
         <AssistantWidget />
       </body>
     </html>

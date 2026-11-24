@@ -26,6 +26,21 @@ export interface OrgIndexEntry {
   login: string;
   contributors: Record<string, number>;
   mergedPRs: number;
+  /** Per contributor, their merged PRs per repository (owner/name) in this
+   *  organisation, so a page can point at the repository we work in most.
+   *  Optional: entries written before this field exist without it. */
+  contributorRepos?: Record<string, Record<string, number>>;
+}
+
+/** The repository our students have merged into most in this organisation, and its count. */
+export function busiestRepo(entry: Pick<OrgIndexEntry, 'contributorRepos'>): { repo: string; merged: number } | null {
+  const totals = new Map<string, number>();
+  for (const repos of Object.values(entry.contributorRepos ?? {})) {
+    for (const [repo, n] of Object.entries(repos)) totals.set(repo, (totals.get(repo) ?? 0) + n);
+  }
+  let best: { repo: string; merged: number } | null = null;
+  for (const [repo, merged] of totals) if (!best || merged > best.merged) best = { repo, merged };
+  return best;
 }
 
 export type OrgIndex = Record<string, OrgIndexEntry>;
@@ -89,7 +104,7 @@ export function indexStudentContributions(
   // the API URL but treats it case-insensitively, so the same organisation can
   // arrive spelled differently across PRs. Keying on raw casing silently split
   // one org into two and, on re-index, dropped the student from it entirely.
-  const perOwner = new Map<string, { login: string; count: number }>();
+  const perOwner = new Map<string, { login: string; count: number; repos: Record<string, number> }>();
 
   for (const pr of profile.prs ?? []) {
     if (!pr.pull_request?.merged_at) continue;
@@ -107,17 +122,19 @@ export function indexStudentContributions(
     const owner = ownerOf(pr.repository_url);
     if (!owner) continue;
     const key = owner.toLowerCase();
-    const seen = perOwner.get(key);
-    if (seen) seen.count += 1;
-    else perOwner.set(key, { login: owner, count: 1 });
+    const seen = perOwner.get(key) ?? { login: owner, count: 0, repos: {} };
+    seen.count += 1;
+    seen.repos[repo] = (seen.repos[repo] ?? 0) + 1;
+    perOwner.set(key, seen);
   }
 
-  for (const [key, { login: owner, count }] of perOwner) {
+  for (const [key, { login: owner, count, repos }] of perOwner) {
     const entry = (index[key] ??= { login: owner, contributors: {}, mergedPRs: 0 });
     // Recompute rather than add: a student can be folded in again on a later
     // refresh, and their count should replace the old one, not stack onto it.
     entry.mergedPRs += count - (entry.contributors[login] ?? 0);
     entry.contributors[login] = count;
+    (entry.contributorRepos ??= {})[login] = repos;
   }
 
   // A student may have had their last PR to an org removed (flagged, or the
@@ -126,6 +143,7 @@ export function indexStudentContributions(
     if (perOwner.has(key) || entry.contributors[login] === undefined) continue;
     entry.mergedPRs -= entry.contributors[login];
     delete entry.contributors[login];
+    if (entry.contributorRepos) delete entry.contributorRepos[login];
     if (Object.keys(entry.contributors).length === 0) delete index[key];
   }
 }

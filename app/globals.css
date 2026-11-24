@@ -477,3 +477,30 @@ html.lenis, html.lenis body {
     }
   }
 }
+
+/* Organisation flip card: hover turns the card over to its GSoC slot history.
+   Only on pointers that can hover; touch taps open the sheet instead. */
+@utility org-flip {
+  perspective: 1200px;
+}
+@utility org-flip-inner {
+  position: relative;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .org-flip:hover & {
+      transform: rotateY(180deg);
+      transition-delay: 0.18s;
+    }
+  }
+}
+@utility org-flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+@utility org-flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
