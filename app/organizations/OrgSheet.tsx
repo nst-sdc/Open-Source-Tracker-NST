@@ -97,7 +97,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
           {c.umbrella && <UmbrellaSection card={c} meta={meta} onOpen={onOpen} />}
 
           {/* Member project: which umbrella it ran GSoC projects under */}
-          {c.via && !c.umbrella && <ViaSection parents={c.via} onOpen={onOpen} />}
+          {c.via && !c.umbrella && <ViaSection card={c} parents={c.via} onOpen={onOpen} />}
 
           {/* GSoC history */}
           {years.length > 0 && (
@@ -248,7 +248,7 @@ function UmbrellaSection({ card, meta, onOpen }: { card: OrgCard; meta: GsocOrg 
           <p className="text-[11px] text-ink-faint mt-2">Member projects seen in the projects&rsquo; code links, most projects first. Projects that linked no code are not counted.</p>
           <div className="flex flex-wrap gap-1.5 mt-1.5">
             {shown.map((m) => (
-              <MemberChip key={m.login} login={m.login} title={`${m.projects} project${m.projects === 1 ? '' : 's'} · ${m.years.join(', ')}`} onOpen={onOpen}>
+              <MemberChip key={m.login} login={m.login} title={`${m.projects} project${m.projects === 1 ? '' : 's'} · ${m.years.join(', ')}${Object.keys(m.repos).length ? ` · in ${Object.keys(m.repos).slice(0, 4).join(', ')}` : ''}`} onOpen={onOpen}>
                 {m.login}<span className="text-ink-faint tabular-nums font-[500]">{m.projects}</span>
               </MemberChip>
             ))}
@@ -275,7 +275,7 @@ function MemberChip({ login, title, onOpen, children }: { login: string; title: 
 }
 
 /** The umbrellas a member project ran its GSoC projects under. */
-function ViaSection({ parents, onOpen }: { parents: ReadonlyArray<UmbrellaParent>; onOpen?: (login: string) => boolean }) {
+function ViaSection({ card, parents, onOpen }: { card: OrgCard; parents: ReadonlyArray<UmbrellaParent>; onOpen?: (login: string) => boolean }) {
   return (
     <section className="rounded-xl border border-line bg-panel/60 p-3">
       <h3 className="text-ink font-[650] text-sm">GSoC through an umbrella</h3>
@@ -292,6 +292,19 @@ function ViaSection({ parents, onOpen }: { parents: ReadonlyArray<UmbrellaParent
           </li>
         ))}
       </ul>
+      {parents.some((p) => Object.keys(p.repos).length > 0) && (
+        <div className="mt-2">
+          <p className="text-[11px] text-ink-faint">Repositories those projects were in:</p>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {parents.flatMap((p) => Object.entries(p.repos).map(([repo, n]) => ({ p, repo, n }))).slice(0, 12).map(({ p, repo, n }) => (
+              <a key={`${p.slug}/${repo}`} href={`https://github.com/${card.login}/${repo}`} target="_blank" rel="noopener noreferrer" title={`${n} project${n === 1 ? '' : 's'}`}
+                className="inline-flex items-center gap-1 text-[11px] font-[600] px-2 py-0.5 rounded-full bg-ground border border-line text-ink-mid hover:text-ink hover:border-line-strong transition-colors">
+                {repo}<span className="text-ink-faint tabular-nums font-[500]">{n}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

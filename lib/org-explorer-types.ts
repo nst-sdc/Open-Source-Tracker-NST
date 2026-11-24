@@ -76,6 +76,8 @@ export interface UmbrellaParent {
   years: number[];
   projects: number;
   projectsByYear: Record<string, number>;
+  /** The member's repositories those projects were in, with project counts. */
+  repos: Record<string, number>;
 }
 
 /** Mentorship history of one organisation in one programme: the years it took
@@ -118,10 +120,14 @@ export interface GsocOrg {
   projectsByYear: Record<string, number>;
   /** Umbrella organisations only: member organisations per year, as the
    *  projects' code links name them, with how many projects each ran. */
-  umbrella?: { membersByYear: Record<string, Record<string, number>> };
+  umbrella?: {
+    membersByYear: Record<string, Record<string, number>>;
+    /** The repositories those projects were in, per member, with project counts. */
+    memberRepos?: Record<string, Record<string, number>>;
+  };
 }
 
-export interface UmbrellaMember { login: string; projects: number; years: number[] }
+export interface UmbrellaMember { login: string; projects: number; years: number[]; repos: Record<string, number> }
 
 /** An umbrella's member organisations across every year, most projects first. */
 export function umbrellaMembers(org: Pick<GsocOrg, 'umbrella'>): UmbrellaMember[] {
@@ -129,7 +135,7 @@ export function umbrellaMembers(org: Pick<GsocOrg, 'umbrella'>): UmbrellaMember[
   for (const [year, counts] of Object.entries(org.umbrella?.membersByYear ?? {})) {
     for (const [login, n] of Object.entries(counts)) {
       const key = login.toLowerCase();
-      const m = acc.get(key) ?? { login, projects: 0, years: [] };
+      const m = acc.get(key) ?? { login, projects: 0, years: [], repos: org.umbrella?.memberRepos?.[login] ?? {} };
       m.projects += n;
       m.years.push(Number(year));
       acc.set(key, m);

@@ -48,11 +48,13 @@ UMBRELLAS = {
 }
 ARCHIVE = os.path.join(ROOT, 'data', 'gsoc-projects-archive.json')
 CODE_OWNER = re.compile(r'https?://(?:www\.)?github\.com/([A-Za-z0-9_.-]+)/')
+CODE_REPO = re.compile(r'https?://(?:www\.)?github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)')
 
 
 def code_owners(slug, src):
-    """{year: {owner: projects}} from the code links of an organisation's GSoC projects."""
+    """({year: {owner: projects}}, {owner: {repo: projects}}) from the code links of an organisation's GSoC projects."""
     per_year = {}
+    repos = {}
     archive = json.load(open(ARCHIVE)).get(slug, {})
     links = [(str(y), p.get('c')) for y, projects in archive.items() for p in projects]
     for y in YEARS:
@@ -64,7 +66,11 @@ def code_owners(slug, src):
         if m:
             per_year.setdefault(y, {}).setdefault(m.group(1), 0)
             per_year[y][m.group(1)] += 1
-    return per_year
+        r = CODE_REPO.match(link or '')
+        if r and r.group(2) not in ('pulls', 'issues', 'blob', 'tree'):
+            repos.setdefault(r.group(1), {}).setdefault(r.group(2), 0)
+            repos[r.group(1)][r.group(2)] += 1
+    return per_year, repos
 
 
 def owner_types(logins, src):
@@ -92,6 +98,16 @@ def owner_types(logins, src):
         with open(cache_path, 'w') as fh:
             json.dump(cache, fh, indent=0, sort_keys=True)
     return cache
+
+
+def member_repos(repos, kept_owners):
+    """{owner: {repo: projects}} for the member projects kept, most projects first."""
+    lower = {o.lower() for o in kept_owners}
+    out = {}
+    for owner, counts in repos.items():
+        if owner.lower() in lower:
+            out[owner] = {r: n for r, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0].lower()))}
+    return out
 
 
 def member_projects(per_year, types, known):
@@ -166,12 +182,15 @@ def main(src):
     for section in json.load(open(PROG)).values():
         known.update(l.lower() for l in section)
     owners = {o['slug']: code_owners(o['slug'], src) for o in orgs if o['slug'] in UMBRELLAS}
-    types = owner_types([l for per_year in owners.values() for counts in per_year.values() for l in counts], src)
+    types = owner_types([l for per_year, _ in owners.values() for counts in per_year.values() for l in counts], src)
     umbrellas = 0
     for o in orgs:
         o.pop('umbrella', None)
         if o['slug'] in UMBRELLAS:
-            o['umbrella'] = {'membersByYear': member_projects(owners[o['slug']], types, known)}
+            per_year, repos = owners[o['slug']]
+            by_year = member_projects(per_year, types, known)
+            kept = {owner for counts in by_year.values() for owner in counts}
+            o['umbrella'] = {'membersByYear': by_year, 'memberRepos': member_repos(repos, kept)}
             umbrellas += 1
     missing = UMBRELLAS - {o['slug'] for o in orgs}
     if missing:

@@ -43,7 +43,7 @@ const GSOC_VIA_BY_LOGIN: ReadonlyMap<string, { login: string; parents: UmbrellaP
         // A link into the umbrella's own account is not a member project.
         if (o.github && lower === o.github.toLowerCase()) continue;
         const e = out.get(lower) ?? { login, parents: new Map<string, UmbrellaParent>() };
-        const p = e.parents.get(o.slug) ?? { slug: o.slug, name: o.name, ...(o.github ? { login: o.github } : {}), years: [], projects: 0, projectsByYear: {} };
+        const p = e.parents.get(o.slug) ?? { slug: o.slug, name: o.name, ...(o.github ? { login: o.github } : {}), years: [], projects: 0, projectsByYear: {}, repos: o.umbrella?.memberRepos?.[login] ?? {} };
         p.years.push(Number(year));
         p.projects += n;
         p.projectsByYear[year] = (p.projectsByYear[year] ?? 0) + n;

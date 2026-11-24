@@ -51,6 +51,7 @@ describe('org explorer', () => {
     expect(pvlib.programs).toContain('gsoc');
     expect(pvlib.gsocSlots).toBeDefined();
     expect(Object.values(pvlib.gsocSlots!).reduce((a, n) => a + n, 0)).toBe(pvlib.via![0].projects);
+    expect(Object.keys(pvlib.via![0].repos)).toContain('pvlib-python');
     expect(numfocus.via).toBeUndefined();
     expect(data.counts.sob.orgs).toBeGreaterThan(10);
     expect(data.cards.find((c) => c.login === 'someuser')).toBeUndefined();
