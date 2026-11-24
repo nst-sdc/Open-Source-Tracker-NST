@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GsocProject } from '@/lib/org-explorer-types';
 import { gsocOfficialOrgUrl } from '@/lib/org-explorer-types';
 
@@ -12,20 +12,24 @@ export function GsocProjects({ slug, years }: { slug: string; years: ReadonlyArr
   const sorted = [...years].sort((a, b) => b - a);
   const [year, setYear] = useState<number>(sorted[0]);
   const [state, setState] = useState<Record<number, State>>({});
+  // Years already requested, so switching tabs and back neither refetches nor
+  // (as an effect cleanup would) cancels a request still in flight.
+  const requested = useRef(new Set<number>());
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   useEffect(() => {
-    if (!year || state[year]) return;
-    const ctrl = new AbortController();
+    if (!year || requested.current.has(year)) return;
+    requested.current.add(year);
     // Loading state for this year, then the answer; both come from the fetch, not from render.
-    queueMicrotask(() => setState((s) => (s[year] ? s : { ...s, [year]: { status: 'loading' } })));
-    fetch(`/api/gsoc-projects?slug=${encodeURIComponent(slug)}&year=${year}`, { signal: ctrl.signal })
+    queueMicrotask(() => { if (alive.current) setState((s) => (s[year] ? s : { ...s, [year]: { status: 'loading' } })); });
+    fetch(`/api/gsoc-projects?slug=${encodeURIComponent(slug)}&year=${year}`)
       .then(async (r) => {
         const body = (await r.json()) as { ok: boolean; projects?: GsocProject[]; source?: 'official' | 'archive'; reason?: string };
-        setState((s) => ({ ...s, [year]: body.ok && body.projects ? { status: 'ok', projects: body.projects, source: body.source ?? 'official' } : { status: 'error', reason: body.reason ?? 'unavailable' } }));
+        if (alive.current) setState((s) => ({ ...s, [year]: body.ok && body.projects ? { status: 'ok', projects: body.projects, source: body.source ?? 'official' } : { status: 'error', reason: body.reason ?? 'unavailable' } }));
       })
-      .catch(() => { if (!ctrl.signal.aborted) setState((s) => ({ ...s, [year]: { status: 'error', reason: 'unavailable' } })); });
-    return () => ctrl.abort();
-  }, [slug, year, state]);
+      .catch(() => { if (alive.current) setState((s) => ({ ...s, [year]: { status: 'error', reason: 'unavailable' } })); requested.current.delete(year); });
+  }, [slug, year]);
 
   if (sorted.length === 0) return null;
   const cur = state[year];

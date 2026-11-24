@@ -45,7 +45,7 @@ export function FacetPanel({ facets, filters, loading, measured, program, onTogg
         {measured === 0 && <p className="text-[11px] text-ink-faint mt-2">No organisation measured yet; the background refresh fills this in.</p>}
       </section>
 
-      <CheckList title="Language in the code" items={facets.langs} selected={filters.langs} onToggle={(v) => onToggle('langs', v)} initial={10} searchable loading={loading} swatch />
+      <CheckList title="Language in the code" items={facets.langs} selected={filters.langs} onToggle={(v) => onToggle('langs', v)} initial={10} searchable loading={measured === 0 && loading} swatch />
 
       {(program === 'gsoc' || program === 'lfx') && (
       <section>

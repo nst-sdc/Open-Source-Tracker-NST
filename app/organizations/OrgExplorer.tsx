@@ -48,25 +48,23 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
     return () => ctrl.abort();
   }, []);
 
-  const update = useCallback((patch: Partial<ExplorerFilters>) => {
-    setFilters((prev) => {
-      const next = { ...prev, ...patch };
-      syncUrl(next);
-      return next;
-    });
+  // The next state is computed in the handler and the URL synced there, never
+  // inside a state updater, which React runs during render.
+  const apply = useCallback((next: ExplorerFilters) => {
+    setFilters(next);
     setLimit(PAGE);
+    syncUrl(next);
   }, []);
 
+  const update = useCallback((patch: Partial<ExplorerFilters>) => {
+    apply({ ...filters, ...patch });
+  }, [apply, filters]);
+
   const toggle = useCallback((kind: 'years' | 'categories' | 'techs' | 'topics' | 'langs', value: string | number) => {
-    setFilters((prev) => {
-      const next = kind === 'years'
-        ? { ...prev, years: toggleIn(prev.years, Number(value)) }
-        : { ...prev, [kind]: toggleIn(prev[kind] as string[], String(value)) };
-      syncUrl(next);
-      return next;
-    });
-    setLimit(PAGE);
-  }, []);
+    apply(kind === 'years'
+      ? { ...filters, years: toggleIn(filters.years, Number(value)) }
+      : { ...filters, [kind]: toggleIn(filters[kind] as string[], String(value)) });
+  }, [apply, filters]);
 
   // Facet counts ignore the facets themselves so each option shows what it would keep.
   const base = useMemo(() => filterCards(data.cards, gsoc, { ...filters, ...EMPTY_FACETS }, langs), [data.cards, gsoc, filters, langs]);
