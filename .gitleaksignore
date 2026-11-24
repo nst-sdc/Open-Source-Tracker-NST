@@ -12,3 +12,8 @@
 # Verified with: gitleaks git --redact  (v8.24.3)
 0dfa790164cec5a9db40ab85164bac80b8ac3957:data/kv/profile_cache_rajatrsrivastav.json:curl-auth-header:887
 0dfa790164cec5a9db40ab85164bac80b8ac3957:data/kv/profile_cache_bitflicker64.json:curl-auth-user:9403
+
+# data/gsoc-projects-archive.json (commit 63b9de6): public links inside GSoC final-report URLs, not credentials:
+# a GitHub repo path containing "glc_scan" and a Dropbox share key. Both links were removed from the file in c408194.
+63b9de64a5e7706b100f9dc1e886d7c4ffc18de8:data/gsoc-projects-archive.json:grafana-cloud-api-token:1
+63b9de64a5e7706b100f9dc1e886d7c4ffc18de8:data/gsoc-projects-archive.json:generic-api-key:1
