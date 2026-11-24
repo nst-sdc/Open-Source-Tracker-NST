@@ -70,14 +70,15 @@ export type GsocProjectsResult =
   | { ok: true; year: number; source: 'official' | 'archive'; projects: GsocProject[] }
   | { ok: false; year: number; reason: 'bad-year' | 'not-found' | 'unavailable' };
 
-export async function getGsocProjects(slug: string, year: number, deps: { fetch?: typeof fetch } = {}): Promise<GsocProjectsResult> {
+export async function getGsocProjects(slug: string, year: number, deps: { fetch?: typeof fetch; cache?: boolean } = {}): Promise<GsocProjectsResult> {
   if (!Number.isInteger(year) || year < GSOC_FIRST_YEAR || year > GSOC_LAST_YEAR || !/^[a-z0-9-]+$/i.test(slug)) return { ok: false, year, reason: 'bad-year' };
   if (year < OFFICIAL_API_FIRST_YEAR) {
     const projects = archivedProjects(slug, year);
     return projects ? { ok: true, year, source: 'archive', projects } : { ok: false, year, reason: 'not-found' };
   }
   const key = `gsoc_projects:${year}:${slug.toLowerCase()}`;
-  const cached = await kvGet<GsocProject[]>(key);
+  const useCache = deps.cache !== false;
+  const cached = useCache ? await kvGet<GsocProject[]>(key) : null;
   if (cached) return { ok: true, year, source: 'official', projects: cached };
   const f = deps.fetch ?? fetch;
   let res: Response;
@@ -95,6 +96,6 @@ export async function getGsocProjects(slug: string, year: number, deps: { fetch?
     return { ok: false, year, reason: 'unavailable' };
   }
   const projects = normalizeOfficial(body, year);
-  await kvSet(key, projects, CACHE_TTL_S);
+  if (useCache) await kvSet(key, projects, CACHE_TTL_S);
   return { ok: true, year, source: 'official', projects };
 }
