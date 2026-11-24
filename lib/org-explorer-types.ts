@@ -56,6 +56,11 @@ export interface OrgCard {
   site?: boolean;
   /** LFX Mentorship history of this organisation's repositories (data/lfx-orgs.json). */
   lfx?: LfxHistory;
+  /** A GSoC umbrella: the slots are the organisation's, the work happens in
+   *  member projects. `members` counts the member organisations seen in the
+   *  projects' code links; `program` is the explorer filter that lists the
+   *  whole membership, when there is one. */
+  umbrella?: { members: number; program?: ProgramKey };
 }
 
 /** Mentorship history of one organisation in one programme: the years it took
@@ -96,6 +101,26 @@ export interface GsocOrg {
   topics: string[];
   projects: number;
   projectsByYear: Record<string, number>;
+  /** Umbrella organisations only: member organisations per year, as the
+   *  projects' code links name them, with how many projects each ran. */
+  umbrella?: { membersByYear: Record<string, Record<string, number>> };
+}
+
+export interface UmbrellaMember { login: string; projects: number; years: number[] }
+
+/** An umbrella's member organisations across every year, most projects first. */
+export function umbrellaMembers(org: Pick<GsocOrg, 'umbrella'>): UmbrellaMember[] {
+  const acc = new Map<string, UmbrellaMember>();
+  for (const [year, counts] of Object.entries(org.umbrella?.membersByYear ?? {})) {
+    for (const [login, n] of Object.entries(counts)) {
+      const key = login.toLowerCase();
+      const m = acc.get(key) ?? { login, projects: 0, years: [] };
+      m.projects += n;
+      m.years.push(Number(year));
+      acc.set(key, m);
+    }
+  }
+  return [...acc.values()].map((m) => ({ ...m, years: [...new Set(m.years)].sort((a, b) => a - b) })).sort((a, b) => b.projects - a.projects || a.login.localeCompare(b.login));
 }
 
 export const GSOC_FIRST_YEAR = 2016;
@@ -118,6 +143,8 @@ export interface GsocProject {
   summary?: string;
   /** Where the code or the final report lives, when the contributor gave one. */
   codeUrl?: string;
+  /** The GitHub organisation or account that link points into: under an umbrella, the member project. */
+  codeOwner?: string;
   tech?: string[];
 }
 

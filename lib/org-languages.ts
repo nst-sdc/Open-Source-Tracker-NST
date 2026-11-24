@@ -14,7 +14,7 @@ import { kvRead, kvSet } from './kv';
 import { getGitHubHeaders } from './github';
 import { readOrgIndex } from './org-index';
 import { getOrgCache } from './org-cache';
-import { programMembership } from './org-explorer';
+import { programMembership, UMBRELLA_LOGINS } from './org-explorer';
 import { aggregateLanguageBytes, type OrgLanguageMap, type OrgLanguageProfile } from './org-languages-shared';
 
 export type { OrgLanguageMap, OrgLanguageProfile } from './org-languages-shared';
@@ -90,6 +90,7 @@ export async function languageCandidates(): Promise<Array<{ login: string; contr
     out.set(login.toLowerCase(), { login, contributors: Object.values(e.contributors).filter((n) => n > 0).length });
   }
   for (const [lower, m] of programMembership()) if (!out.has(lower)) out.set(lower, { login: m.login, contributors: 0 });
+  for (const lower of UMBRELLA_LOGINS) out.delete(lower);
   return [...out.values()];
 }
 

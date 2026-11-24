@@ -18,6 +18,7 @@ import { busiestRepo, type OrgIndex } from './org-index';
 import { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg, type LfxHistory } from './org-explorer-types';
 
 export { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg } from './org-explorer-types';
+import { umbrellaMembers } from './org-explorer-types';
 
 /** The GSoC dataset (2016–2026), one record per organisation. */
 export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
@@ -27,6 +28,20 @@ export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
 const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(
   [...GSOC_ORGS].filter((o) => o.github).sort((a, b) => a.projects - b.projects).map((o) => [o.github!.toLowerCase(), o]),
 );
+
+/** Umbrellas whose whole membership the explorer lists under a programme filter. */
+const UMBRELLA_PROGRAM: Record<string, ProgramKey> = { numfocus: 'numfocus', cncf: 'cncf', 'apache-software-foundation': 'apache', 'eclipse-foundation': 'eclipse' };
+
+function umbrellaOf(o: GsocOrg): OrgCard['umbrella'] | undefined {
+  if (!o.umbrella) return undefined;
+  const program = UMBRELLA_PROGRAM[o.slug];
+  return { members: umbrellaMembers(o).length, ...(program ? { program } : {}) };
+}
+
+/** Lower-case GitHub logins of the GSoC umbrella organisations: their own
+ *  repositories say nothing about the code their mentees write, so they
+ *  are not measured for languages. */
+export const UMBRELLA_LOGINS: ReadonlySet<string> = new Set(GSOC_ORGS.filter((o) => o.umbrella && o.github).map((o) => o.github!.toLowerCase()));
 
 /** Projects per year summed over every record of a login. */
 const GSOC_SLOTS_BY_LOGIN: ReadonlyMap<string, Record<string, number>> = (() => {
@@ -144,6 +159,8 @@ export function buildOrgExplorer(input: {
     };
     if (years.size) card.years = [...years].sort((a, b) => a - b);
     if (gsoc) card.gsocSlug = gsoc.slug;
+    const umbrella = gsoc ? umbrellaOf(gsoc) : undefined;
+    if (umbrella) card.umbrella = umbrella;
     const slots = GSOC_SLOTS_BY_LOGIN.get(lower);
     if (slots && Object.keys(slots).length) card.gsocSlots = slots;
     const lfx = LFX_BY_LOGIN.get(lower);
@@ -204,6 +221,7 @@ export function buildOrgExplorer(input: {
       years: [...o.years],
       gsocSlug: o.slug,
       site: true,
+      ...(umbrellaOf(o) ? { umbrella: umbrellaOf(o) } : {}),
     });
   }
 

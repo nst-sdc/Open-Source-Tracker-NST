@@ -38,6 +38,13 @@ describe('org explorer', () => {
     expect(sympy.programs).toContain('gsoc');
     expect(sympy.topRepo).toEqual({ repo: 'sympy/sympy', merged: 3 });
     expect(data.cards.find((c) => c.login === 'KDE')?.programs).toEqual(expect.arrayContaining(['sok', 'outreachy']));
+    // Umbrellas carry their own login, not a member's, and know their member projects.
+    const numfocus = data.cards.find((c) => c.login === 'numfocus')!;
+    expect(numfocus.gsocSlug).toBe('numfocus');
+    expect(numfocus.umbrella).toEqual({ members: expect.any(Number), program: 'numfocus' });
+    expect(numfocus.umbrella!.members).toBeGreaterThan(10);
+    expect(numfocus.gsocSlots?.['2025']).toBe(31);
+    expect(data.cards.find((c) => c.login === 'psf')?.umbrella).toEqual({ members: expect.any(Number) });
     expect(data.counts.sob.orgs).toBeGreaterThan(10);
     expect(data.cards.find((c) => c.login === 'someuser')).toBeUndefined();
     expect(data.cards.find((c) => c.login === 'firstcontributions')).toBeUndefined(); // only excluded repos

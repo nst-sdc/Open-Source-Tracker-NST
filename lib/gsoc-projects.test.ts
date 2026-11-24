@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { archivedProjects, getGsocProjects, normalizeOfficial, officialProjectUrl } from './gsoc-projects';
+import { archivedProjects, codeOwner, getGsocProjects, normalizeOfficial, officialProjectUrl } from './gsoc-projects';
 import { gsocOfficialOrgUrl } from './org-explorer-types';
 
 describe('gsoc projects from the official site', () => {
@@ -12,6 +12,16 @@ describe('gsoc projects from the official site', () => {
   it('normalises the official answer', () => {
     const p = normalizeOfficial({ slug: 'x', projects: [{ id: 'a1', title: 'T', project_code_url: 'https://c', contributor_display_name: 'Ann', mentor_names: ['M'], abstract_short: 'S', tech_tags: ['python'] }] }, 2024);
     expect(p).toEqual([{ title: 'T', url: 'https://summerofcode.withgoogle.com/archive/2024/projects/a1', contributor: 'Ann', mentors: ['M'], summary: 'S', codeUrl: 'https://c', tech: ['python'] }]);
+  });
+
+  it('names the GitHub owner a code link points into', () => {
+    expect(codeOwner('https://github.com/sbi-dev/sbi/pull/1621')).toBe('sbi-dev');
+    expect(codeOwner('https://www.github.com/SciML/DiffEqFlux.jl')).toBe('SciML');
+    expect(codeOwner('https://github.com/numfocus')).toBeUndefined();
+    expect(codeOwner('https://gitlab.com/x/y')).toBeUndefined();
+    expect(codeOwner(undefined)).toBeUndefined();
+    const p = normalizeOfficial({ slug: 'x', projects: [{ id: 'a1', title: 'T', project_code_url: 'https://github.com/sbi-dev/sbi/pull/1' }] }, 2025);
+    expect(p[0].codeOwner).toBe('sbi-dev');
   });
 
   it('serves 2016–2021 from the archive file with official links', () => {
