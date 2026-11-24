@@ -9,7 +9,11 @@ import { buildOrgExplorer } from '@/lib/org-explorer';
 import { OrgExplorer } from './OrgExplorer';
 
 export const metadata = { title: 'Organizations — Opensource Tracker NST' };
-export const revalidate = 900;
+// Rendered on request, like the home and contributors pages. The page was
+// prerendered at build time, when the store is out of reach, with every count
+// at zero, and the deployment never regenerated it: the live page showed no
+// NST contributor anywhere for hours after the index was rebuilt.
+export const dynamic = 'force-dynamic';
 
 /**
  * Every organisation our students have merged into, and every one on a
