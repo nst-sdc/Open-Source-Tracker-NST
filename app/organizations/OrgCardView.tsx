@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
-import { GSOC_LAST_YEAR } from '@/lib/org-explorer-types';
+import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR } from '@/lib/org-explorer-types';
 import { yearRanges } from '@/lib/org-explorer-filter';
 
 export function OrgLogo({ card, meta, size = 'w-12 h-12' }: { card: OrgCard; meta?: GsocOrg; size?: string }) {
@@ -40,8 +40,11 @@ export function OrgCardView({ card: c, meta, years, onOpen, onPickTech }: {
   const hasOurs = c.contributors > 0;
   const techs = meta?.technologies.slice(0, 4) ?? [];
   const more = (meta?.technologies.length ?? 0) - techs.length;
-  return (
-    <div className="relative bg-ground border border-line rounded-2xl p-4 shadow-card card-hover flex flex-col gap-3 focus-within:border-brand-100">
+  const flips = years.length > 0;
+  const face = 'bg-ground border border-line rounded-2xl shadow-card group-hover:shadow-card-hover group-hover:border-line-heavy transition-[box-shadow,border-color] duration-300';
+
+  const front = (
+    <div className={`relative ${face} org-flip-face p-4 flex flex-col gap-3 h-full focus-within:border-brand-100`}>
       <button type="button" onClick={onOpen} aria-label={`Open details for ${c.name}`} className="absolute inset-0 rounded-2xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300" />
       <div className="flex items-start gap-3 min-w-0 pointer-events-none">
         <OrgLogo card={c} meta={meta} />
@@ -119,5 +122,49 @@ export function OrgCardView({ card: c, meta, years, onOpen, onPickTech }: {
         )}
       </div>
     </div>
+  );
+
+  if (!flips) return <div className="group h-full">{front}</div>;
+
+  return (
+    <div className="group org-flip h-full">
+      <div className="org-flip-inner">
+        {front}
+        <SlotsBack card={c} meta={meta} years={years} onOpen={onOpen} face={face} />
+      </div>
+    </div>
+  );
+}
+
+/** The back of the card: the organisation's GSoC slots per year, 2016–2026,
+ *  a box per year with the number of projects (or a tick when the count is
+ *  unknown), so histories can be compared at a glance without opening each one. */
+function SlotsBack({ card: c, meta, years, onOpen, face }: { card: OrgCard; meta?: GsocOrg; years: ReadonlyArray<number>; onOpen: () => void; face: string }) {
+  const allYears = Array.from({ length: GSOC_LAST_YEAR - GSOC_FIRST_YEAR + 1 }, (_, i) => GSOC_FIRST_YEAR + i);
+  const total = meta?.projects ?? 0;
+  return (
+    <button type="button" onClick={onOpen} aria-hidden="true" tabIndex={-1} className={`${face} org-flip-face org-flip-back p-4 flex flex-col text-left cursor-pointer w-full`}>
+      <div className="text-center min-w-0">
+        <div className="text-ink font-[650] text-[14.5px] leading-snug truncate">{c.name}</div>
+        <div className="text-[10px] uppercase tracking-wider text-ink-soft font-[650] mt-0.5">GSoC slots by year</div>
+      </div>
+      <div className="flex flex-wrap justify-center gap-1.5 my-auto py-3">
+        {allYears.map((y) => {
+          const active = years.includes(y);
+          const n = meta?.projectsByYear[String(y)];
+          return (
+            <div key={y} title={active ? `${y}: ${n ?? 'some'} project${n === 1 ? '' : 's'}` : `${y}: not in GSoC`}
+              className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center tabular-nums ${active ? 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm' : 'bg-panel-2 text-ink-faint border border-line'}`}>
+              <span className={`text-[9px] leading-none ${active ? 'text-white/80' : ''}`}>{y}</span>
+              <span className="text-[13px] font-[700] leading-tight mt-0.5">{active ? (n ?? '✓') : '–'}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between text-[11px] text-ink-soft tabular-nums">
+        <span>{total > 0 ? `${total} projects over ${years.length} yr${years.length === 1 ? '' : 's'}` : `${years.length} yr${years.length === 1 ? '' : 's'} in GSoC`}</span>
+        <span className="text-brand-600 font-[600]">Click for details →</span>
+      </div>
+    </button>
   );
 }
