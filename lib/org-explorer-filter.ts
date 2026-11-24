@@ -11,18 +11,41 @@ import { combinedShare, type OrgLanguageMap } from './org-languages-shared';
 
 export type SortKey = 'recommended' | 'language' | 'contributors' | 'recent' | 'oldest' | 'years' | 'slots' | 'newest' | 'name' | 'name-desc';
 
-export const SORTS: ReadonlyArray<{ key: SortKey; label: string; hint: string }> = [
+export interface SortOption { key: SortKey; label: string; hint: string }
+
+/** Programmes the explorer has a year-by-year history for. */
+export const HISTORY_PROGRAMS: ReadonlySet<ProgramKey> = new Set<ProgramKey>(['gsoc', 'lfx']);
+
+const COMMON_SORTS: ReadonlyArray<SortOption> = [
   { key: 'recommended', label: 'Recommended', hint: 'Where NST already contributes first, then the longest-running organisations' },
   { key: 'language', label: 'Language share', hint: 'Most of the chosen languages in the code first (GitHub bytes across the most-starred repositories)' },
   { key: 'contributors', label: 'Most NST contributors', hint: 'Organisations with the most of our students' },
-  { key: 'recent', label: 'Recently participated', hint: 'Most recent GSoC year first' },
-  { key: 'oldest', label: 'Oldest in GSoC', hint: 'Earliest first GSoC year first: the veterans' },
-  { key: 'years', label: 'Most years in GSoC', hint: 'Most years as a GSoC organisation: the steadiest bets' },
-  { key: 'slots', label: 'Most slots', hint: 'Most GSoC projects over the years: the most places' },
-  { key: 'newest', label: 'New to GSoC', hint: 'First-time organisations first: fewer applicants compete there' },
+];
+const NAME_SORTS: ReadonlyArray<SortOption> = [
   { key: 'name', label: 'A → Z', hint: 'Alphabetical' },
   { key: 'name-desc', label: 'Z → A', hint: 'Reverse alphabetical' },
 ];
+
+/** The sort options that make sense for the selected programme: the history
+ *  orders (slots, years, recent, oldest, new) only where there is a history,
+ *  worded for that programme; nothing GSoC- or LFX-specific under "All". */
+export function sortsFor(program: ProgramKey | 'all'): SortOption[] {
+  if (!HISTORY_PROGRAMS.has(program as ProgramKey)) return [...COMMON_SORTS, ...NAME_SORTS];
+  const P = program === 'gsoc' ? 'GSoC' : 'LFX';
+  const slot = program === 'gsoc' ? 'projects' : 'mentorships';
+  return [
+    ...COMMON_SORTS,
+    { key: 'slots', label: `Most ${P} slots`, hint: `Most ${P} ${slot} over the years: the most places` },
+    { key: 'years', label: `Most years in ${P}`, hint: `Most years as a ${P} organisation: the steadiest bets` },
+    { key: 'recent', label: `Recently in ${P}`, hint: `Most recent ${P} year first` },
+    { key: 'oldest', label: `Oldest in ${P}`, hint: `Earliest first ${P} year first: the veterans` },
+    { key: 'newest', label: `New to ${P}`, hint: 'First-time organisations first: fewer applicants compete there' },
+    ...NAME_SORTS,
+  ];
+}
+
+/** Every sort key, for parsing URLs. */
+export const SORTS: ReadonlyArray<SortOption> = sortsFor('gsoc');
 
 export interface ExplorerFilters {
   program: ProgramKey | 'all';
@@ -52,9 +75,13 @@ export function langsOf(card: OrgCard, langs: LangMap) {
   return card.site ? undefined : langs[card.login.toLowerCase()];
 }
 
-/** The sort that applies: a language pick sorts by share unless another order was chosen. */
+/** The sort that applies: a language pick sorts by share unless another order
+ *  was chosen, and an order the programme has no data for falls back to
+ *  recommended (a GSoC history order carried over to the CNCF chip). */
 export function effectiveSort(f: ExplorerFilters): SortKey {
-  return f.langs.length > 0 && f.sort === 'recommended' ? 'language' : f.sort;
+  const available = sortsFor(f.program).some((s) => s.key === f.sort) && (f.sort !== 'language' || f.langs.length > 0);
+  const sort = available ? f.sort : 'recommended';
+  return f.langs.length > 0 && sort === 'recommended' ? 'language' : sort;
 }
 
 export function metaOf(card: OrgCard, gsoc: GsocMap): GsocOrg | undefined {

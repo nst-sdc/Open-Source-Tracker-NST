@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { GsocOrg, OrgCard } from './org-explorer-types';
-import { DEFAULT_FILTERS, NO_LANGS, effectiveSort, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, yearRanges } from './org-explorer-filter';
+import { DEFAULT_FILTERS, NO_LANGS, effectiveSort, sortsFor, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, yearRanges } from './org-explorer-filter';
 import type { OrgLanguageMap } from './org-languages-shared';
 
 const card = (login: string, extra: Partial<OrgCard> = {}): OrgCard => ({
@@ -90,6 +90,17 @@ describe('org explorer filters', () => {
     expect(fx.techs.find((t) => t.value === 'python')).toEqual({ value: 'python', count: 1 });
     expect(fx.categories.map((c) => c.value)).toEqual(['Web', 'Science and medicine']);
     expect(fx.topics.find((t) => t.value === 'web')?.count).toBe(2);
+  });
+
+  it('offers programme-specific sort orders only where there is a history', () => {
+    expect(sortsFor('all').map((s) => s.key)).toEqual(['recommended', 'language', 'contributors', 'name', 'name-desc']);
+    expect(sortsFor('cncf').map((s) => s.key)).toEqual(['recommended', 'language', 'contributors', 'name', 'name-desc']);
+    expect(sortsFor('gsoc').find((s) => s.key === 'slots')?.label).toBe('Most GSoC slots');
+    expect(sortsFor('lfx').find((s) => s.key === 'newest')?.label).toBe('New to LFX');
+    // a history order carried to a programme without history falls back
+    expect(effectiveSort({ ...DEFAULT_FILTERS, program: 'cncf', sort: 'slots' })).toBe('recommended');
+    expect(effectiveSort({ ...DEFAULT_FILTERS, program: 'lfx', sort: 'slots' })).toBe('slots');
+    expect(effectiveSort({ ...DEFAULT_FILTERS, sort: 'language' })).toBe('recommended'); // no language picked
   });
 
   it('formats year ranges', () => {

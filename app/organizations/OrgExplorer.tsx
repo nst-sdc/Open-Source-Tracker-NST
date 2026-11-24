@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PROGRAM_FILTERS, type GsocOrg, type OrgCard, type OrgExplorerData, type ProgramKey } from '@/lib/org-explorer-types';
 import {
-  EMPTY_FACETS, NO_LANGS, SORTS, activeFacetCount, effectiveSort, facetsOf, filterCards, filtersToParams, langsOf, parseFilters, sortCards, toggleIn, yearsOf,
+  EMPTY_FACETS, NO_LANGS, activeFacetCount, sortsFor, effectiveSort, facetsOf, filterCards, filtersToParams, langsOf, parseFilters, sortCards, toggleIn, yearsOf,
   type ExplorerFilters, type GsocMap, type LangMap, type SortKey,
 } from '@/lib/org-explorer-filter';
 import type { OrgLanguageMap } from '@/lib/org-languages-shared';
@@ -79,7 +79,8 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
   const totalContributors = new Set(shown.flatMap((c) => c.people)).size;
   const withOurs = shown.filter((c) => c.contributors > 0).length;
   const current = filters.program === 'all' ? null : PROGRAM_FILTERS.find((f) => f.key === filters.program) ?? null;
-  const showFacets = filters.program === 'all' || filters.program === 'gsoc' || filters.program === 'lfx';
+  // Every programme gets the language facets; the history facets appear per programme inside the panel.
+  const showFacets = true;
   const open = openLogin ? data.cards.find((c) => c.login === openLogin) ?? null : null;
   const facetCount = activeFacetCount(filters);
 
@@ -123,7 +124,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
           <label className="inline-flex items-center gap-2 text-sm text-ink-mid">
             <span className="text-ink-soft">Sort</span>
             <select value={sort} onChange={(e) => update({ sort: e.target.value as SortKey })} className="bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand-100 cursor-pointer">
-              {SORTS.filter((s) => s.key !== 'language' || filters.langs.length > 0).map((s) => <option key={s.key} value={s.key} title={s.hint}>{s.label}</option>)}
+              {sortsFor(filters.program).filter((s) => s.key !== 'language' || filters.langs.length > 0).map((s) => <option key={s.key} value={s.key} title={s.hint}>{s.label}</option>)}
             </select>
           </label>
           <label className="inline-flex items-center gap-2 text-sm text-ink-mid cursor-pointer select-none">

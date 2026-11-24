@@ -47,8 +47,9 @@ export function FacetPanel({ facets, filters, loading, measured, program, onTogg
 
       <CheckList title="Language in the code" items={facets.langs} selected={filters.langs} onToggle={(v) => onToggle('langs', v)} initial={10} searchable loading={loading} swatch />
 
+      {(program === 'gsoc' || program === 'lfx') && (
       <section>
-        <h3 className="text-[11px] uppercase tracking-wider text-ink-soft font-[650] mb-2">{program === 'lfx' ? 'LFX year' : program === 'gsoc' ? 'GSoC year' : 'Programme year'}</h3>
+        <h3 className="text-[11px] uppercase tracking-wider text-ink-soft font-[650] mb-2">{program === 'lfx' ? 'LFX year' : 'GSoC year'}</h3>
         <div className="grid grid-cols-4 gap-1.5">
           {facets.years.map((y) => {
             const on = filters.years.includes(y.value);
@@ -62,10 +63,11 @@ export function FacetPanel({ facets, filters, loading, measured, program, onTogg
         </div>
         {facets.years.length === 0 && <p className="text-xs text-ink-faint">No mentorship history in this selection.</p>}
       </section>
+      )}
 
-      <CheckList title="Category" items={facets.categories} selected={filters.categories} onToggle={(v) => onToggle('categories', v)} initial={14} />
-      <CheckList title={program === 'lfx' ? 'Skills the LFX projects asked for' : 'Technology (as the org describes it)'} items={facets.techs} selected={filters.techs} onToggle={(v) => onToggle('techs', v)} initial={12} searchable loading={loading} />
-      <CheckList title="Topic" items={facets.topics} selected={filters.topics} onToggle={(v) => onToggle('topics', v)} initial={12} searchable loading={loading} />
+      {program === 'gsoc' && <CheckList title="Category" items={facets.categories} selected={filters.categories} onToggle={(v) => onToggle('categories', v)} initial={14} />}
+      <CheckList title={program === 'lfx' ? 'Skills the LFX projects asked for' : program === 'gsoc' ? 'Technology (as the org describes it)' : 'Technology or skills (self-described)'} items={facets.techs} selected={filters.techs} onToggle={(v) => onToggle('techs', v)} initial={12} searchable loading={loading} />
+      {program === 'gsoc' && <CheckList title="Topic" items={facets.topics} selected={filters.topics} onToggle={(v) => onToggle('topics', v)} initial={12} searchable loading={loading} />}
     </div>
   );
 }
