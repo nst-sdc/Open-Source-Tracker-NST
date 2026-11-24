@@ -4,6 +4,35 @@ import Link from 'next/link';
 import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
 import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR } from '@/lib/org-explorer-types';
 import { yearRanges } from '@/lib/org-explorer-filter';
+import { languageColor, shareOf, type OrgLanguageProfile } from '@/lib/org-languages-shared';
+
+/** Top languages of the organisation's code with GitHub's colours; the picked
+ *  ones first and bold so a filtered list reads at a glance. */
+export function LanguageStrip({ profile, picked, onPick, max = 3 }: { profile: OrgLanguageProfile; picked: ReadonlyArray<string>; onPick?: (lang: string) => void; max?: number }) {
+  const pickedFirst = [
+    ...picked.map((p) => profile.languages.find((l) => l[0].toLowerCase() === p.toLowerCase())).filter((l): l is NonNullable<typeof l> => !!l),
+    ...profile.languages.filter((l) => !picked.some((p) => p.toLowerCase() === l[0].toLowerCase())),
+  ].slice(0, max);
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      {pickedFirst.map(([name, pct]) => {
+        const hot = picked.some((p) => p.toLowerCase() === name.toLowerCase());
+        const inner = (
+          <>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: languageColor(name) }} aria-hidden="true" />
+            <span className={hot ? 'text-ink font-[650]' : 'text-ink-mid'}>{name}</span>
+            <span className={`tabular-nums ${hot ? 'text-brand-600 font-[650]' : 'text-ink-faint'}`}>{pct}%</span>
+          </>
+        );
+        return onPick ? (
+          <button key={name} type="button" onClick={() => onPick(name)} title={`Only organisations whose code has ${name}`} className="inline-flex items-center gap-1.5 text-[11px] hover:underline underline-offset-2 cursor-pointer">{inner}</button>
+        ) : (
+          <span key={name} className="inline-flex items-center gap-1.5 text-[11px]">{inner}</span>
+        );
+      })}
+    </div>
+  );
+}
 
 export function OrgLogo({ card, meta, size = 'w-12 h-12' }: { card: OrgCard; meta?: GsocOrg; size?: string }) {
   // GitHub's avatar for organisations we know on GitHub; the GSoC logo for the rest.
@@ -30,15 +59,21 @@ export function YearsLine({ years }: { years: ReadonlyArray<number> }) {
   );
 }
 
-export function OrgCardView({ card: c, meta, years, onOpen, onPickTech }: {
+export function OrgCardView({ card: c, meta, years, profile, picked, onOpen, onPickTech, onPickLang }: {
   card: OrgCard;
   meta?: GsocOrg;
   years: ReadonlyArray<number>;
+  /** GitHub-measured languages, when the organisation has been measured. */
+  profile?: OrgLanguageProfile;
+  /** Languages the user filtered on. */
+  picked: ReadonlyArray<string>;
   onOpen: () => void;
   onPickTech: (tech: string) => void;
+  onPickLang: (lang: string) => void;
 }) {
   const hasOurs = c.contributors > 0;
   const techs = meta?.technologies.slice(0, 4) ?? [];
+  const pickedShare = picked.length > 0 && profile ? picked.map((l) => `${l} ${shareOf(profile, l)}%`).join(' · ') : null;
   const more = (meta?.technologies.length ?? 0) - techs.length;
   const flips = years.length > 0;
   const face = 'bg-ground border border-line rounded-2xl shadow-card group-hover:shadow-card-hover group-hover:border-line-heavy transition-[box-shadow,border-color] duration-300';
@@ -78,6 +113,13 @@ export function OrgCardView({ card: c, meta, years, onOpen, onPickTech }: {
         <YearsLine years={years} />
         {meta && meta.projects > 0 && <span className="text-[11px] text-ink-soft tabular-nums whitespace-nowrap">{meta.projects} GSoC projects</span>}
       </div>
+
+      {profile && (
+        <div className="relative flex items-center justify-between gap-2">
+          <LanguageStrip profile={profile} picked={picked} onPick={onPickLang} />
+          {pickedShare && <span className="text-[10.5px] text-ink-faint whitespace-nowrap">of the code</span>}
+        </div>
+      )}
 
       {techs.length > 0 && (
         <div className="relative flex flex-wrap gap-1.5">

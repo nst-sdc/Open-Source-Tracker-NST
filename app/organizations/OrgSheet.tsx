@@ -5,15 +5,17 @@ import Link from 'next/link';
 import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
 import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, gsocHistoryUrl, goodFirstIssuesUrl } from '@/lib/org-explorer-types';
 import { OrgLogo, YearsLine } from './OrgCardView';
+import { languageColor, LANGUAGE_MIN_SHARE, type OrgLanguageProfile } from '@/lib/org-languages-shared';
 
 /** The side panel for one organisation: what it is, its GSoC history,
  *  what it builds with, who from NST is already there, and where to start. */
-export function OrgSheet({ card: c, meta, years, onClose, onPick }: {
+export function OrgSheet({ card: c, meta, years, profile, onClose, onPick }: {
   card: OrgCard;
   meta?: GsocOrg;
   years: ReadonlyArray<number>;
+  profile?: OrgLanguageProfile;
   onClose: () => void;
-  onPick: (kind: 'tech' | 'topic' | 'category', value: string) => void;
+  onPick: (kind: 'tech' | 'topic' | 'category' | 'lang', value: string) => void;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -93,8 +95,38 @@ export function OrgSheet({ card: c, meta, years, onClose, onPick }: {
             </section>
           )}
 
+          {/* Languages, as GitHub measures them */}
+          {!c.site && (
+            <section>
+              <div className="flex items-baseline justify-between gap-2 mb-2">
+                <h3 className="text-ink font-[650] text-sm">Languages in the code</h3>
+                {profile && <span className="text-[11px] text-ink-faint tabular-nums">GitHub, {profile.repos < profile.totalRepos ? `${profile.repos} most-starred of ${profile.totalRepos}` : `all ${profile.repos}`} repositories</span>}
+              </div>
+              {profile ? (
+                <>
+                  <div className="flex h-2.5 rounded-full overflow-hidden bg-panel-2" role="img" aria-label={profile.languages.map(([n, p]) => `${n} ${p}%`).join(', ')}>
+                    {profile.languages.filter(([, p]) => p >= LANGUAGE_MIN_SHARE).map(([name, pct]) => (
+                      <div key={name} title={`${name} ${pct}%`} style={{ width: `${pct}%`, backgroundColor: languageColor(name) }} />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-2">
+                    {profile.languages.filter(([, p]) => p >= LANGUAGE_MIN_SHARE).map(([name, pct, repos]) => (
+                      <button key={name} type="button" onClick={() => onPick('lang', name)} title={`${repos} of the sampled repositories use ${name}. Show organisations whose code has ${name}.`} className="inline-flex items-center gap-1.5 text-[11.5px] hover:underline underline-offset-2 cursor-pointer">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: languageColor(name) }} aria-hidden="true" />
+                        <span className="text-ink-mid">{name}</span>
+                        <span className="text-ink-faint tabular-nums">{pct}%</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-ink-faint">Not measured yet; the background refresh reads the repositories from GitHub within a day.</p>
+              )}
+            </section>
+          )}
+
           {meta && meta.technologies.length > 0 && (
-            <Facet title="Built with" items={meta.technologies} onPick={(v) => onPick('tech', v)} tone="brand" />
+            <Facet title="Technologies, as the organisation describes them" items={meta.technologies} onPick={(v) => onPick('tech', v)} tone="brand" />
           )}
           {meta && meta.topics.length > 0 && (
             <Facet title="Topics" items={meta.topics} onPick={(v) => onPick('topic', v)} tone="violet" />

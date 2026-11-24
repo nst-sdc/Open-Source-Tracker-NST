@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { GsocOrg, OrgCard } from './org-explorer-types';
-import { DEFAULT_FILTERS, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, yearRanges } from './org-explorer-filter';
+import { DEFAULT_FILTERS, effectiveSort, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, yearRanges } from './org-explorer-filter';
+import type { OrgLanguageMap } from './org-languages-shared';
 
 const card = (login: string, extra: Partial<OrgCard> = {}): OrgCard => ({
   login, name: login, avatarUrl: '', url: `https://github.com/${login}`, contributors: 0, mergedPRs: 0, top: [], people: [], programs: ['gsoc'], tags: ['GSoC'], ...extra,
@@ -41,9 +42,32 @@ describe('org explorer filters', () => {
     const g = cards.slice(0, 3);
     expect(sortCards(g, gsoc, 'recommended').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']);
     expect(sortCards(g, gsoc, 'years').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']);
-    expect(sortCards(g, gsoc, 'projects').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']);
+    expect(sortCards(g, gsoc, 'slots').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']);
     expect(sortCards(g, gsoc, 'newest').map((c) => c.login)).toEqual(['newbie', 'sympy', 'oldweb']);
+    expect(sortCards(g, gsoc, 'recent').map((c) => c.login)).toEqual(['sympy', 'newbie', 'oldweb']); // 2026 (8 yrs), 2026 (1 yr), 2017
+    expect(sortCards(g, gsoc, 'oldest').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']); // 2016 (8 yrs), 2016 (2 yrs), 2026
     expect(sortCards(g, gsoc, 'name').map((c) => c.login)).toEqual(['newbie', 'oldweb', 'sympy']);
+    expect(sortCards(g, gsoc, 'name-desc').map((c) => c.login)).toEqual(['sympy', 'oldweb', 'newbie']);
+  });
+
+  it('filters by measured GitHub languages and sorts by their share', () => {
+    const langs: OrgLanguageMap = {
+      sympy: { repos: 50, totalRepos: 60, languages: [['Python', 92.4, 40], ['C', 4.1, 3], ['Shell', 0.5, 12]] },
+      newbie: { repos: 3, totalRepos: 3, languages: [['TypeScript', 70, 3], ['Python', 30, 1]] },
+      oldweb: { repos: 9, totalRepos: 9, languages: [['PHP', 100, 9]] },
+    };
+    const f = { ...DEFAULT_FILTERS, langs: ['Python'] };
+    const got = filterCards(cards, gsoc, f, langs);
+    expect(got.map((c) => c.login)).toEqual(['sympy', 'newbie']); // listed-only and KDE have no profile yet
+    expect(effectiveSort(f)).toBe('language');
+    expect(sortCards(got, gsoc, 'language', langs, f.langs).map((c) => c.login)).toEqual(['sympy', 'newbie']);
+    // below the noise floor does not count as "uses"
+    expect(filterCards(cards, gsoc, { ...DEFAULT_FILTERS, langs: ['Shell'] }, langs)).toEqual([]);
+    // every picked language must be present
+    expect(filterCards(cards, gsoc, { ...DEFAULT_FILTERS, langs: ['Python', 'TypeScript'] }, langs).map((c) => c.login)).toEqual(['newbie']);
+    expect(facetsOf(cards, gsoc, langs).langs).toEqual([{ value: 'Python', count: 2 }, { value: 'C', count: 1 }, { value: 'PHP', count: 1 }, { value: 'TypeScript', count: 1 }]);
+    // a chosen order wins over the automatic language sort
+    expect(effectiveSort({ ...f, sort: 'name' })).toBe('name');
   });
 
   it('counts facets over the given cards', () => {
@@ -62,7 +86,7 @@ describe('org explorer filters', () => {
 
   it('round-trips filters through URL params and ignores junk', () => {
     const keys = new Set(['gsoc', 'lfx']);
-    const f = { ...DEFAULT_FILTERS, program: 'gsoc' as const, years: [2026, 2025], techs: ['python'], search: 'math', sort: 'newest' as const, onlyOurs: true };
+    const f = { ...DEFAULT_FILTERS, program: 'gsoc' as const, years: [2026, 2025], techs: ['python'], langs: ['C++'], search: 'math', sort: 'newest' as const, onlyOurs: true };
     const back = parseFilters(filtersToParams(f), keys);
     expect(back).toEqual(f);
     expect(filtersToParams(DEFAULT_FILTERS).toString()).toBe('');

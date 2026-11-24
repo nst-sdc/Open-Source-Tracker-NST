@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PROGRAM_FILTERS, type GsocOrg, type OrgCard, type OrgExplorerData, type ProgramKey } from '@/lib/org-explorer-types';
 import {
-  SORTS, activeFacetCount, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, toggleIn, yearsOf,
-  type ExplorerFilters, type GsocMap, type SortKey,
+  EMPTY_FACETS, NO_LANGS, SORTS, activeFacetCount, effectiveSort, facetsOf, filterCards, filtersToParams, langsOf, parseFilters, sortCards, toggleIn, yearsOf,
+  type ExplorerFilters, type GsocMap, type LangMap, type SortKey,
 } from '@/lib/org-explorer-filter';
+import type { OrgLanguageMap } from '@/lib/org-languages-shared';
 import { OrgCardView } from './OrgCardView';
 import { OrgSheet } from './OrgSheet';
 import { FacetPanel } from './Facets';
@@ -28,6 +29,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
   const [filters, setFilters] = useState<ExplorerFilters>(() => parseFilters(new URLSearchParams(params.toString()), PROGRAM_KEYS));
   const [limit, setLimit] = useState(PAGE);
   const [gsoc, setGsoc] = useState<GsocMap>(EMPTY);
+  const [langs, setLangs] = useState<LangMap>(NO_LANGS);
   const [loading, setLoading] = useState(true);
   const [openLogin, setOpenLogin] = useState<string | null>(null);
   const [drawer, setDrawer] = useState(false);
@@ -38,6 +40,11 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
       .then((r) => (r.ok ? (r.json() as Promise<GsocOrg[]>) : Promise.reject(new Error(String(r.status)))))
       .then((list) => { setGsoc(new Map(list.map((o) => [o.slug, o]))); setLoading(false); })
       .catch(() => { if (!ctrl.signal.aborted) setLoading(false); });
+    // What GitHub says each organisation's code is written in; filled in by the refresh tick.
+    fetch('/api/org-languages', { signal: ctrl.signal })
+      .then((r) => (r.ok ? (r.json() as Promise<OrgLanguageMap>) : Promise.reject(new Error(String(r.status)))))
+      .then((map) => setLangs(map))
+      .catch(() => {});
     return () => ctrl.abort();
   }, []);
 
@@ -50,7 +57,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
     setLimit(PAGE);
   }, []);
 
-  const toggle = useCallback((kind: 'years' | 'categories' | 'techs' | 'topics', value: string | number) => {
+  const toggle = useCallback((kind: 'years' | 'categories' | 'techs' | 'topics' | 'langs', value: string | number) => {
     setFilters((prev) => {
       const next = kind === 'years'
         ? { ...prev, years: toggleIn(prev.years, Number(value)) }
@@ -62,9 +69,11 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
   }, []);
 
   // Facet counts ignore the facets themselves so each option shows what it would keep.
-  const base = useMemo(() => filterCards(data.cards, gsoc, { ...filters, years: [], categories: [], techs: [], topics: [] }), [data.cards, gsoc, filters]);
-  const facets = useMemo(() => facetsOf(base, gsoc), [base, gsoc]);
-  const shown = useMemo(() => sortCards(filterCards(data.cards, gsoc, filters), gsoc, filters.sort), [data.cards, gsoc, filters]);
+  const base = useMemo(() => filterCards(data.cards, gsoc, { ...filters, ...EMPTY_FACETS }, langs), [data.cards, gsoc, filters, langs]);
+  const facets = useMemo(() => facetsOf(base, gsoc, langs), [base, gsoc, langs]);
+  const sort = effectiveSort(filters);
+  const shown = useMemo(() => sortCards(filterCards(data.cards, gsoc, filters, langs), gsoc, sort, langs, filters.langs), [data.cards, gsoc, filters, langs, sort]);
+  const measured = useMemo(() => Object.keys(langs).length, [langs]);
 
   const visible = shown.slice(0, limit);
   const totalContributors = new Set(shown.flatMap((c) => c.people)).size;
@@ -74,14 +83,15 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
   const open = openLogin ? data.cards.find((c) => c.login === openLogin) ?? null : null;
   const facetCount = activeFacetCount(filters);
 
-  const pickFromSheet = (kind: 'tech' | 'topic' | 'category', value: string) => {
+  const pickFromSheet = (kind: 'tech' | 'topic' | 'category' | 'lang', value: string) => {
     setOpenLogin(null);
-    const key = kind === 'tech' ? 'techs' : kind === 'topic' ? 'topics' : 'categories';
+    const key = kind === 'tech' ? 'techs' : kind === 'topic' ? 'topics' : kind === 'lang' ? 'langs' : 'categories';
     if (!(filters[key] as string[]).includes(value)) toggle(key, value);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const chips: Array<{ label: string; clear: () => void }> = [
+    ...filters.langs.map((v) => ({ label: `${v} code`, clear: () => toggle('langs', v) })),
     ...filters.years.map((y) => ({ label: `GSoC ${y}`, clear: () => toggle('years', y) })),
     ...filters.categories.map((v) => ({ label: v, clear: () => toggle('categories', v) })),
     ...filters.techs.map((v) => ({ label: v, clear: () => toggle('techs', v) })),
@@ -112,8 +122,8 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex items-center gap-2 text-sm text-ink-mid">
             <span className="text-ink-soft">Sort</span>
-            <select value={filters.sort} onChange={(e) => update({ sort: e.target.value as SortKey })} className="bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand-100 cursor-pointer">
-              {SORTS.map((s) => <option key={s.key} value={s.key} title={s.hint}>{s.label}</option>)}
+            <select value={sort} onChange={(e) => update({ sort: e.target.value as SortKey })} className="bg-ground border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand-100 cursor-pointer">
+              {SORTS.filter((s) => s.key !== 'language' || filters.langs.length > 0).map((s) => <option key={s.key} value={s.key} title={s.hint}>{s.label}</option>)}
             </select>
           </label>
           <label className="inline-flex items-center gap-2 text-sm text-ink-mid cursor-pointer select-none">
@@ -132,7 +142,8 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         <span className="text-ink font-[650] tabular-nums">{shown.length}</span> organisation{shown.length === 1 ? '' : 's'}{current ? ` in ${current.label}` : ''}
         {' · '}<span className="text-ink font-[650] tabular-nums">{withOurs}</span> with NST contributors
         {' · '}<span className="text-ink font-[650] tabular-nums">{totalContributors}</span> of us contributing
-        {current?.hint && <span className="block md:inline md:ml-2 text-ink-faint">{current.hint}</span>}
+        {filters.langs.length > 0 && <span className="block md:inline md:ml-2 text-ink-faint">Sorted by how much of the code GitHub measures as {filters.langs.join(' and ')}, across the most-starred repositories of each organisation{measured < data.cards.length ? `; ${measured} of ${data.cards.length} organisations measured so far` : ''}.</span>}
+        {current?.hint && !filters.langs.length && <span className="block md:inline md:ml-2 text-ink-faint">{current.hint}</span>}
       </p>
 
       {chips.length > 0 && (
@@ -142,7 +153,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
               {ch.label}<span aria-hidden="true">×</span>
             </button>
           ))}
-          <button type="button" onClick={() => update({ years: [], categories: [], techs: [], topics: [] })} className="text-xs text-ink-soft hover:text-ink underline-offset-2 hover:underline ml-1 cursor-pointer">Clear all</button>
+          <button type="button" onClick={() => update(EMPTY_FACETS)} className="text-xs text-ink-soft hover:text-ink underline-offset-2 hover:underline ml-1 cursor-pointer">Clear all</button>
         </div>
       )}
 
@@ -150,7 +161,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         {showFacets && (
           <aside className="hidden lg:block">
             <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 -mr-2 bg-ground border border-line rounded-2xl p-4">
-              <FacetPanel facets={facets} filters={filters} loading={loading} onToggle={toggle} onClear={() => update({ years: [], categories: [], techs: [], topics: [] })} />
+              <FacetPanel facets={facets} filters={filters} loading={loading} measured={measured} onToggle={toggle} onClear={() => update(EMPTY_FACETS)} />
             </div>
           </aside>
         )}
@@ -164,8 +175,8 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {visible.map((c) => (
-                <OrgCardView key={c.login} card={c} meta={c.gsocSlug ? gsoc.get(c.gsocSlug) : undefined} years={yearsOf(c, gsoc)}
-                  onOpen={() => setOpenLogin(c.login)} onPickTech={(t) => { if (!filters.techs.includes(t)) toggle('techs', t); }} />
+                <OrgCardView key={c.login} card={c} meta={c.gsocSlug ? gsoc.get(c.gsocSlug) : undefined} years={yearsOf(c, gsoc)} profile={langsOf(c, langs)} picked={filters.langs}
+                  onOpen={() => setOpenLogin(c.login)} onPickTech={(t) => { if (!filters.techs.includes(t)) toggle('techs', t); }} onPickLang={(l) => { if (!filters.langs.includes(l)) toggle('langs', l); }} />
               ))}
             </div>
           )}
@@ -179,13 +190,13 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
         </div>
       </div>
 
-      {open && <OrgSheet card={open} meta={open.gsocSlug ? gsoc.get(open.gsocSlug) : undefined} years={yearsOf(open, gsoc)} onClose={() => setOpenLogin(null)} onPick={pickFromSheet} />}
+      {open && <OrgSheet card={open} meta={open.gsocSlug ? gsoc.get(open.gsocSlug) : undefined} years={yearsOf(open, gsoc)} profile={langsOf(open, langs)} onClose={() => setOpenLogin(null)} onPick={pickFromSheet} />}
 
       {drawer && showFacets && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
           <button type="button" aria-label="Close filters" onClick={() => setDrawer(false)} className="absolute inset-0 bg-ink/40 cursor-default" />
           <div className="absolute left-0 top-0 h-full w-[88%] max-w-sm bg-ground border-r border-line overflow-y-auto p-4">
-            <FacetPanel facets={facets} filters={filters} loading={loading} onToggle={toggle} onClear={() => update({ years: [], categories: [], techs: [], topics: [] })} />
+            <FacetPanel facets={facets} filters={filters} loading={loading} measured={measured} onToggle={toggle} onClear={() => update(EMPTY_FACETS)} />
             <button type="button" onClick={() => setDrawer(false)} className="mt-5 w-full bg-brand-500 text-white font-[600] rounded-xl py-2.5 text-sm cursor-pointer">Show {shown.length} organisation{shown.length === 1 ? '' : 's'}</button>
           </div>
         </div>

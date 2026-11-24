@@ -7,20 +7,22 @@
  * the page stays a thin layer over these.
  */
 import type { GsocOrg, OrgCard, ProgramKey } from './org-explorer-types';
+import { combinedShare, type OrgLanguageMap } from './org-languages-shared';
 
-export type SortKey = 'recommended' | 'contributors' | 'years' | 'projects' | 'newest' | 'name';
+export type SortKey = 'recommended' | 'language' | 'contributors' | 'recent' | 'oldest' | 'years' | 'slots' | 'newest' | 'name' | 'name-desc';
 
 export const SORTS: ReadonlyArray<{ key: SortKey; label: string; hint: string }> = [
   { key: 'recommended', label: 'Recommended', hint: 'Where NST already contributes first, then the longest-running organisations' },
+  { key: 'language', label: 'Language share', hint: 'Most of the chosen languages in the code first (GitHub bytes across the most-starred repositories)' },
   { key: 'contributors', label: 'Most NST contributors', hint: 'Organisations with the most of our students' },
-  { key: 'years', label: 'Longest in GSoC', hint: 'Most years as a GSoC organisation: the steadiest bets' },
-  { key: 'projects', label: 'Most GSoC projects', hint: 'Most students mentored over the years: the most slots' },
+  { key: 'recent', label: 'Recently participated', hint: 'Most recent GSoC year first' },
+  { key: 'oldest', label: 'Oldest in GSoC', hint: 'Earliest first GSoC year first: the veterans' },
+  { key: 'years', label: 'Most years in GSoC', hint: 'Most years as a GSoC organisation: the steadiest bets' },
+  { key: 'slots', label: 'Most slots', hint: 'Most GSoC projects over the years: the most places' },
   { key: 'newest', label: 'New to GSoC', hint: 'First-time organisations first: fewer applicants compete there' },
   { key: 'name', label: 'A → Z', hint: 'Alphabetical' },
+  { key: 'name-desc', label: 'Z → A', hint: 'Reverse alphabetical' },
 ];
-
-/** Technologies a beginner is likely to know: the quick picks above the facets. */
-export const TECH_QUICK_PICKS: ReadonlyArray<string> = ['python', 'javascript', 'typescript', 'c++', 'c', 'java', 'go', 'rust', 'react', 'android', 'kotlin', 'machine learning'];
 
 export interface ExplorerFilters {
   program: ProgramKey | 'all';
@@ -34,12 +36,26 @@ export interface ExplorerFilters {
   techs: string[];
   /** Any of these topics (lower-case). */
   topics: string[];
+  /** Languages as GitHub names them; an organisation must have every one of
+   *  them in its code (above the noise floor). */
+  langs: string[];
   sort: SortKey;
 }
 
-export const DEFAULT_FILTERS: ExplorerFilters = { program: 'all', onlyOurs: false, search: '', years: [], categories: [], techs: [], topics: [], sort: 'recommended' };
+export const DEFAULT_FILTERS: ExplorerFilters = { program: 'all', onlyOurs: false, search: '', years: [], categories: [], techs: [], topics: [], langs: [], sort: 'recommended' };
 
 export type GsocMap = ReadonlyMap<string, GsocOrg>;
+export type LangMap = Readonly<OrgLanguageMap>;
+export const NO_LANGS: LangMap = {};
+
+export function langsOf(card: OrgCard, langs: LangMap) {
+  return card.site ? undefined : langs[card.login.toLowerCase()];
+}
+
+/** The sort that applies: a language pick sorts by share unless another order was chosen. */
+export function effectiveSort(f: ExplorerFilters): SortKey {
+  return f.langs.length > 0 && f.sort === 'recommended' ? 'language' : f.sort;
+}
 
 export function metaOf(card: OrgCard, gsoc: GsocMap): GsocOrg | undefined {
   return card.gsocSlug ? gsoc.get(card.gsocSlug) : undefined;
@@ -52,10 +68,14 @@ export function yearsOf(card: OrgCard, gsoc: GsocMap): number[] {
 const anyOf = (wanted: ReadonlyArray<string>, have: ReadonlyArray<string> | undefined) =>
   wanted.length === 0 || (have !== undefined && wanted.some((w) => have.includes(w)));
 
-/** Does the card pass the metadata filters (years, categories, technologies, topics) and the text search? */
-export function matchesCard(card: OrgCard, gsoc: GsocMap, f: ExplorerFilters): boolean {
+/** Does the card pass the metadata filters (years, categories, technologies, topics, languages) and the text search? */
+export function matchesCard(card: OrgCard, gsoc: GsocMap, f: ExplorerFilters, langs: LangMap = NO_LANGS): boolean {
   if (f.program !== 'all' && !card.programs.includes(f.program)) return false;
   if (f.onlyOurs && card.contributors === 0) return false;
+  if (f.langs.length > 0) {
+    const profile = langsOf(card, langs);
+    if (!profile || f.langs.some((l) => combinedShare(profile, [l]) === 0)) return false;
+  }
   const meta = metaOf(card, gsoc);
   if (f.years.length > 0) {
     const years = yearsOf(card, gsoc);
@@ -72,23 +92,31 @@ export function matchesCard(card: OrgCard, gsoc: GsocMap, f: ExplorerFilters): b
   return true;
 }
 
-export function filterCards(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, f: ExplorerFilters): OrgCard[] {
-  return cards.filter((c) => matchesCard(c, gsoc, f));
+export function filterCards(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, f: ExplorerFilters, langs: LangMap = NO_LANGS): OrgCard[] {
+  return cards.filter((c) => matchesCard(c, gsoc, f, langs));
 }
 
-export function sortCards(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, sort: SortKey): OrgCard[] {
+export function sortCards(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, sort: SortKey, langs: LangMap = NO_LANGS, picked: ReadonlyArray<string> = []): OrgCard[] {
   const years = (c: OrgCard) => yearsOf(c, gsoc).length;
   const projects = (c: OrgCard) => metaOf(c, gsoc)?.projects ?? 0;
   const first = (c: OrgCard) => { const y = yearsOf(c, gsoc); return y.length ? Math.min(...y) : 0; };
+  const last = (c: OrgCard) => { const y = yearsOf(c, gsoc); return y.length ? Math.max(...y) : 0; };
+  const share = (c: OrgCard) => combinedShare(langsOf(c, langs), picked);
   const byName = (a: OrgCard, b: OrgCard) => a.name.localeCompare(b.name);
+  const recommended = (a: OrgCard, b: OrgCard) => b.contributors - a.contributors || b.mergedPRs - a.mergedPRs || years(b) - years(a) || projects(b) - projects(a) || byName(a, b);
   const cmp: Record<SortKey, (a: OrgCard, b: OrgCard) => number> = {
-    recommended: (a, b) => b.contributors - a.contributors || b.mergedPRs - a.mergedPRs || years(b) - years(a) || projects(b) - projects(a) || byName(a, b),
+    recommended,
+    language: (a, b) => share(b) - share(a) || recommended(a, b),
     contributors: (a, b) => b.contributors - a.contributors || b.mergedPRs - a.mergedPRs || byName(a, b),
+    recent: (a, b) => last(b) - last(a) || years(b) - years(a) || byName(a, b),
+    // Earliest first year first; organisations without a known year go last.
+    oldest: (a, b) => (first(a) || 9999) - (first(b) || 9999) || years(b) - years(a) || byName(a, b),
     years: (a, b) => years(b) - years(a) || projects(b) - projects(a) || byName(a, b),
-    projects: (a, b) => projects(b) - projects(a) || years(b) - years(a) || byName(a, b),
+    slots: (a, b) => projects(b) - projects(a) || years(b) - years(a) || byName(a, b),
     // Newest first; organisations without a known first year go last.
     newest: (a, b) => (first(b) || -1) - (first(a) || -1) || projects(b) - projects(a) || byName(a, b),
     name: byName,
+    'name-desc': (a, b) => byName(b, a),
   };
   return [...cards].sort(cmp[sort]);
 }
@@ -100,19 +128,24 @@ export interface Facets {
   categories: Facet[];
   techs: Facet[];
   topics: Facet[];
+  /** Languages GitHub measured, with how many organisations use each above the noise floor. */
+  langs: Facet[];
 }
 
 /** How many of the given cards each facet value would keep. Computed over the
  *  cards matching everything except the facets themselves, so counts stay
  *  honest as the search and programme change. */
-export function facetsOf(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap): Facets {
+export function facetsOf(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap, langs: LangMap = NO_LANGS): Facets {
   const years = new Map<number, number>();
   const categories = new Map<string, number>();
   const techs = new Map<string, number>();
   const topics = new Map<string, number>();
+  const languages = new Map<string, number>();
   const bump = <K,>(m: Map<K, number>, k: K) => m.set(k, (m.get(k) ?? 0) + 1);
   for (const c of cards) {
     for (const y of yearsOf(c, gsoc)) bump(years, y);
+    const profile = langsOf(c, langs);
+    if (profile) for (const [name] of profile.languages) if (combinedShare(profile, [name]) > 0) bump(languages, name);
     const meta = metaOf(c, gsoc);
     if (!meta) continue;
     bump(categories, meta.category);
@@ -125,6 +158,7 @@ export function facetsOf(cards: ReadonlyArray<OrgCard>, gsoc: GsocMap): Facets {
     categories: list(categories),
     techs: list(techs),
     topics: list(topics),
+    langs: list(languages),
   };
 }
 
@@ -146,8 +180,10 @@ export function toggleIn<T>(list: ReadonlyArray<T>, value: T): T[] {
 }
 
 export function activeFacetCount(f: ExplorerFilters): number {
-  return f.years.length + f.categories.length + f.techs.length + f.topics.length;
+  return f.years.length + f.categories.length + f.techs.length + f.topics.length + f.langs.length;
 }
+
+export const EMPTY_FACETS: Pick<ExplorerFilters, 'years' | 'categories' | 'techs' | 'topics' | 'langs'> = { years: [], categories: [], techs: [], topics: [], langs: [] };
 
 const SORT_KEYS = new Set<string>(SORTS.map((s) => s.key));
 
@@ -164,6 +200,7 @@ export function parseFilters(params: URLSearchParams, programKeys: ReadonlySet<s
     categories: list('category'),
     techs: list('tech').map((t) => t.toLowerCase()),
     topics: list('topic').map((t) => t.toLowerCase()),
+    langs: list('lang'),
     sort: SORT_KEYS.has(sort) ? (sort as SortKey) : 'recommended',
   };
 }
@@ -177,6 +214,7 @@ export function filtersToParams(f: ExplorerFilters): URLSearchParams {
   if (f.categories.length) p.set('category', f.categories.join(','));
   if (f.techs.length) p.set('tech', f.techs.join(','));
   if (f.topics.length) p.set('topic', f.topics.join(','));
+  if (f.langs.length) p.set('lang', f.langs.join(','));
   if (f.sort !== 'recommended') p.set('sort', f.sort);
   return p;
 }
