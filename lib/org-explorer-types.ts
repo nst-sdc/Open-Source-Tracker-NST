@@ -61,6 +61,21 @@ export interface OrgCard {
    *  projects' code links; `program` is the explorer filter that lists the
    *  whole membership, when there is one. */
   umbrella?: { members: number; program?: ProgramKey };
+  /** A member project of one or more GSoC umbrellas: the umbrellas its GSoC
+   *  projects were mentored under, with the years and project counts the
+   *  projects' code links show. Partial: projects that linked no code are
+   *  not counted. */
+  via?: UmbrellaParent[];
+}
+
+export interface UmbrellaParent {
+  /** The umbrella's dataset slug, name and GitHub login (none for GNU). */
+  slug: string;
+  name: string;
+  login?: string;
+  years: number[];
+  projects: number;
+  projectsByYear: Record<string, number>;
 }
 
 /** Mentorship history of one organisation in one programme: the years it took

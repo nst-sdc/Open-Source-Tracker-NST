@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
+import type { GsocOrg, OrgCard, UmbrellaParent } from '@/lib/org-explorer-types';
 import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, PROGRAM_FILTERS, gsocOfficialOrgUrl, goodFirstIssuesUrl, umbrellaMembers } from '@/lib/org-explorer-types';
 import { GsocProjects } from './GsocProjects';
 import { OrgLogo, YearsLine } from './OrgCardView';
@@ -10,7 +10,7 @@ import { languageColor, LANGUAGE_MIN_SHARE, type OrgLanguageProfile } from '@/li
 
 /** The side panel for one organisation: what it is, its GSoC history,
  *  what it builds with, who from NST is already there, and where to start. */
-export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, onPick }: {
+export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, onPick, onOpen }: {
   card: OrgCard;
   meta?: GsocOrg;
   years: ReadonlyArray<number>;
@@ -19,6 +19,8 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
   onMeasured: (login: string, profile: OrgLanguageProfile) => void;
   onClose: () => void;
   onPick: (kind: 'tech' | 'topic' | 'category' | 'lang', value: string) => void;
+  /** Open another organisation's sheet by login, when the explorer has a card for it. */
+  onOpen?: (login: string) => boolean;
 }) {
   // The organisation's current GSoC ideas list, once the projects section has read it from the official site.
   const [ideasList, setIdeasList] = useState<string | null>(null);
@@ -92,7 +94,10 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
           {c.description && <p className="text-ink-mid text-sm leading-relaxed">{c.description}</p>}
 
           {/* Umbrella: where the slots actually go */}
-          {c.umbrella && <UmbrellaSection card={c} meta={meta} />}
+          {c.umbrella && <UmbrellaSection card={c} meta={meta} onOpen={onOpen} />}
+
+          {/* Member project: which umbrella it ran GSoC projects under */}
+          {c.via && !c.umbrella && <ViaSection parents={c.via} onOpen={onOpen} />}
 
           {/* GSoC history */}
           {years.length > 0 && (
@@ -228,7 +233,7 @@ const LFX_YEARS = Array.from({ length: LFX_LAST_YEAR - LFX_FIRST_YEAR + 1 }, (_,
 
 /** An umbrella's member organisations, as the GSoC projects' code links name
  *  them. Partial by nature: many projects link a blog post or nothing. */
-function UmbrellaSection({ card, meta }: { card: OrgCard; meta: GsocOrg | undefined }) {
+function UmbrellaSection({ card, meta, onOpen }: { card: OrgCard; meta: GsocOrg | undefined; onOpen?: (login: string) => boolean }) {
   const members = meta ? umbrellaMembers(meta) : [];
   const shown = members.slice(0, 24);
   const programLabel = card.umbrella?.program ? PROGRAM_FILTERS.find((p) => p.key === card.umbrella!.program)?.label : undefined;
@@ -243,10 +248,9 @@ function UmbrellaSection({ card, meta }: { card: OrgCard; meta: GsocOrg | undefi
           <p className="text-[11px] text-ink-faint mt-2">Member projects seen in the projects&rsquo; code links, most projects first. Projects that linked no code are not counted.</p>
           <div className="flex flex-wrap gap-1.5 mt-1.5">
             {shown.map((m) => (
-              <a key={m.login} href={`https://github.com/${m.login}`} target="_blank" rel="noopener noreferrer" title={`${m.projects} project${m.projects === 1 ? '' : 's'} · ${m.years.join(', ')}`}
-                className="inline-flex items-center gap-1 text-[11px] font-[600] px-2 py-0.5 rounded-full bg-ground border border-line text-ink-mid hover:text-ink hover:border-line-strong transition-colors">
+              <MemberChip key={m.login} login={m.login} title={`${m.projects} project${m.projects === 1 ? '' : 's'} · ${m.years.join(', ')}`} onOpen={onOpen}>
                 {m.login}<span className="text-ink-faint tabular-nums font-[500]">{m.projects}</span>
-              </a>
+              </MemberChip>
             ))}
             {members.length > shown.length && <span className="text-[11px] px-1.5 py-0.5 text-ink-faint">+{members.length - shown.length} more</span>}
           </div>
@@ -255,6 +259,39 @@ function UmbrellaSection({ card, meta }: { card: OrgCard; meta: GsocOrg | undefi
       {card.umbrella?.program && (
         <Link href={`/organizations?program=${card.umbrella.program}`} className="inline-block mt-2 text-xs font-[600] text-brand-600 hover:underline underline-offset-2">Browse every {programLabel ?? 'member'} project here →</Link>
       )}
+    </section>
+  );
+}
+
+/** A chip that opens the organisation's sheet here when there is one, and its GitHub page otherwise. */
+function MemberChip({ login, title, onOpen, children }: { login: string; title: string; onOpen?: (login: string) => boolean; children: React.ReactNode }) {
+  const cls = 'inline-flex items-center gap-1 text-[11px] font-[600] px-2 py-0.5 rounded-full bg-ground border border-line text-ink-mid hover:text-ink hover:border-line-strong transition-colors cursor-pointer';
+  return (
+    <a href={`https://github.com/${login}`} target="_blank" rel="noopener noreferrer" title={title} className={cls}
+      onClick={(e) => { if (onOpen && onOpen(login)) e.preventDefault(); }}>
+      {children}
+    </a>
+  );
+}
+
+/** The umbrellas a member project ran its GSoC projects under. */
+function ViaSection({ parents, onOpen }: { parents: ReadonlyArray<UmbrellaParent>; onOpen?: (login: string) => boolean }) {
+  return (
+    <section className="rounded-xl border border-line bg-panel/60 p-3">
+      <h3 className="text-ink font-[650] text-sm">GSoC through an umbrella</h3>
+      <p className="text-xs text-ink-mid mt-1 leading-relaxed">GSoC lists these projects under the umbrella organisation; the mentoring, the code and the maintainers were here. Counted from the projects&rsquo; code links, so projects that linked no code are missing.</p>
+      <ul className="mt-2 space-y-1">
+        {parents.map((p) => (
+          <li key={p.slug} className="flex items-baseline justify-between gap-3 text-xs">
+            {p.login ? (
+              <MemberChip login={p.login} title={`Open ${p.name}`} onOpen={onOpen}>{p.name}</MemberChip>
+            ) : (
+              <span className="font-[600] text-ink-mid">{p.name}</span>
+            )}
+            <span className="text-ink-soft tabular-nums whitespace-nowrap">{p.projects} project{p.projects === 1 ? '' : 's'} · {p.years.join(', ')}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
