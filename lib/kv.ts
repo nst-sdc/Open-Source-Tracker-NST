@@ -185,3 +185,43 @@ export async function kvSet<T>(key: string, value: T, ttlSeconds?: number): Prom
   writeDiskKV(key, value, ttlSeconds);
   return true;
 }
+
+/** True when a real Redis-compatible store is configured (not the disk fallback). */
+export function kvConfigured(): boolean {
+  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
+
+/**
+ * Runs raw Redis commands in one round trip through the REST proxy's
+ * `/pipeline` endpoint (Upstash and serverless-redis-http both serve it).
+ * Results come back in command order; a command that errored yields null.
+ * `ok: false` means the store did not answer at all. There is no disk
+ * fallback here: callers that need one in development bring their own.
+ */
+export async function kvPipeline(commands: string[][]): Promise<{ ok: boolean; results: unknown[] }> {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  if (!url || !token || commands.length === 0) return { ok: false, results: [] };
+  try {
+    const res = await fetch(`${url.replace(/\/+$/, '')}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(commands),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(`KV pipeline failed [${commands[0][0]} … ×${commands.length}]: ${res.status} ${body.slice(0, 300)}`);
+      return { ok: false, results: [] };
+    }
+    const data = (await res.json()) as Array<{ result?: unknown; error?: string }>;
+    if (!Array.isArray(data)) return { ok: false, results: [] };
+    return { ok: true, results: data.map((d) => (d && 'result' in d ? d.result : null)) };
+  } catch (err) {
+    if (err && typeof err === 'object' && 'digest' in err && err.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw err;
+    }
+    console.error(`KV pipeline threw [${commands[0][0]} … ×${commands.length}]:`, err);
+    return { ok: false, results: [] };
+  }
+}

@@ -4,6 +4,7 @@ import { Nav } from "./components/Nav";
 import { DeadlinePostcard } from "./components/DeadlinePostcard";
 import AssistantWidget from "./components/AssistantWidget";
 import SmoothScroll from "./components/SmoothScroll";
+import UsageBeacon from "./components/UsageBeacon";
 import "./globals.css";
 
 // grauity's own face (see Newton-School/grauity constantGlobalStyle.ts).
@@ -47,6 +48,7 @@ export default function RootLayout({
         </SmoothScroll>
         <DeadlinePostcard />
         <AssistantWidget />
+        <UsageBeacon />
       </body>
     </html>
   );
