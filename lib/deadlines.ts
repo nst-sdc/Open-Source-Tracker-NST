@@ -23,6 +23,8 @@ export interface Deadline {
   program: string;
   /** Short name for the postcard. */
   short: string;
+  /** Even shorter, for the stamp that peeks out at rest (defaults to "left"). */
+  stamp?: string;
   kind: DeadlineKind;
   milestones: Milestone[];
   /** Plain-language explanation shown on hover. */
@@ -57,20 +59,23 @@ export const DEADLINES: ReadonlyArray<Deadline> = [
     more: '/programs',
   },
   {
-    id: 'riscv-lfx-spring-2027',
-    program: 'RISC-V mentorships on LFX, Spring 2027',
-    short: 'RISC-V on LFX',
+    id: 'lfx-spring-2027',
+    program: 'LFX Mentorship, Spring 2027',
+    short: 'LFX Mentorship',
+    stamp: 'LFX',
     kind: 'published',
     milestones: [
-      { label: 'selected programmes notified', at: '2026-12-04' },
-      { label: 'mentorships listed on LFX', at: '2027-01-07' },
-      { label: 'term starts', at: '2027-03-01' },
-      { label: 'term ends', at: '2027-05-31' },
+      { label: 'RISC-V programmes notified', at: '2026-12-04' },
+      { label: 'RISC-V mentorships listed', at: '2027-01-07' },
+      { label: 'CNCF applications expected to open', at: '2027-01-26', estimated: true },
+      { label: 'CNCF applications expected to close', at: '2027-02-10', estimated: true },
+      { label: 'spring term starts', at: '2027-03-01' },
+      { label: 'spring term ends', at: '2027-05-31' },
     ],
-    about: 'RISC-V International runs paid mentorships through LFX Mentorship: a mentee works with a RISC-V project maintainer for a term.',
-    facts: ['Spring term runs 1 March to 31 May 2027.', 'Mentee applications open on LFX Mentorship after the mentorships are listed on 7 January.'],
-    source: 'Published by RISC-V International.',
-    url: 'https://riscv.org/community/riscv-mentorship-program/',
+    about: 'The Linux Foundation’s paid, remote mentorship platform. Projects under CNCF, RISC-V, Hyperledger, OpenSSF and other foundations post mentorships each term; a mentee works with a maintainer for twelve weeks.',
+    facts: ['Three terms a year: spring (March to May), summer (June to August) and fall (September to November).', 'Each foundation sets its own application window. RISC-V lists its Spring 2027 mentorships on 7 January; CNCF Term 1 applications were open 26 January to 10 February in 2026.', 'Apply on mentorship.lfx.linuxfoundation.org once a mentorship is listed.'],
+    source: 'Term dates and the RISC-V schedule are published; the CNCF window is estimated from 2026.',
+    url: 'https://mentorship.lfx.linuxfoundation.org/',
     more: '/organizations?program=lfx',
   },
   {
@@ -90,22 +95,6 @@ export const DEADLINES: ReadonlyArray<Deadline> = [
     source: 'Estimated from the 2026 timeline; nothing for 2027 is published yet.',
     url: 'https://summerofcode.withgoogle.com/',
     more: '/organizations?program=gsoc',
-  },
-  {
-    id: 'cncf-lfx-2027-t1',
-    program: 'CNCF / LFX Mentorship 2027, Term 1',
-    short: 'CNCF Term 1',
-    kind: 'expected',
-    milestones: [
-      { label: 'mentee applications expected to open', at: '2027-01-26', estimated: true },
-      { label: 'mentee applications expected to close', at: '2027-02-10', estimated: true },
-      { label: 'term runs March to May', at: '2027-03-01', estimated: true },
-    ],
-    about: 'Paid 12-week mentorships on CNCF projects (Kubernetes, Prometheus, Envoy and hundreds more) run through LFX Mentorship, three terms a year.',
-    facts: ['Term 1 runs March to May.', 'In 2026, Term 1 mentee applications were open 26 January to 10 February.', 'Expect the 2027 window in late January to early February.'],
-    source: 'Estimated from the 2026 Term 1 dates; 2027 dates are not posted yet.',
-    url: 'https://github.com/cncf/mentoring',
-    more: '/organizations?program=cncf',
   },
   {
     id: 'outreachy-may-2027',

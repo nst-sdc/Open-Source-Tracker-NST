@@ -6,11 +6,13 @@ import { DEADLINES, countdown, formatCountdown, formatDate, milestoneTime, upcom
 
 const DISMISS_KEY = 'deadline-postcard-dismissed';
 
-/** A small postcard pinned to the bottom-left of every page with the soonest
- *  programme date and a live countdown. Hovering (or focusing) it unfolds the
- *  programme's story: what it is, its dates, how sure they are. Clicking it
- *  goes to that programme's page on this tracker. Published dates are solid;
- *  expected ones are marked "~". The card can be put away for the session. */
+/** A small postcard tucked into the right edge of every page, a little below
+ *  the navigation. At rest only its stamp shows: the live countdown and the
+ *  programme's name. Under the pointer (or keyboard focus) the whole card
+ *  slides out and the programme's story unfolds beneath it: what it is, its
+ *  dates, how sure they are. Clicking it goes to that programme's page on this
+ *  tracker. Published dates are solid; expected ones are marked "~". The card
+ *  can be put away for the session. */
 export function DeadlinePostcard() {
   // The clock starts after mount so the server and first client render agree.
   const [now, setNow] = useState<number | null>(null);
@@ -39,9 +41,9 @@ export function DeadlinePostcard() {
   const soon = (m: Milestone) => now !== null && milestoneTime(m.at) - now < 7 * 86_400_000;
 
   return (
-    <aside className="group fixed bottom-4 left-4 z-50 w-[15.5rem] max-w-[calc(100vw-6rem)] select-none" aria-label="Upcoming programme dates">
-      {/* Unfolds above the card under the pointer or keyboard focus. */}
-      <div className="pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto opacity-0 translate-y-2 scale-[0.98] group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:scale-100 transition duration-200 origin-bottom-left absolute bottom-full left-0 mb-2 w-[22rem] max-w-[calc(100vw-2rem)] bg-ground border border-line rounded-2xl shadow-2xl p-4 space-y-4">
+    <aside className="group fixed top-32 right-0 z-40 w-[17rem] max-w-[calc(100vw-1rem)] select-none" aria-label="Upcoming programme dates">
+      {/* Unfolds below the card under the pointer or keyboard focus. */}
+      <div className="pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto opacity-0 -translate-y-2 scale-[0.98] group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:scale-100 transition duration-200 origin-top-right absolute top-full right-4 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] bg-ground border border-line rounded-2xl shadow-2xl p-4 space-y-4">
         <ProgrammeStory deadline={first.deadline} now={now} />
         {rest.length > 0 && (
           <ul className="border-t border-line pt-3 space-y-1.5">
@@ -59,21 +61,21 @@ export function DeadlinePostcard() {
 
       {/* The postcard itself: a stamp with the countdown, the programme and its next date. */}
       <Link href={first.deadline.more ?? first.deadline.url} aria-label={`${first.deadline.program}: ${first.next.label} ${formatDate(first.next.at)}. Open the programme page.`}
-        className="relative flex items-stretch gap-3 bg-ground border border-line rounded-xl shadow-card p-2.5 pr-7 hover:border-line-strong hover:shadow-2xl transition motion-safe:hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+        className="relative flex items-stretch gap-3 bg-ground border border-r-0 border-line rounded-l-xl shadow-card p-2.5 pr-7 translate-x-[calc(100%-5.75rem)] group-hover:translate-x-0 group-focus-within:translate-x-0 hover:border-line-strong hover:shadow-2xl transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
         <span className={`shrink-0 flex flex-col items-center justify-center w-[4.5rem] rounded-lg border border-dashed px-1 py-1.5 text-center ${soon(first.next) ? 'border-amber-400 bg-amber-300/15 text-amber-700 dark:text-amber-300' : 'border-brand-500/50 bg-brand-500/8 text-brand-600'}`} aria-hidden="true">
           <span className="text-[12.5px] leading-none font-[750] tabular-nums whitespace-nowrap">{remaining(first.next)}</span>
-          <span className="text-[9px] leading-none mt-1 uppercase tracking-wider opacity-80">left</span>
+          <span className="text-[9px] leading-none mt-1 uppercase tracking-wider opacity-80 truncate max-w-full">{first.deadline.stamp ?? 'left'}</span>
         </span>
         <span className="min-w-0 flex flex-col justify-center leading-tight">
           <span className="text-[12px] font-[700] text-ink truncate">{first.deadline.short}</span>
-          <span className="text-[11px] text-ink-mid truncate">{first.next.label}</span>
-          <span className="text-[10.5px] text-ink-faint tabular-nums">{formatDate(first.next.at)}{first.deadline.kind === 'expected' ? ' · expected' : ''}{rest.length > 0 ? ` · +${rest.length} more` : ''}</span>
+          <span className="text-[11px] text-ink-mid leading-snug">{first.next.label}</span>
+          <span className="text-[10.5px] text-ink-faint tabular-nums">{formatDate(first.next.at)}{first.next.estimated ? ' · expected' : ''}{rest.length > 0 ? ` · +${rest.length} more` : ''}</span>
         </span>
         <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${first.deadline.kind === 'published' ? (soon(first.next) ? 'bg-amber-400 live-dot' : 'bg-success-600') : 'ring-1 ring-ink-faint'}`} aria-hidden="true" />
       </Link>
 
       <button type="button" onClick={dismiss} aria-label="Hide programme dates for this visit"
-        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-ground border border-line text-ink-faint hover:text-ink hover:border-line-strong text-[11px] leading-none flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+        className="absolute -top-2 left-1 w-5 h-5 rounded-full bg-ground border border-line text-ink-faint hover:text-ink hover:border-line-strong text-[11px] leading-none flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
         ×
       </button>
     </aside>

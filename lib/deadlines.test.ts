@@ -23,9 +23,9 @@ describe('programme deadlines', () => {
 
   it('orders upcoming deadlines by their next milestone and drops finished ones', () => {
     const list = upcoming(DEADLINES, now);
-    // Only the LFX programmes are on the postcard for now; the rest stay in the file, hidden.
-    expect(list.map((x) => x.deadline.id)).toEqual(['riscv-lfx-spring-2027', 'cncf-lfx-2027-t1']);
-    expect(list[0].next.label).toBe('selected programmes notified');
+    // Only LFX Mentorship is on the postcard for now; the rest stay in the file, hidden.
+    expect(list.map((x) => x.deadline.id)).toEqual(['lfx-spring-2027']);
+    expect(list[0].next.label).toBe('RISC-V programmes notified');
     expect(upcoming(DEADLINES, Date.parse('2030-01-01T00:00:00Z'))).toEqual([]);
   });
 
