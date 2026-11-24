@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import type { GsocOrg, OrgCard } from '@/lib/org-explorer-types';
-import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, gsocHistoryUrl, goodFirstIssuesUrl } from '@/lib/org-explorer-types';
+import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, gsocOfficialOrgUrl, goodFirstIssuesUrl } from '@/lib/org-explorer-types';
+import { GsocProjects } from './GsocProjects';
 import { OrgLogo, YearsLine } from './OrgCardView';
 import { languageColor, LANGUAGE_MIN_SHARE, type OrgLanguageProfile } from '@/lib/org-languages-shared';
 
@@ -57,7 +58,7 @@ export function OrgSheet({ card: c, meta, years, profile, onClose, onPick }: {
             {website && <LinkChip href={website} label="Website" />}
             {!c.site && <LinkChip href={c.url} label="GitHub" />}
             {!c.site && <LinkChip href={goodFirstIssuesUrl(c.login)} label="Good first issues" accent />}
-            {meta && <LinkChip href={gsocHistoryUrl(meta.slug)} label="Past GSoC projects" />}
+            {meta && years.length > 0 && <LinkChip href={gsocOfficialOrgUrl(meta.slug, Math.max(...years))} label="On GSoC site" />}
             {activityHref && (
               <Link href={activityHref} className="inline-flex items-center gap-1.5 text-xs font-[600] px-3 py-1.5 rounded-lg bg-brand-500/15 text-brand-600 border border-brand-100 hover:bg-brand-500/25 transition-colors">
                 Repo activity · {c.topRepo!.repo.split('/')[1]}
@@ -94,6 +95,8 @@ export function OrgSheet({ card: c, meta, years, profile, onClose, onPick }: {
               )}
             </section>
           )}
+
+          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} />}
 
           {/* LFX Mentorship history */}
           {c.lfx && <LfxHistorySection lfx={c.lfx} onPick={onPick} />}

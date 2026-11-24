@@ -98,9 +98,24 @@ export interface GsocOrg {
 export const GSOC_FIRST_YEAR = 2016;
 export const GSOC_LAST_YEAR = 2026;
 
-/** The organisation's page on gsocorganizations.dev: every past project, by year. */
-export function gsocHistoryUrl(slug: string): string {
-  return `https://www.gsocorganizations.dev/organization/${encodeURIComponent(slug)}/`;
+/** The organisation's page on the official GSoC site for a year: the archive
+ *  for past programmes, the programme pages for the current one. */
+export function gsocOfficialOrgUrl(slug: string, year: number): string {
+  const base = year >= GSOC_LAST_YEAR ? `programs/${year}` : `archive/${year}`;
+  return `https://summerofcode.withgoogle.com/${base}/organizations/${encodeURIComponent(slug)}`;
+}
+
+/** One past GSoC project of an organisation, from the official site. */
+export interface GsocProject {
+  title: string;
+  /** The project's page on summerofcode.withgoogle.com. */
+  url: string;
+  contributor?: string;
+  mentors?: string[];
+  summary?: string;
+  /** Where the code or the final report lives, when the contributor gave one. */
+  codeUrl?: string;
+  tech?: string[];
 }
 
 /** Open issues labelled for newcomers across the organisation, on GitHub. */
