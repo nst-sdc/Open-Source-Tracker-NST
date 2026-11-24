@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { PROGRAM_FILTERS, type GsocOrg, type OrgCard, type OrgExplorerData, type ProgramKey } from '@/lib/org-explorer-types';
 import {
   SORTS, activeFacetCount, facetsOf, filterCards, filtersToParams, parseFilters, sortCards, toggleIn, yearsOf,
@@ -15,8 +15,14 @@ const PAGE = 48;
 const PROGRAM_KEYS: ReadonlySet<string> = new Set(PROGRAM_FILTERS.map((f) => f.key));
 const EMPTY: GsocMap = new Map();
 
+/** Mirror the selection into the address bar without a server round trip:
+ *  the native history API is integrated with Next's router. */
+function syncUrl(f: ExplorerFilters) {
+  const qs = filtersToParams(f).toString();
+  window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+}
+
 export function OrgExplorer({ data }: { data: OrgExplorerData }) {
-  const router = useRouter();
   const params = useSearchParams();
   // The URL is the source of truth for the selection, so any view can be shared.
   const [filters, setFilters] = useState<ExplorerFilters>(() => parseFilters(new URLSearchParams(params.toString()), PROGRAM_KEYS));
@@ -38,24 +44,22 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
   const update = useCallback((patch: Partial<ExplorerFilters>) => {
     setFilters((prev) => {
       const next = { ...prev, ...patch };
-      const qs = filtersToParams(next).toString();
-      router.replace(qs ? `?${qs}` : '/organizations', { scroll: false });
+      syncUrl(next);
       return next;
     });
     setLimit(PAGE);
-  }, [router]);
+  }, []);
 
   const toggle = useCallback((kind: 'years' | 'categories' | 'techs' | 'topics', value: string | number) => {
     setFilters((prev) => {
       const next = kind === 'years'
         ? { ...prev, years: toggleIn(prev.years, Number(value)) }
         : { ...prev, [kind]: toggleIn(prev[kind] as string[], String(value)) };
-      const qs = filtersToParams(next).toString();
-      router.replace(qs ? `?${qs}` : '/organizations', { scroll: false });
+      syncUrl(next);
       return next;
     });
     setLimit(PAGE);
-  }, [router]);
+  }, []);
 
   // Facet counts ignore the facets themselves so each option shows what it would keep.
   const base = useMemo(() => filterCards(data.cards, gsoc, { ...filters, years: [], categories: [], techs: [], topics: [] }), [data.cards, gsoc, filters]);
