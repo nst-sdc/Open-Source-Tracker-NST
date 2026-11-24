@@ -119,7 +119,7 @@ export function Nav() {
 
   return (
     <>
-      <nav className="sticky top-7 z-50 border-b border-line bg-ground/90 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-line bg-ground/90 backdrop-blur-md">
         <div className="w-full px-4 md:px-8 flex items-center justify-between gap-4" style={{ height: 60 }}>
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">

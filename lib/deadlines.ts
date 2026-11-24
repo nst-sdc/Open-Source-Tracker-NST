@@ -1,9 +1,9 @@
 /**
  * lib/deadlines.ts
  *
- * Upcoming programme dates for the ticker that runs on every page: what is
+ * Upcoming programme dates for the postcard pinned to every page: what is
  * published, what is only expected from past years, and the words that
- * explain each programme when the ticker is clicked. Dates are UTC; a date
+ * explain each programme when the postcard is hovered. Dates are UTC; a date
  * without a time counts until the end of that day.
  */
 
@@ -21,11 +21,11 @@ export interface Milestone {
 export interface Deadline {
   id: string;
   program: string;
-  /** Short name for the ticker. */
+  /** Short name for the postcard. */
   short: string;
   kind: DeadlineKind;
   milestones: Milestone[];
-  /** Plain-language explanation shown on click. */
+  /** Plain-language explanation shown on hover. */
   about: string;
   /** Facts worth knowing before applying. */
   facts: string[];
@@ -34,7 +34,7 @@ export interface Deadline {
   url: string;
   /** The tracker's own page for the programme, when it has one. */
   more?: string;
-  /** Kept in the file but off the ticker for now. */
+  /** Kept in the file but off the postcard for now. */
   hidden?: boolean;
 }
 
@@ -161,7 +161,7 @@ export function formatDate(at: string): string {
   return new Date(milestoneTime(at)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
-/** Deadlines on the ticker with something still ahead, soonest next milestone first. */
+/** Deadlines on the postcard with something still ahead, soonest next milestone first. */
 export function upcoming(list: ReadonlyArray<Deadline>, now: number): Array<{ deadline: Deadline; next: Milestone }> {
   return list
     .filter((d) => !d.hidden)
