@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { GsocProject } from '@/lib/org-explorer-types';
 import { gsocOfficialOrgUrl } from '@/lib/org-explorer-types';
 
-type State = { status: 'loading' } | { status: 'ok'; projects: GsocProject[]; source: 'official' | 'archive' } | { status: 'error'; reason: string };
+type State = { status: 'loading' } | { status: 'ok'; projects: GsocProject[]; source: 'official' | 'archive'; ideasListUrl?: string } | { status: 'error'; reason: string };
 
 /** An organisation's GSoC projects by year, from the official GSoC site:
  *  pick a year, read the titles, open the project or its code. */
-export function GsocProjects({ slug, years }: { slug: string; years: ReadonlyArray<number> }) {
+export function GsocProjects({ slug, years, onIdeasList }: { slug: string; years: ReadonlyArray<number>; onIdeasList?: (url: string) => void }) {
   const sorted = [...years].sort((a, b) => b - a);
   const [year, setYear] = useState<number>(sorted[0]);
   const [state, setState] = useState<Record<number, State>>({});
@@ -25,10 +25,13 @@ export function GsocProjects({ slug, years }: { slug: string; years: ReadonlyArr
     queueMicrotask(() => { if (alive.current) setState((s) => (s[year] ? s : { ...s, [year]: { status: 'loading' } })); });
     fetch(`/api/gsoc-projects?slug=${encodeURIComponent(slug)}&year=${year}`)
       .then(async (r) => {
-        const body = (await r.json()) as { ok: boolean; projects?: GsocProject[]; source?: 'official' | 'archive'; reason?: string };
-        if (alive.current) setState((s) => ({ ...s, [year]: body.ok && body.projects ? { status: 'ok', projects: body.projects, source: body.source ?? 'official' } : { status: 'error', reason: body.reason ?? 'unavailable' } }));
+        const body = (await r.json()) as { ok: boolean; projects?: GsocProject[]; source?: 'official' | 'archive'; ideasListUrl?: string; reason?: string };
+        if (alive.current) setState((s) => ({ ...s, [year]: body.ok && body.projects ? { status: 'ok', projects: body.projects, source: body.source ?? 'official', ideasListUrl: body.ideasListUrl } : { status: 'error', reason: body.reason ?? 'unavailable' } }));
+        // The newest year's ideas list is the one an applicant wants; it is the first tab, so the first answer.
+        if (alive.current && body.ok && body.ideasListUrl && year === sorted[0]) onIdeasList?.(body.ideasListUrl);
       })
       .catch(() => { if (alive.current) setState((s) => ({ ...s, [year]: { status: 'error', reason: 'unavailable' } })); requested.current.delete(year); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch per slug and year; the callback and tab order are stable for the sheet's life
   }, [slug, year]);
 
   if (sorted.length === 0) return null;

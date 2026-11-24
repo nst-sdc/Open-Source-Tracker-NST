@@ -20,6 +20,8 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
   onClose: () => void;
   onPick: (kind: 'tech' | 'topic' | 'category' | 'lang', value: string) => void;
 }) {
+  // The organisation's current GSoC ideas list, once the projects section has read it from the official site.
+  const [ideasList, setIdeasList] = useState<string | null>(null);
   // No profile yet: ask the server to measure this organisation now.
   const [measuring, setMeasuring] = useState<'idle' | 'busy' | 'none' | 'failed'>('idle');
   useEffect(() => {
@@ -76,6 +78,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
             {website && <LinkChip href={website} label="Website" />}
             {!c.site && <LinkChip href={c.url} label="GitHub" />}
             {!c.site && <LinkChip href={goodFirstIssuesUrl(c.login)} label="Good first issues" accent />}
+            {ideasList && <LinkChip href={ideasList} label="GSoC ideas list" accent />}
             {meta && years.length > 0 && <LinkChip href={gsocOfficialOrgUrl(meta.slug, Math.max(...years))} label="On GSoC site" />}
             {activityHref && (
               <Link href={activityHref} className="inline-flex items-center gap-1.5 text-xs font-[600] px-3 py-1.5 rounded-lg bg-brand-500/15 text-brand-600 border border-brand-100 hover:bg-brand-500/25 transition-colors">
@@ -114,7 +117,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
             </section>
           )}
 
-          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} />}
+          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} onIdeasList={setIdeasList} />}
 
           {/* LFX Mentorship history */}
           {c.lfx && <LfxHistorySection lfx={c.lfx} onPick={onPick} />}

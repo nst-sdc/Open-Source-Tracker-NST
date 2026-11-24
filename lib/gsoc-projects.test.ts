@@ -22,9 +22,9 @@ describe('gsoc projects from the official site', () => {
   });
 
   it('fetches 2022+ from the official API and rejects bad input', async () => {
-    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify({ slug: 'sympy', projects: [{ id: 'p1', title: 'Solve' }] }), { status: 200 }));
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify({ slug: 'sympy', ideas_list_url: 'https://github.com/sympy/sympy/wiki/GSoC-Ideas', projects: [{ id: 'p1', title: 'Solve' }] }), { status: 200 }));
     const r = await getGsocProjects('sympy', 2025, { fetch: f as unknown as typeof fetch, cache: false });
-    expect(r).toMatchObject({ ok: true, source: 'official' });
+    expect(r).toMatchObject({ ok: true, source: 'official', ideasListUrl: 'https://github.com/sympy/sympy/wiki/GSoC-Ideas' });
     if (r.ok) expect(r.projects[0]).toEqual({ title: 'Solve', url: 'https://summerofcode.withgoogle.com/archive/2025/projects/p1' });
     expect(f.mock.calls[0][0]).toBe('https://summerofcode.withgoogle.com/api/archive/programs/2025/organizations/sympy/');
     expect(await getGsocProjects('../x', 2025)).toMatchObject({ ok: false, reason: 'bad-year' });

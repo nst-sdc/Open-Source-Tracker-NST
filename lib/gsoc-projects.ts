@@ -20,6 +20,7 @@ const ARCHIVE = gsocArchive as ArchiveFile;
 
 interface OfficialOrg {
   slug: string;
+  ideas_list_url?: string | null;
   projects?: Array<{
     id: string;
     title: string;
@@ -66,8 +67,14 @@ export function archivedProjects(slug: string, year: number): GsocProject[] | nu
   });
 }
 
+export interface GsocYear {
+  projects: GsocProject[];
+  /** The organisation's ideas list for that year, when the official site has it. */
+  ideasListUrl?: string;
+}
+
 export type GsocProjectsResult =
-  | { ok: true; year: number; source: 'official' | 'archive'; projects: GsocProject[] }
+  | ({ ok: true; year: number; source: 'official' | 'archive' } & GsocYear)
   | { ok: false; year: number; reason: 'bad-year' | 'not-found' | 'unavailable' };
 
 export async function getGsocProjects(slug: string, year: number, deps: { fetch?: typeof fetch; cache?: boolean } = {}): Promise<GsocProjectsResult> {
@@ -76,10 +83,10 @@ export async function getGsocProjects(slug: string, year: number, deps: { fetch?
     const projects = archivedProjects(slug, year);
     return projects ? { ok: true, year, source: 'archive', projects } : { ok: false, year, reason: 'not-found' };
   }
-  const key = `gsoc_projects:${year}:${slug.toLowerCase()}`;
+  const key = `gsoc_projects:v2:${year}:${slug.toLowerCase()}`;
   const useCache = deps.cache !== false;
-  const cached = useCache ? await kvGet<GsocProject[]>(key) : null;
-  if (cached) return { ok: true, year, source: 'official', projects: cached };
+  const cached = useCache ? await kvGet<GsocYear>(key) : null;
+  if (cached) return { ok: true, year, source: 'official', ...cached };
   const f = deps.fetch ?? fetch;
   let res: Response;
   try {
@@ -95,7 +102,8 @@ export async function getGsocProjects(slug: string, year: number, deps: { fetch?
   } catch {
     return { ok: false, year, reason: 'unavailable' };
   }
-  const projects = normalizeOfficial(body, year);
-  if (useCache) await kvSet(key, projects, CACHE_TTL_S);
-  return { ok: true, year, source: 'official', projects };
+  const value: GsocYear = { projects: normalizeOfficial(body, year) };
+  if (body.ideas_list_url && /^https?:\/\//.test(body.ideas_list_url)) value.ideasListUrl = body.ideas_list_url;
+  if (useCache) await kvSet(key, value, CACHE_TTL_S);
+  return { ok: true, year, source: 'official', ...value };
 }
