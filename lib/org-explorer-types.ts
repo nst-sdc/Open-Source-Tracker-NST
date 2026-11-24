@@ -49,6 +49,9 @@ export interface OrgCard {
   years?: number[];
   /** Key into the GSoC dataset (/api/gsoc-orgs) for technologies, topics, category and history. */
   gsocSlug?: string;
+  /** GSoC projects per year across every dataset record of this organisation
+   *  (an umbrella like Apache has several), for the flip back and the sheet. */
+  gsocSlots?: Record<string, number>;
   /** No GitHub organisation: `login` is the dataset slug, `url` the project website. */
   site?: boolean;
   /** LFX Mentorship history of this organisation's repositories (data/lfx-orgs.json). */

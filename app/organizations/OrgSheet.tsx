@@ -49,7 +49,9 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
   const website = meta?.url ?? (c.site ? c.url : null);
   const activityHref = c.topRepo ? `/repo-activity?repo=${encodeURIComponent(c.topRepo.repo)}&period=month` : null;
   const allYears = Array.from({ length: GSOC_LAST_YEAR - GSOC_FIRST_YEAR + 1 }, (_, i) => GSOC_FIRST_YEAR + i);
-  const maxProjects = Math.max(1, ...Object.values(meta?.projectsByYear ?? {}));
+  const slots = c.gsocSlots ?? meta?.projectsByYear ?? {};
+  const maxProjects = Math.max(1, ...Object.values(slots));
+  const slotTotal = Object.values(slots).reduce((a, n) => a + n, 0);
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={c.name}>
@@ -99,7 +101,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
               <div className="grid grid-cols-11 gap-1 items-end h-16">
                 {allYears.map((y) => {
                   const active = years.includes(y);
-                  const n = meta?.projectsByYear[String(y)] ?? 0;
+                  const n = slots[String(y)] ?? 0;
                   const h = active ? Math.max(14, Math.round((n / maxProjects) * 100)) : 6;
                   return (
                     <div key={y} className="flex flex-col items-center justify-end h-full" title={active ? `${y}: ${n || '?'} project${n === 1 ? '' : 's'}` : `${y}: not in GSoC`}>
@@ -111,8 +113,8 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
               <div className="grid grid-cols-11 gap-1 mt-1">
                 {allYears.map((y) => <div key={y} className="text-center text-[9px] text-ink-faint tabular-nums">{String(y).slice(2)}</div>)}
               </div>
-              {meta && meta.projects > 0 && (
-                <p className="text-xs text-ink-soft mt-2 tabular-nums">{meta.projects} students mentored over {years.length} year{years.length === 1 ? '' : 's'}, about {Math.round(meta.projects / years.length)} a year.</p>
+              {slotTotal > 0 && (
+                <p className="text-xs text-ink-soft mt-2 tabular-nums">{slotTotal} students mentored over {years.length} year{years.length === 1 ? '' : 's'}, about {Math.round(slotTotal / years.length)} a year.</p>
               )}
             </section>
           )}

@@ -202,8 +202,8 @@ function SlotsBack({ card: c, meta, years, program, onOpen, face }: { card: OrgC
   const lfx = program === 'lfx';
   const [firstYear, lastYear] = lfx ? [LFX_FIRST_YEAR, LFX_LAST_YEAR] : [GSOC_FIRST_YEAR, GSOC_LAST_YEAR];
   const allYears = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => firstYear + i);
-  const byYear = lfx ? c.lfx?.projectsByYear : meta?.projectsByYear;
-  const total = (lfx ? c.lfx?.projects : meta?.projects) ?? 0;
+  const byYear = lfx ? c.lfx?.projectsByYear : (c.gsocSlots ?? meta?.projectsByYear);
+  const total = lfx ? (c.lfx?.projects ?? 0) : Object.values(byYear ?? {}).reduce((a, n) => a + n, 0);
   const label = lfx ? 'LFX' : 'GSoC';
   return (
     <button type="button" onClick={onOpen} aria-hidden="true" tabIndex={-1} className={`${face} org-flip-face org-flip-back p-4 flex flex-col text-left cursor-pointer w-full`}>
@@ -216,7 +216,7 @@ function SlotsBack({ card: c, meta, years, program, onOpen, face }: { card: OrgC
           const active = years.includes(y);
           const n = byYear?.[String(y)];
           return (
-            <div key={y} title={active ? `${y}: ${n ?? 'some'} project${n === 1 ? '' : 's'}` : `${y}: not in ${label}`}
+            <div key={y} title={active ? (n !== undefined ? `${y}: ${n} project${n === 1 ? '' : 's'}` : `${y}: took part; the project count is not published`) : `${y}: not in ${label}`}
               className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center tabular-nums ${active ? (lfx ? 'bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-sm' : 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm') : 'bg-panel-2 text-ink-faint border border-line'}`}>
               <span className={`text-[9px] leading-none ${active ? 'text-white/80' : ''}`}>{y}</span>
               <span className="text-[13px] font-[700] leading-tight mt-0.5">{active ? (n ?? '✓') : '–'}</span>

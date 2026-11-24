@@ -22,8 +22,24 @@ export { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, t
 /** The GSoC dataset (2016–2026), one record per organisation. */
 export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
 
-/** Dataset record by lower-case GitHub login, for organisations that have one. */
-const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(GSOC_ORGS.filter((o) => o.github).map((o) => [o.github!.toLowerCase(), o]));
+/** Dataset record by lower-case GitHub login, for organisations that have one;
+ *  when several records share a login the one with most projects stands for it. */
+const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(
+  [...GSOC_ORGS].filter((o) => o.github).sort((a, b) => a.projects - b.projects).map((o) => [o.github!.toLowerCase(), o]),
+);
+
+/** Projects per year summed over every record of a login. */
+const GSOC_SLOTS_BY_LOGIN: ReadonlyMap<string, Record<string, number>> = (() => {
+  const out = new Map<string, Record<string, number>>();
+  for (const o of GSOC_ORGS) {
+    if (!o.github) continue;
+    const key = o.github.toLowerCase();
+    const acc = out.get(key) ?? {};
+    for (const [y, n] of Object.entries(o.projectsByYear)) acc[y] = (acc[y] ?? 0) + n;
+    out.set(key, acc);
+  }
+  return out;
+})();
 
 /** LFX Mentorship history (2019–2023 from the LFX Mentorship Metrics dump) by lower-case login. */
 export const LFX_ORGS: ReadonlyArray<LfxHistory & { login: string }> = lfxOrgsJson as unknown as Array<LfxHistory & { login: string }>;
@@ -110,7 +126,7 @@ export function buildOrgExplorer(input: {
     const member = membership.get(lower);
     const gsoc = GSOC_BY_LOGIN.get(lower);
     const display = meta?.login ?? member?.login ?? gsoc?.github ?? login;
-    const years = new Set<number>([...(member?.years ?? []), ...(gsoc?.years ?? [])]);
+    const years = new Set<number>([...(member?.years ?? []), ...(gsoc?.years ?? []), ...Object.keys(GSOC_SLOTS_BY_LOGIN.get(lower) ?? {}).map(Number)]);
     const card: OrgCard = {
       login: display,
       // GitHub's profile first; the GSoC dataset fills in for organisations the classifier has not reached.
@@ -128,6 +144,8 @@ export function buildOrgExplorer(input: {
     };
     if (years.size) card.years = [...years].sort((a, b) => a - b);
     if (gsoc) card.gsocSlug = gsoc.slug;
+    const slots = GSOC_SLOTS_BY_LOGIN.get(lower);
+    if (slots && Object.keys(slots).length) card.gsocSlots = slots;
     const lfx = LFX_BY_LOGIN.get(lower);
     if (lfx) card.lfx = lfx;
     cards.set(lower, card);
