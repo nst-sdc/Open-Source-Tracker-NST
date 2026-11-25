@@ -93,7 +93,10 @@ export function metaOf(card: OrgCard, gsoc: GsocMap): GsocOrg | undefined {
 /** Programme years that count for the current view: GSoC's under the GSoC
  *  chip, LFX's under the LFX chip, every programme's otherwise. */
 export function yearsOf(card: OrgCard, gsoc: GsocMap, program: ProgramKey | 'all' = 'all'): number[] {
-  const g = metaOf(card, gsoc)?.years ?? card.years ?? [];
+  // The card's years span every dataset record of the login (Apache has one
+  // record for 2016–21 and another for 2022–26); the record's own years are
+  // the fallback for cards built from one record only.
+  const g = card.years ?? metaOf(card, gsoc)?.years ?? [];
   const l = card.lfx?.years ?? [];
   if (program === 'lfx') return l;
   if (program === 'gsoc') return g;

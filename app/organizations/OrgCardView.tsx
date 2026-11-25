@@ -86,7 +86,9 @@ export function OrgCardView({ card: c, meta, years, program, profile, picked, on
   const techs = allTechs.slice(0, 4);
   const more = allTechs.length - techs.length;
   const pickedShare = picked.length > 0 && profile ? picked.map((l) => `${l} ${shareOf(profile, l)}%`).join(' · ') : null;
-  const gsocYears = meta?.years ?? c.years ?? [];
+  const gsocYears = c.years ?? meta?.years ?? [];
+  // Slots across every record of this login, so a split record still reads as one history.
+  const gsocProjects = c.gsocSlots ? Object.values(c.gsocSlots).reduce((a, n) => a + n, 0) : (meta?.projects ?? 0);
   const which = historyProgram(c, program, gsocYears.length > 0);
   const flips = which !== null;
   const yearsLabel = which === 'lfx' ? 'LFX' : 'GSoC';
@@ -138,7 +140,7 @@ export function OrgCardView({ card: c, meta, years, program, profile, picked, on
       <div className="flex items-center justify-between gap-2 pointer-events-none">
         <YearsLine years={which === 'lfx' ? (c.lfx?.years ?? []) : years} label={yearsLabel} />
         <span className="text-[11px] text-ink-soft tabular-nums whitespace-nowrap">
-          {which === 'lfx' && c.lfx ? `${c.lfx.projects} LFX project${c.lfx.projects === 1 ? '' : 's'}` : meta && meta.projects > 0 ? `${meta.projects} GSoC projects` : ''}
+          {which === 'lfx' && c.lfx ? `${c.lfx.projects} LFX project${c.lfx.projects === 1 ? '' : 's'}` : gsocProjects > 0 ? `${gsocProjects} GSoC projects` : ''}
           {which === 'gsoc' && c.lfx ? ` · ${c.lfx.projects} LFX` : ''}
         </span>
       </div>

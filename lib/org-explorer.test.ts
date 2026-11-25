@@ -58,6 +58,12 @@ describe('org explorer', () => {
     expect(Object.values(pvlib.gsocSlots!).reduce((a, n) => a + n, 0)).toBe(pvlib.via![0].projects);
     expect(Object.keys(pvlib.via![0].repos)).toContain('pvlib-python');
     expect(numfocus.via).toBeUndefined();
+    // A login with several dataset records (Apache: 2016–21 and 2022–26 under different official slugs) reads as one history.
+    const apacheCard = data.cards.find((c) => c.login === 'apache')!;
+    expect(apacheCard.years).toEqual(expect.arrayContaining([2016, 2021, 2022, 2026]));
+    expect(apacheCard.gsocSlots?.['2026']).toBe(34);
+    expect(apacheCard.gsocSlugByYear?.['2026']).toBe('apache-software-foundation');
+    expect(apacheCard.gsocSlugByYear?.['2021']).toBe('the-apache-software-foundation');
     expect(data.counts.sob.orgs).toBeGreaterThan(10);
     expect(data.cards.find((c) => c.login === 'someuser')).toBeUndefined();
     expect(data.cards.find((c) => c.login === 'firstcontributions')).toBeUndefined(); // only excluded repos
