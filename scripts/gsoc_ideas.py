@@ -80,12 +80,30 @@ def tokens(name):
     return [t for t in re.split(r'[^a-z0-9]+', name.lower()) if len(t) > 2 and t not in ('the', 'and', 'for', 'project', 'apache', 'eclipse', 'owasp', 'gnu')]
 
 
+def segments(gh):
+    """Whole words of an owner/repo: 'kubernetes-sigs/cluster-api' -> kubernetes, sigs, cluster, api, plus the joined owner and repo."""
+    parts = [p for p in re.split(r'[^a-z0-9]+', gh.lower()) if p]
+    joined = [p.replace('-', '').replace('_', '').replace('.', '') for p in gh.lower().split('/')]
+    return set(parts + joined)
+
+
+def names_match(name, gh):
+    """A project name and a GitHub owner/repo agree when a whole word of the name
+    is a whole word of the owner or repository ('Data Retriever' and
+    'weecology/retriever'), or the name joined is one ('KubeVela' and
+    'oam-dev/kubevela'). 'Open Cluster Management' and 'securefederatedai/openfl'
+    do not: a shared prefix is not a match."""
+    segs = segments(gh)
+    joined = re.sub(r'[^a-z0-9]', '', name.lower())
+    return joined in segs or any(t in segs for t in tokens(name))
+
+
 def best_link(name, urls):
     """The GitHub link that carries the project's name in its owner or repository,
     else None: a section's first link is often an upstream issue elsewhere."""
     for u in urls:
         gh = github_of(u)
-        if gh and any(t in gh.lower().replace('-', '').replace('_', '') or t in gh.lower() for t in tokens(name)):
+        if gh and names_match(name, gh):
             return u
     return None
 
@@ -185,10 +203,14 @@ def psf(path):
     for i, (name, link, pos) in enumerate(hs[start + 1:], start + 1):
         if len(name) > 60 or re.search(r'ideas for|how to|apply|contact|timeline|faq', name, re.I):
             continue
-        if name.lower() in ('ideas', 'sub-orgs', 'projects') or re.search(r'archive|ideas \d{4}', name, re.I):
+        if name.lower() in ('ideas', 'sub-orgs', 'projects') or re.search(r'archive|ideas \d{4}|gsoc team', name, re.I):
             continue
         end = hs[i + 1][2] if i + 1 < len(hs) else len(s)
-        out.append(entry(name, link or section_link(name, s, pos, end)))
+        e = entry(name, link or section_link(name, s, pos, end))
+        # The PSF's own GSoC team is the umbrella, not a sub-organisation.
+        if (e.get('github') or '').lower().startswith('python-gsoc'):
+            continue
+        out.append(e)
     return out
 
 
@@ -330,10 +352,6 @@ def sub_orgs(src, slug):
     elif slug == 'openastronomy':
         for year in YEARS:
             put(year, openastronomy(src, year))
-    elif slug == 'jboss-community':
-        for year, paths in got.items():
-            if year:
-                put(year, [e for p in paths for e in jboss(p)])
-    # INCF's list names host institutions and projects alike, and the others name
-    # ideas, not sub-organisations: nothing from the ideas list for those.
+    # JBoss's and INCF's lists mix project names into idea titles, and the
+    # others name ideas, not sub-organisations: nothing from the ideas list for those.
     return out

@@ -691,8 +691,8 @@
     },
     {
      "name": "The Update Framework (TUF)",
-     "url": "https://github.com/theupdateframework/taps/blob/master/tap13.md",
-     "github": "theupdateframework/taps"
+     "url": "https://github.com/theupdateframework/go-tuf",
+     "github": "theupdateframework/go-tuf"
     },
     {
      "name": "Keylime",
@@ -755,9 +755,7 @@
      "github": "opencurve/curve"
     },
     {
-     "name": "Falco",
-     "url": "https://github.com/falcosecurity/libs",
-     "github": "falcosecurity/libs"
+     "name": "Falco"
     },
     {
      "name": "in-toto",
@@ -837,9 +835,7 @@
      "github": "cncf/mentoring"
     },
     {
-     "name": "Falco",
-     "url": "https://github.com/falcosecurity/evolution/issues/362",
-     "github": "falcosecurity/evolution"
+     "name": "Falco"
     },
     {
      "name": "in-toto",
@@ -968,8 +964,8 @@
     },
     {
      "name": "Open Cluster Management",
-     "url": "https://github.com/securefederatedai/openfl",
-     "github": "securefederatedai/openfl"
+     "url": "https://github.com/open-cluster-management-io/ocm/issues/825",
+     "github": "open-cluster-management-io/ocm"
     },
     {
      "name": "ORAS",
@@ -978,8 +974,8 @@
     },
     {
      "name": "The Update Framework (TUF)",
-     "url": "https://github.com/theupdateframework/taps/blob/master/tap16.md",
-     "github": "theupdateframework/taps"
+     "url": "https://github.com/theupdateframework/python-tuf",
+     "github": "theupdateframework/python-tuf"
     },
     {
      "name": "Vitess",
@@ -1565,16 +1561,7 @@
     "google-summer-of-code": 1
    }
   },
-  "subOrgsByYear": {
-   "2026": [
-    {
-     "name": "WildFly Elytron"
-    },
-    {
-     "name": "JBoss Web Server"
-    }
-   ]
-  }
+  "subOrgsByYear": {}
  },
  "national-resource-for-network-biology-nrnb": {
   "name": "National Resource for Network Biology (NRNB)",
@@ -3383,9 +3370,7 @@
      "github": "intel/cve-bin-tool"
     },
     {
-     "name": "Activeloop",
-     "url": "https://github.com/activeloopai/Hub/wiki/Activeloop-GSoC-2022-project-ideas",
-     "github": "activeloopai/Hub"
+     "name": "Activeloop"
     },
     {
      "name": "DFFML",
@@ -3429,11 +3414,6 @@
      "name": "Python Argentina"
     },
     {
-     "name": "Python Software Foundation GSoC Team",
-     "url": "https://github.com/python-gsoc/python-blogs",
-     "github": "python-gsoc/python-blogs"
-    },
-    {
      "name": "SciPy",
      "url": "https://github.com/scipy/scipy/wiki/GSoC-2022-project-ideas",
      "github": "scipy/scipy"
@@ -3454,9 +3434,7 @@
    ],
    "2023": [
     {
-     "name": "Borg Collective",
-     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2023-Ideas",
-     "github": "borgbase/vorta"
+     "name": "Borg Collective"
     },
     {
      "name": "CVE Binary Tool",
@@ -3573,9 +3551,7 @@
      "github": "seldon-code"
     },
     {
-     "name": "Borg Collective",
-     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2024-Ideas",
-     "github": "borgbase/vorta"
+     "name": "Borg Collective"
     },
     {
      "name": "Python Argentina"
@@ -3607,9 +3583,7 @@
      "github": "intel/cve-bin-tool"
     },
     {
-     "name": "Tölvera",
-     "url": "https://github.com/afhverjuekki/tolvera",
-     "github": "afhverjuekki/tolvera"
+     "name": "Tölvera"
     },
     {
      "name": "pocketpy",
@@ -3617,9 +3591,7 @@
      "github": "pocketpy/pocketpy"
     },
     {
-     "name": "Borg Collective",
-     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2025-Ideas",
-     "github": "borgbase/vorta"
+     "name": "Borg Collective"
     },
     {
      "name": "MNE-Python",
@@ -3657,9 +3629,7 @@
      "github": "pocketpy/pocketpy"
     },
     {
-     "name": "Borg Collective",
-     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2026-Ideas",
-     "github": "borgbase/vorta"
+     "name": "Borg Collective"
     },
     {
      "name": "Open World Holidays Framework",

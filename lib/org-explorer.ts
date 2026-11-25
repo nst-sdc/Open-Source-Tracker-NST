@@ -36,6 +36,23 @@ const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(
 /** Umbrellas whose whole membership the explorer lists under a programme filter. */
 const UMBRELLA_PROGRAM: Record<string, ProgramKey> = { numfocus: 'numfocus', cncf: 'cncf', 'eclipse-foundation': 'eclipse' };
 
+/** Is the GitHub owner the sub-organisation the ideas list names, or just the
+ *  organisation that hosts its repository? 'pvlib/pvlib-python' is pvlib and
+ *  'stan-dev/stan' is Stan; 'pytorch/ignite' listed as pytorch-ignite is not
+ *  PyTorch, 'intel/cve-bin-tool' is not Intel, 'weecology/retriever' listed as
+ *  Data Retriever is not weecology. Whole words of the name against the owner,
+ *  and a name that names the repository points at the repository. */
+function ownerNamedLike(name: string, owner: string, repo?: string): boolean {
+  const join = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const ownerJ = join(owner);
+  const nameJ = join(name);
+  if (ownerJ === nameJ || ownerJ.includes(nameJ)) return true;
+  if (repo && join(repo) !== ownerJ && nameJ.includes(join(repo))) return false;
+  const words = owner.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const tokens = name.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 3 && !['project', 'foundation'].includes(t));
+  return (ownerJ.length >= 4 && nameJ.includes(ownerJ)) || tokens.some((t) => words.includes(t));
+}
+
 /** The other direction: for every sub-organisation with a GitHub login
  *  (lower-case), the umbrellas whose ideas lists named it and whose GSoC
  *  projects its code hosted, most projects first. */
@@ -63,9 +80,13 @@ const GSOC_VIA_BY_LOGIN: ReadonlyMap<string, { login: string; parents: UmbrellaP
     }
     for (const [year, subs] of Object.entries(detail.subOrgsByYear)) {
       for (const s of subs) {
-        const owner = s.github?.split('/')[0];
+        const [owner, repo] = s.github?.split('/') ?? [];
         // Apache's sub-projects are repositories under apache itself: no card of their own.
         if (!owner || owner.toLowerCase() === self) continue;
+        // A repository inside a bigger organisation (pytorch/ignite under NumFOCUS,
+        // intel/cve-bin-tool under the PSF) does not put that organisation under
+        // the umbrella: only an owner named like the sub-organisation is.
+        if (repo && !ownerNamedLike(s.name, owner, repo)) continue;
         parentFor(slug, detail, owner).listed.push(Number(year));
       }
     }
