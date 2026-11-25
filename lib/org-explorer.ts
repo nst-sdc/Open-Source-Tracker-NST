@@ -82,6 +82,26 @@ const GSOC_SLOTS_BY_LOGIN: ReadonlyMap<string, Record<string, number>> = (() => 
   return out;
 })();
 
+/** Which record holds each year of a login; with several records for one
+ *  year (Apache and Apache DataFusion in 2025) the one with more projects. */
+const GSOC_SLUG_BY_YEAR: ReadonlyMap<string, Record<string, string>> = (() => {
+  const out = new Map<string, Record<string, string>>();
+  const best = new Map<string, Record<string, number>>();
+  for (const o of GSOC_ORGS) {
+    if (!o.github) continue;
+    const key = o.github.toLowerCase();
+    const slugs = out.get(key) ?? {};
+    const counts = best.get(key) ?? {};
+    for (const y of o.years) {
+      const n = o.projectsByYear[String(y)] ?? 0;
+      if (slugs[y] === undefined || n > (counts[y] ?? -1)) { slugs[y] = o.slug; counts[y] = n; }
+    }
+    out.set(key, slugs);
+    best.set(key, counts);
+  }
+  return out;
+})();
+
 /** LFX Mentorship history (2019–2023 from the LFX Mentorship Metrics dump) by lower-case login. */
 export const LFX_ORGS: ReadonlyArray<LfxHistory & { login: string }> = lfxOrgsJson as unknown as Array<LfxHistory & { login: string }>;
 const LFX_BY_LOGIN: ReadonlyMap<string, LfxHistory> = new Map(LFX_ORGS.map(({ login, ...h }) => [login.toLowerCase(), h]));
@@ -190,6 +210,8 @@ export function buildOrgExplorer(input: {
     if (umbrella) card.umbrella = umbrella;
     const slots = GSOC_SLOTS_BY_LOGIN.get(lower);
     if (slots && Object.keys(slots).length) card.gsocSlots = slots;
+    const slugByYear = GSOC_SLUG_BY_YEAR.get(lower);
+    if (slugByYear && Object.keys(slugByYear).length) card.gsocSlugByYear = slugByYear;
     if (via) {
       // A member project took part in GSoC through its umbrella: it is a GSoC
       // organisation here too, with the umbrella's slots that went to it.

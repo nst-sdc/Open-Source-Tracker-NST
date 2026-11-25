@@ -83,7 +83,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
             {!c.site && <LinkChip href={c.url} label="GitHub" />}
             {!c.site && <LinkChip href={goodFirstIssuesUrl(c.login)} label="Good first issues" accent />}
             {ideasList && <LinkChip href={ideasList} label="GSoC ideas list" accent />}
-            {meta && years.length > 0 && <LinkChip href={gsocOfficialOrgUrl(meta.slug, Math.max(...years))} label="On GSoC site" />}
+            {meta && years.length > 0 && <LinkChip href={gsocOfficialOrgUrl(c.gsocSlugByYear?.[String(Math.max(...years))] ?? meta.slug, Math.max(...years))} label="On GSoC site" />}
             {activityHref && (
               <Link href={activityHref} className="inline-flex items-center gap-1.5 text-xs font-[600] px-3 py-1.5 rounded-lg bg-brand-500/15 text-brand-600 border border-brand-100 hover:bg-brand-500/25 transition-colors">
                 Repo activity · {c.topRepo!.repo.split('/')[1]}
@@ -127,7 +127,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
             </section>
           )}
 
-          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} onIdeasList={setIdeasList} members={c.umbrella ? new Set(umbrellaMembers(meta).map((m) => m.login.toLowerCase())) : undefined} />}
+          {meta && years.length > 0 && <GsocProjects slug={meta.slug} slugByYear={c.gsocSlugByYear} years={years} onIdeasList={setIdeasList} members={c.umbrella ? new Set(umbrellaMembers(meta).map((m) => m.login.toLowerCase())) : undefined} />}
 
           {/* LFX Mentorship history */}
           {c.lfx && <LfxHistorySection lfx={c.lfx} onPick={onPick} />}
