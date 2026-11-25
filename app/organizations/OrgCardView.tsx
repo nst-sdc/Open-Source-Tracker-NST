@@ -121,15 +121,15 @@ export function OrgCardView({ card: c, meta, years, program, profile, picked, on
           </div>
           {c.description && <p className="text-ink-mid text-xs mt-1.5 line-clamp-2 leading-snug">{c.description}</p>}
           {c.via && !c.umbrella && (
-            <p className="text-[11px] text-ink-soft mt-1.5 leading-snug" title="GSoC projects mentored here under an umbrella organisation, by the projects' code links">
+            <p className="text-[11px] text-ink-soft mt-1.5 leading-snug" title="A sub-organisation: GSoC lists its projects under the umbrella">
               GSoC under <span className="font-[650] text-ink-mid">{c.via.map((p) => p.name).join(', ')}</span>
-              {c.gsocSlug ? '' : ` · ${c.via.reduce((a, p) => a + p.projects, 0)} project${c.via.reduce((a, p) => a + p.projects, 0) === 1 ? '' : 's'}`}
+              {c.gsocSlug ? '' : c.via.reduce((a, p) => a + p.projects, 0) > 0 ? ` · ${c.via.reduce((a, p) => a + p.projects, 0)} project${c.via.reduce((a, p) => a + p.projects, 0) === 1 ? '' : 's'}` : ` · on its ${Math.max(...c.via.flatMap((p) => p.listed))} ideas list`}
             </p>
           )}
           {c.umbrella && (
             <p className="text-[11px] text-brand-700 mt-1.5 leading-snug" title="GSoC counts the slots for the umbrella; mentees work in its member projects">
               <span className="font-[650]">Umbrella organisation</span>
-              {c.umbrella.members > 0 ? ` · slots go to ${c.umbrella.members}+ member projects` : ' · slots go to its member projects'}
+              {c.umbrella.subOrgs > 0 ? ` · ${c.umbrella.subOrgs} sub-organisations on its ${c.umbrella.latestYear} ideas list` : c.umbrella.members > 0 ? ` · slots go to ${c.umbrella.members}+ sub-organisations` : ' · slots go to its sub-organisations'}
             </p>
           )}
         </div>

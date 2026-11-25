@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { GsocOrg, OrgCard, UmbrellaParent } from '@/lib/org-explorer-types';
+import type { GsocOrg, OrgCard, UmbrellaDetail, UmbrellaParent } from '@/lib/org-explorer-types';
 import { GSOC_FIRST_YEAR, GSOC_LAST_YEAR, LFX_FIRST_YEAR, LFX_LAST_YEAR, PROGRAM_FILTERS, gsocOfficialOrgUrl, goodFirstIssuesUrl, umbrellaMembers } from '@/lib/org-explorer-types';
 import { GsocProjects } from './GsocProjects';
 import { OrgLogo, YearsLine } from './OrgCardView';
@@ -24,6 +24,16 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
 }) {
   // The organisation's current GSoC ideas list, once the projects section has read it from the official site.
   const [ideasList, setIdeasList] = useState<string | null>(null);
+  // For an umbrella: its sub-organisations, fetched when the sheet opens (undefined while loading, null when missing).
+  const [umbrella, setUmbrella] = useState<UmbrellaDetail | null | undefined>(undefined);
+  useEffect(() => {
+    if (!c.umbrella || !c.gsocSlug) return;
+    let alive = true;
+    fetch(`/api/gsoc-umbrellas?slug=${encodeURIComponent(c.gsocSlug)}`)
+      .then(async (r) => { if (alive) setUmbrella(r.ok ? ((await r.json()) as UmbrellaDetail) : null); })
+      .catch(() => { if (alive) setUmbrella(null); });
+    return () => { alive = false; };
+  }, [c.umbrella, c.gsocSlug]);
   // No profile yet: ask the server to measure this organisation now.
   const [measuring, setMeasuring] = useState<'idle' | 'busy' | 'none' | 'failed'>('idle');
   useEffect(() => {
@@ -94,7 +104,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
           {c.description && <p className="text-ink-mid text-sm leading-relaxed">{c.description}</p>}
 
           {/* Umbrella: where the slots actually go */}
-          {c.umbrella && <UmbrellaSection card={c} meta={meta} onOpen={onOpen} />}
+          {c.umbrella && <UmbrellaSection card={c} detail={umbrella} onOpen={onOpen} />}
 
           {/* Member project: which umbrella it ran GSoC projects under */}
           {c.via && !c.umbrella && <ViaSection card={c} parents={c.via} onOpen={onOpen} />}
@@ -127,7 +137,7 @@ export function OrgSheet({ card: c, meta, years, profile, onMeasured, onClose, o
             </section>
           )}
 
-          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} onIdeasList={setIdeasList} members={c.umbrella ? new Set(umbrellaMembers(meta).map((m) => m.login.toLowerCase())) : undefined} />}
+          {meta && years.length > 0 && <GsocProjects slug={meta.slug} years={years} onIdeasList={setIdeasList} members={c.umbrella && umbrella ? new Set(umbrellaMembers(umbrella).map((m) => m.login.toLowerCase())) : undefined} />}
 
           {/* LFX Mentorship history */}
           {c.lfx && <LfxHistorySection lfx={c.lfx} onPick={onPick} />}
@@ -233,26 +243,70 @@ const LFX_YEARS = Array.from({ length: LFX_LAST_YEAR - LFX_FIRST_YEAR + 1 }, (_,
 
 /** An umbrella's member organisations, as the GSoC projects' code links name
  *  them. Partial by nature: many projects link a blog post or nothing. */
-function UmbrellaSection({ card, meta, onOpen }: { card: OrgCard; meta: GsocOrg | undefined; onOpen?: (login: string) => boolean }) {
-  const members = meta ? umbrellaMembers(meta) : [];
-  const shown = members.slice(0, 24);
+function UmbrellaSection({ card, detail, onOpen }: { card: OrgCard; detail: UmbrellaDetail | null | undefined; onOpen?: (login: string) => boolean }) {
   const programLabel = card.umbrella?.program ? PROGRAM_FILTERS.find((p) => p.key === card.umbrella!.program)?.label : undefined;
+  const years = detail ? Object.keys(detail.subOrgsByYear).map(Number).sort((a, b) => b - a) : [];
+  const [year, setYear] = useState<number | null>(null);
+  const shownYear = year && years.includes(year) ? year : years[0];
+  const subs = detail && shownYear ? detail.subOrgsByYear[String(shownYear)] : [];
+  const members = detail ? umbrellaMembers(detail) : [];
+  const shownMembers = members.slice(0, 24);
   return (
     <section className="rounded-xl border border-brand-100 bg-brand-0/60 p-3">
       <h3 className="text-ink font-[650] text-sm">Umbrella organisation</h3>
       <p className="text-xs text-ink-mid mt-1 leading-relaxed">
-        GSoC counts the slots for {card.name} as one organisation, but each project is mentored inside a member project, and that is where the code and the maintainers are.
+        GSoC counts the slots for {card.name} as one organisation, but each project is mentored inside a sub-organisation, and that is where the code and the maintainers are.
       </p>
-      {shown.length > 0 && (
+      {detail === undefined && <p className="text-[11px] text-ink-faint mt-2">Loading the sub-organisations…</p>}
+      {detail && years.length > 0 && (
         <>
-          <p className="text-[11px] text-ink-faint mt-2">Member projects seen in the projects&rsquo; code links, most projects first. Projects that linked no code are not counted.</p>
+          <div className="flex items-center justify-between gap-2 mt-2.5">
+            <p className="text-[11px] text-ink-faint">Sub-organisations on the {shownYear} ideas list, as {card.name} published it.</p>
+            <div className="flex gap-1 shrink-0">
+              {years.map((y) => (
+                <button key={y} type="button" onClick={() => setYear(y)} className={`text-[10.5px] tabular-nums px-1.5 py-0.5 rounded-md cursor-pointer transition-colors ${y === shownYear ? 'bg-brand-500 text-white' : 'bg-ground border border-line text-ink-mid hover:text-ink'}`}>{y}</button>
+              ))}
+            </div>
+          </div>
           <div className="flex flex-wrap gap-1.5 mt-1.5">
-            {shown.map((m) => (
+            {subs.map((s) => {
+              const owner = s.github?.split('/')[0];
+              const cls = 'inline-flex items-center gap-1 text-[11px] font-[600] px-2 py-0.5 rounded-full bg-ground border border-line text-ink-mid hover:text-ink hover:border-line-strong transition-colors';
+              const chip = s.url ? (
+                <a href={s.url} target="_blank" rel="noopener noreferrer" title="Its ideas page" className={cls}>{s.name}</a>
+              ) : owner ? (
+                <MemberChip login={owner} title={s.github!} onOpen={onOpen}>{s.name}</MemberChip>
+              ) : (
+                <span className={cls} title="No link on the ideas list">{s.name}</span>
+              );
+              return (
+                <span key={s.name} className="inline-flex items-center gap-0.5">
+                  {chip}
+                  {s.github && s.url && (
+                    <a href={`https://github.com/${s.github}`} target="_blank" rel="noopener noreferrer" title={`github.com/${s.github}`} onClick={(e) => { if (owner && onOpen && onOpen(owner)) e.preventDefault(); }}
+                      className="text-ink-faint hover:text-brand-600 p-0.5">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .5A11.5 11.5 0 000 12a11.5 11.5 0 007.9 10.9c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 015.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0024 12 11.5 11.5 0 0012 .5z" /></svg>
+                    </a>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {detail && years.length === 0 && (
+        <p className="text-[11px] text-ink-faint mt-2">Its ideas list names project ideas rather than sub-organisations, so there is no list to show here.</p>
+      )}
+      {shownMembers.length > 0 && (
+        <>
+          <p className="text-[11px] text-ink-faint mt-3">Where past GSoC projects&rsquo; code went, most projects first (from the projects&rsquo; code links; projects that linked no code are not counted).</p>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {shownMembers.map((m) => (
               <MemberChip key={m.login} login={m.login} title={`${m.projects} project${m.projects === 1 ? '' : 's'} · ${m.years.join(', ')}${Object.keys(m.repos).length ? ` · in ${Object.keys(m.repos).slice(0, 4).join(', ')}` : ''}`} onOpen={onOpen}>
                 {m.login}<span className="text-ink-faint tabular-nums font-[500]">{m.projects}</span>
               </MemberChip>
             ))}
-            {members.length > shown.length && <span className="text-[11px] px-1.5 py-0.5 text-ink-faint">+{members.length - shown.length} more</span>}
+            {members.length > shownMembers.length && <span className="text-[11px] px-1.5 py-0.5 text-ink-faint">+{members.length - shownMembers.length} more</span>}
           </div>
         </>
       )}
@@ -279,16 +333,19 @@ function ViaSection({ card, parents, onOpen }: { card: OrgCard; parents: Readonl
   return (
     <section className="rounded-xl border border-line bg-panel/60 p-3">
       <h3 className="text-ink font-[650] text-sm">GSoC through an umbrella</h3>
-      <p className="text-xs text-ink-mid mt-1 leading-relaxed">GSoC lists these projects under the umbrella organisation; the mentoring, the code and the maintainers were here. Counted from the projects&rsquo; code links, so projects that linked no code are missing.</p>
-      <ul className="mt-2 space-y-1">
+      <p className="text-xs text-ink-mid mt-1 leading-relaxed">GSoC lists this organisation&rsquo;s projects under an umbrella; the mentoring, the code and the maintainers are here. The years come from the umbrella&rsquo;s ideas lists and from where past projects&rsquo; code went.</p>
+      <ul className="mt-2 space-y-1.5">
         {parents.map((p) => (
-          <li key={p.slug} className="flex items-baseline justify-between gap-3 text-xs">
-            {p.login ? (
-              <MemberChip login={p.login} title={`Open ${p.name}`} onOpen={onOpen}>{p.name}</MemberChip>
-            ) : (
-              <span className="font-[600] text-ink-mid">{p.name}</span>
-            )}
-            <span className="text-ink-soft tabular-nums whitespace-nowrap">{p.projects} project{p.projects === 1 ? '' : 's'} · {p.years.join(', ')}</span>
+          <li key={p.slug} className="text-xs">
+            <div className="flex items-baseline justify-between gap-3">
+              {p.login ? (
+                <MemberChip login={p.login} title={`Open ${p.name}`} onOpen={onOpen}>{p.name}</MemberChip>
+              ) : (
+                <span className="font-[600] text-ink-mid">{p.name}</span>
+              )}
+              {p.projects > 0 && <span className="text-ink-soft tabular-nums whitespace-nowrap">{p.projects} project{p.projects === 1 ? '' : 's'} · {p.years.join(', ')}</span>}
+            </div>
+            {p.listed.length > 0 && <div className="text-[11px] text-ink-faint mt-0.5 tabular-nums">On its ideas list: {p.listed.join(', ')}</div>}
           </li>
         ))}
       </ul>

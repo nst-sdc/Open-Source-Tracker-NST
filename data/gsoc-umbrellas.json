@@ -1,0 +1,4035 @@
+{
+ "apache-software-foundation": {
+  "name": "Apache Software Foundation",
+  "github": "apache",
+  "membersByYear": {
+   "2022": {
+    "apache": 9,
+    "dubbogo": 1
+   },
+   "2023": {
+    "apache": 5
+   },
+   "2024": {
+    "apache": 6
+   },
+   "2025": {
+    "apache": 5
+   },
+   "2026": {
+    "apache": 2,
+    "cyber-shuttle": 1
+   }
+  },
+  "memberRepos": {
+   "apache": {
+    "dubbo": 2,
+    "dubbo-go": 2,
+    "opendal": 2,
+    "shardingsphere": 2,
+    "airavata-custos": 1,
+    "apisix-dashboard": 1,
+    "beam": 1,
+    "cassandra-java-driver": 1,
+    "doris": 1,
+    "dubbo-go-pixiu": 1,
+    "eventmesh-site": 1,
+    "gora": 1,
+    "hertzbeat": 1,
+    "incubator-eventmesh": 1,
+    "incubator-hugegraph": 1,
+    "incubator-seata": 1,
+    "incubator-teaclave": 1,
+    "mahout": 1,
+    "nuttx": 1,
+    "skywalking-banyandb": 1,
+    "skywalking-python": 1,
+    "skywalking-terraform": 1,
+    "streampipes": 1
+   },
+   "dubbogo": {
+    "dubbo-go-boot": 1
+   },
+   "cyber-shuttle": {
+    "CS-FileSystem": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2022": [
+    {
+     "name": "Apache Commons Statistics",
+     "url": "https://issues.apache.org/jira/browse/STATISTICS-54",
+     "github": "apache/commons-statistics"
+    },
+    {
+     "name": "Apache Ratis",
+     "url": "https://issues.apache.org/jira/browse/RATIS-1557",
+     "github": "apache/ratis"
+    },
+    {
+     "name": "Apache Commons Numbers",
+     "url": "https://issues.apache.org/jira/browse/NUMBERS-188",
+     "github": "apache/commons-numbers"
+    },
+    {
+     "name": "Apache Nemo (Retired)",
+     "url": "https://issues.apache.org/jira/browse/NEMO-485"
+    },
+    {
+     "name": "Apache Commons Math",
+     "url": "https://issues.apache.org/jira/browse/MATH-1641",
+     "github": "apache/commons-math"
+    },
+    {
+     "name": "Apache James Server",
+     "url": "https://issues.apache.org/jira/browse/JAMES-3695"
+    },
+    {
+     "name": "Apache ShardingSphere",
+     "url": "https://issues.apache.org/jira/browse/GSOC-218",
+     "github": "apache/shardingsphere"
+    },
+    {
+     "name": "Apache ShenYu",
+     "url": "https://issues.apache.org/jira/browse/GSOC-215",
+     "github": "apache/shenyu"
+    },
+    {
+     "name": "Apache APISIX",
+     "url": "https://issues.apache.org/jira/browse/GSOC-211",
+     "github": "apache/apisix"
+    },
+    {
+     "name": "Apache SkyWalking",
+     "url": "https://issues.apache.org/jira/browse/GSOC-190",
+     "github": "apache/skywalking"
+    },
+    {
+     "name": "Apache EventMesh",
+     "url": "https://issues.apache.org/jira/browse/GSOC-180",
+     "github": "apache/eventmesh"
+    },
+    {
+     "name": "Apache IoTDB",
+     "url": "https://issues.apache.org/jira/browse/GSOC-176",
+     "github": "apache/iotdb"
+    },
+    {
+     "name": "Apache Wayang",
+     "url": "https://issues.apache.org/jira/browse/GSOC-90",
+     "github": "apache/wayang"
+    },
+    {
+     "name": "Apache Commons Geometry",
+     "url": "https://issues.apache.org/jira/browse/GEOMETRY-145",
+     "github": "apache/commons-geometry"
+    },
+    {
+     "name": "Apache Fineract",
+     "url": "https://issues.apache.org/jira/browse/FINERACT-1586",
+     "github": "apache/fineract"
+    },
+    {
+     "name": "Apache Dubbo",
+     "url": "https://issues.apache.org/jira/browse/DUBBO-103",
+     "github": "apache/dubbo"
+    },
+    {
+     "name": "Apache Community Development",
+     "url": "https://issues.apache.org/jira/browse/COMDEV-461"
+    },
+    {
+     "name": "Apache CloudStack",
+     "url": "https://issues.apache.org/jira/browse/CLOUDSTACK-10454",
+     "github": "apache/cloudstack"
+    },
+    {
+     "name": "Apache Cassandra",
+     "url": "https://issues.apache.org/jira/browse/CASSANDRA-17381",
+     "github": "apache/cassandra"
+    },
+    {
+     "name": "Apache Beam",
+     "url": "https://issues.apache.org/jira/browse/BEAM-14137",
+     "github": "apache/beam"
+    },
+    {
+     "name": "Apache Airavata",
+     "url": "https://issues.apache.org/jira/browse/AIRAVATA-3608",
+     "github": "apache/airavata"
+    }
+   ],
+   "2023": [
+    {
+     "name": "Apache Commons Statistics",
+     "url": "https://issues.apache.org/jira/browse/STATISTICS-78",
+     "github": "apache/commons-statistics"
+    },
+    {
+     "name": "Apache Commons Numbers",
+     "url": "https://issues.apache.org/jira/browse/NUMBERS-193",
+     "github": "apache/commons-numbers"
+    },
+    {
+     "name": "Apache Commons Math",
+     "url": "https://issues.apache.org/jira/browse/MATH-1655",
+     "github": "apache/commons-math"
+    },
+    {
+     "name": "Apache Commons Imaging",
+     "url": "https://issues.apache.org/jira/browse/IMAGING-346",
+     "github": "apache/commons-imaging"
+    },
+    {
+     "name": "Apache SeaTunnel",
+     "url": "https://issues.apache.org/jira/browse/GSOC-250",
+     "github": "apache/seatunnel"
+    },
+    {
+     "name": "Apache ShenYu",
+     "url": "https://issues.apache.org/jira/browse/GSOC-248",
+     "github": "apache/shenyu"
+    },
+    {
+     "name": "Apache ShardingSphere",
+     "url": "https://issues.apache.org/jira/browse/GSOC-247",
+     "github": "apache/shardingsphere"
+    },
+    {
+     "name": "Apache EventMesh",
+     "url": "https://issues.apache.org/jira/browse/GSOC-158",
+     "github": "apache/eventmesh"
+    },
+    {
+     "name": "Apache Gora (Retired)",
+     "url": "https://issues.apache.org/jira/browse/GORA-709"
+    },
+    {
+     "name": "Apache Dubbo",
+     "url": "https://issues.apache.org/jira/browse/DUBBO-135",
+     "github": "apache/dubbo"
+    },
+    {
+     "name": "Apache Commons All",
+     "url": "https://issues.apache.org/jira/browse/COMMONSSITE-165"
+    },
+    {
+     "name": "Apache CloudStack",
+     "url": "https://issues.apache.org/jira/browse/CLOUDSTACK-10463",
+     "github": "apache/cloudstack"
+    }
+   ],
+   "2024": [
+    {
+     "name": "Apache UIMA",
+     "url": "https://issues.apache.org/jira/browse/UIMA-6487"
+    },
+    {
+     "name": "Apache Openmeetings",
+     "url": "https://issues.apache.org/jira/browse/OPENMEETINGS-2782",
+     "github": "apache/openmeetings"
+    },
+    {
+     "name": "Apache NuttX",
+     "url": "https://issues.apache.org/jira/browse/NUTTX-15",
+     "github": "apache/nuttx"
+    },
+    {
+     "name": "Apache Nutch",
+     "url": "https://issues.apache.org/jira/browse/NUTCH-3034",
+     "github": "apache/nutch"
+    },
+    {
+     "name": "Apache James Server",
+     "url": "https://issues.apache.org/jira/browse/JAMES-3985"
+    },
+    {
+     "name": "Apache OpenDAL",
+     "url": "https://issues.apache.org/jira/browse/GSOC-272",
+     "github": "apache/opendal"
+    },
+    {
+     "name": "Apache EventMesh",
+     "url": "https://issues.apache.org/jira/browse/GSOC-263",
+     "github": "apache/eventmesh"
+    },
+    {
+     "name": "Apache ShenYu",
+     "url": "https://issues.apache.org/jira/browse/GSOC-262",
+     "github": "apache/shenyu"
+    },
+    {
+     "name": "Apache Dubbo",
+     "url": "https://issues.apache.org/jira/browse/DUBBO-139",
+     "github": "apache/dubbo"
+    },
+    {
+     "name": "Apache Airavata",
+     "url": "https://issues.apache.org/jira/browse/AIRAVATA-3789",
+     "github": "apache/airavata"
+    }
+   ],
+   "2025": [
+    {
+     "name": "Apache NuttX",
+     "url": "https://issues.apache.org/jira/browse/NUTTX-19",
+     "github": "apache/nuttx"
+    },
+    {
+     "name": "Apache Doris",
+     "url": "https://issues.apache.org/jira/browse/GSOC-302",
+     "github": "apache/doris"
+    },
+    {
+     "name": "Apache Mahout",
+     "url": "https://issues.apache.org/jira/browse/GSOC-300",
+     "github": "apache/mahout"
+    },
+    {
+     "name": "Apache Lucene.NET",
+     "url": "https://issues.apache.org/jira/browse/GSOC-286"
+    },
+    {
+     "name": "Apache CloudStack",
+     "url": "https://issues.apache.org/jira/browse/GSOC-285",
+     "github": "apache/cloudstack"
+    },
+    {
+     "name": "Apache Fineract",
+     "url": "https://issues.apache.org/jira/browse/FINERACT-2169",
+     "github": "apache/fineract"
+    },
+    {
+     "name": "Apache Dubbo",
+     "url": "https://issues.apache.org/jira/browse/DUBBO-145",
+     "github": "apache/dubbo"
+    },
+    {
+     "name": "Apache Airavata",
+     "url": "https://issues.apache.org/jira/browse/AIRAVATA-3966",
+     "github": "apache/airavata"
+    }
+   ],
+   "2026": [
+    {
+     "name": "Apache Wayang",
+     "url": "https://issues.apache.org/jira/browse/WAYANG-56",
+     "github": "apache/wayang"
+    },
+    {
+     "name": "Apache Spark",
+     "url": "https://issues.apache.org/jira/browse/SPARK-55163",
+     "github": "apache/spark"
+    },
+    {
+     "name": "Apache NuttX",
+     "url": "https://issues.apache.org/jira/browse/NUTTX-26",
+     "github": "apache/nuttx"
+    },
+    {
+     "name": "Apache Iceberg",
+     "url": "https://issues.apache.org/jira/browse/GSOC-335",
+     "github": "apache/iceberg"
+    },
+    {
+     "name": "Apache Fluss (Incubating)",
+     "url": "https://issues.apache.org/jira/browse/GSOC-331",
+     "github": "apache/fluss"
+    },
+    {
+     "name": "Apache Airflow",
+     "url": "https://issues.apache.org/jira/browse/GSOC-329",
+     "github": "apache/airflow"
+    },
+    {
+     "name": "Apache Fory",
+     "url": "https://issues.apache.org/jira/browse/GSOC-328",
+     "github": "apache/fory"
+    },
+    {
+     "name": "Apache Beam",
+     "url": "https://issues.apache.org/jira/browse/GSOC-315",
+     "github": "apache/beam"
+    },
+    {
+     "name": "Apache Mahout",
+     "url": "https://issues.apache.org/jira/browse/GSOC-313",
+     "github": "apache/mahout"
+    },
+    {
+     "name": "Apache SkyWalking",
+     "url": "https://issues.apache.org/jira/browse/GSOC-310",
+     "github": "apache/skywalking"
+    },
+    {
+     "name": "Apache DolphinScheduler",
+     "url": "https://issues.apache.org/jira/browse/GSOC-306",
+     "github": "apache/dolphinscheduler"
+    },
+    {
+     "name": "Apache Fineract",
+     "url": "https://issues.apache.org/jira/browse/FINERACT-2609",
+     "github": "apache/fineract"
+    },
+    {
+     "name": "Apache Dubbo",
+     "url": "https://issues.apache.org/jira/browse/DUBBO-151",
+     "github": "apache/dubbo"
+    },
+    {
+     "name": "Apache Cassandra",
+     "url": "https://issues.apache.org/jira/browse/CASSANDRA-21265",
+     "github": "apache/cassandra"
+    },
+    {
+     "name": "Apache AsterixDB",
+     "url": "https://issues.apache.org/jira/browse/ASTERIXDB-3703",
+     "github": "apache/asterixdb"
+    },
+    {
+     "name": "Apache APISIX",
+     "url": "https://issues.apache.org/jira/browse/APISIX-39",
+     "github": "apache/apisix"
+    },
+    {
+     "name": "Apache Airavata",
+     "url": "https://issues.apache.org/jira/browse/AIRAVATA-3982",
+     "github": "apache/airavata"
+    }
+   ]
+  }
+ },
+ "cern-hsf": {
+  "name": "CERN-HSF",
+  "github": "HSF",
+  "membersByYear": {
+   "2017": {
+    "MultithreadCorner": 1
+   },
+   "2018": {
+    "allpix-squared": 1,
+    "cvmfs-contrib": 1
+   },
+   "2019": {
+    "AIDASoft": 1,
+    "root-project": 1
+   },
+   "2020": {
+    "root-project": 2,
+    "cms-sw": 1,
+    "DeepLense-Unsupervised": 1,
+    "ganga-devs": 1,
+    "HSF": 1,
+    "uccross": 1
+   },
+   "2021": {
+    "Autoencoders-compression-anomaly": 1
+   },
+   "2022": {
+    "MadAnalysis": 1,
+    "scikit-hep": 1,
+    "tmvadnn": 1
+   },
+   "2024": {
+    "ganga-devs": 1
+   },
+   "2025": {
+    "BNLNPPS": 1,
+    "cvmfs": 1,
+    "fastmachinelearning": 1,
+    "ganga-devs": 1,
+    "rucio": 1
+   },
+   "2026": {
+    "fast-sim": 1,
+    "HSF": 1
+   }
+  },
+  "memberRepos": {
+   "MultithreadCorner": {
+    "Hydra.Python": 1
+   },
+   "cvmfs-contrib": {
+    "cvmfs-emscripten": 1
+   },
+   "allpix-squared": {
+    "allpix-squared": 1
+   },
+   "AIDASoft": {
+    "podio": 1
+   },
+   "root-project": {
+    "root": 3
+   },
+   "HSF": {
+    "hsf.github.io": 1,
+    "Qt3DExaminerViewer": 1
+   },
+   "cms-sw": {
+    "cmssw": 1
+   },
+   "uccross": {
+    "skyhookdm-ceph": 1
+   },
+   "ganga-devs": {
+    "ganga": 2,
+    "ganga-ai": 1
+   },
+   "DeepLense-Unsupervised": {
+    "unsupervised-lensing": 1
+   },
+   "Autoencoders-compression-anomaly": {
+    "Deep-Autoencoders-Data-Compression-GSoC-2021": 1
+   },
+   "scikit-hep": {
+    "uproot5": 1
+   },
+   "tmvadnn": {
+    "tmva-batch-generator": 1
+   },
+   "MadAnalysis": {
+    "madanalysis5": 1
+   },
+   "cvmfs": {
+    "cvmfs": 1
+   },
+   "rucio": {
+    "webui": 1
+   },
+   "BNLNPPS": {
+    "intelligent-logging-pipeline": 1
+   },
+   "fastmachinelearning": {
+    "hls4ml": 1
+   },
+   "fast-sim": {
+    "showerRepresentationStudies": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "cncf": {
+  "name": "CNCF",
+  "github": "cncf",
+  "membersByYear": {
+   "2017": {
+    "opentracing-contrib": 1
+   },
+   "2019": {
+    "k8s-gpu-allocator": 1,
+    "open-policy-agent": 1
+   },
+   "2020": {
+    "prometheus": 1
+   },
+   "2021": {
+    "kubernetes-sigs": 1,
+    "tikv": 1
+   },
+   "2022": {
+    "chaos-mesh": 2,
+    "in-toto": 1,
+    "meshery": 1,
+    "pingcap": 1,
+    "WasmEdge": 1
+   },
+   "2023": {
+    "buildpacks": 1
+   },
+   "2024": {
+    "kubearmor": 1,
+    "meshery": 1,
+    "prometheus": 1,
+    "WasmEdge": 1
+   },
+   "2025": {
+    "jaegertracing": 1,
+    "kubestellar": 1,
+    "meshery": 1,
+    "WasmEdge": 1
+   },
+   "2026": {
+    "kptdev": 1
+   }
+  },
+  "memberRepos": {
+   "opentracing-contrib": {
+    "go-restful": 1
+   },
+   "k8s-gpu-allocator": {
+    "GSoC2019": 1
+   },
+   "open-policy-agent": {
+    "contrib": 1
+   },
+   "prometheus": {
+    "prometheus": 2
+   },
+   "tikv": {
+    "tikv": 1
+   },
+   "kubernetes-sigs": {
+    "kube-scheduler-simulator": 1
+   },
+   "pingcap": {
+    "tispark": 1
+   },
+   "WasmEdge": {
+    "WasmEdge": 3
+   },
+   "chaos-mesh": {
+    "chaos-mesh": 2
+   },
+   "in-toto": {
+    "in-toto-rs": 1
+   },
+   "meshery": {
+    "meshery": 3
+   },
+   "buildpacks": {
+    "pack": 1
+   },
+   "kubearmor": {
+    "rancherui": 1
+   },
+   "jaegertracing": {
+    "jaeger": 1
+   },
+   "kubestellar": {
+    "kubestellar": 1
+   },
+   "kptdev": {
+    "kpt": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2022": [
+    {
+     "name": "Argo",
+     "url": "https://github.com/argoproj/argo-workflows/issues/3587",
+     "github": "argoproj/argo-workflows"
+    },
+    {
+     "name": "Buildpacks",
+     "url": "https://github.com/buildpacks/rfcs/blob/main/text/0091-pack-cache-options.md",
+     "github": "buildpacks/rfcs"
+    },
+    {
+     "name": "Kubernetes",
+     "url": "https://github.com/kubernetes-sigs/kubebuilder",
+     "github": "kubernetes-sigs/kubebuilder"
+    },
+    {
+     "name": "KubeVela",
+     "url": "https://github.com/oam-dev/kubevela/issues/2442",
+     "github": "oam-dev/kubevela"
+    },
+    {
+     "name": "Chaos Mesh",
+     "url": "https://github.com/chaos-mesh/chaosd",
+     "github": "chaos-mesh/chaosd"
+    },
+    {
+     "name": "Vitess",
+     "url": "https://github.com/vitessio/vitess/issues/9647",
+     "github": "vitessio/vitess"
+    },
+    {
+     "name": "KubeArmor",
+     "url": "https://github.com/kubearmor/KubeArmor/issues/613",
+     "github": "kubearmor/KubeArmor"
+    },
+    {
+     "name": "TiKV",
+     "url": "https://github.com/tikv/client-java/issues/514",
+     "github": "tikv/client-java"
+    },
+    {
+     "name": "Karmada",
+     "url": "https://github.com/karmada-io/karmada/",
+     "github": "karmada-io/karmada"
+    },
+    {
+     "name": "Pixie",
+     "url": "https://github.com/pixie-io/pixie/issues/34",
+     "github": "pixie-io/pixie"
+    },
+    {
+     "name": "CoreDNS",
+     "url": "https://github.com/coredns/coredns",
+     "github": "coredns/coredns"
+    },
+    {
+     "name": "in-toto",
+     "url": "https://github.com/in-toto/ITE/blob/master/ITE/5/README.adoc",
+     "github": "in-toto/ITE"
+    },
+    {
+     "name": "KubeEdge",
+     "url": "https://github.com/kubeedge/kubeedge/issues/3608",
+     "github": "kubeedge/kubeedge"
+    },
+    {
+     "name": "WasmEdge",
+     "url": "https://github.com/WasmEdge/WasmEdge",
+     "github": "WasmEdge/WasmEdge"
+    },
+    {
+     "name": "Kyverno",
+     "url": "https://github.com/kyverno/kyverno/issues/3217",
+     "github": "kyverno/kyverno"
+    },
+    {
+     "name": "Brigade",
+     "url": "https://github.com/brigadecore/brigade/issues/1811",
+     "github": "brigadecore/brigade"
+    },
+    {
+     "name": "cert-manager",
+     "url": "https://github.com/cert-manager/cert-manager",
+     "github": "cert-manager/cert-manager"
+    },
+    {
+     "name": "The Update Framework (TUF)",
+     "url": "https://github.com/theupdateframework/taps/blob/master/tap13.md",
+     "github": "theupdateframework/taps"
+    },
+    {
+     "name": "Keylime",
+     "url": "https://github.com/keylime/enhancements/issues/60",
+     "github": "keylime/enhancements"
+    },
+    {
+     "name": "Thanos",
+     "url": "https://github.com/thanos-io/thanos/issues/4972",
+     "github": "thanos-io/thanos"
+    },
+    {
+     "name": "LitmusChaos",
+     "url": "https://github.com/litmuschaos/litmus/issues/3456",
+     "github": "litmuschaos/litmus"
+    },
+    {
+     "name": "Meshery",
+     "url": "https://github.com/meshery/meshery.io/issues/677",
+     "github": "meshery/meshery.io"
+    },
+    {
+     "name": "Service Mesh Performance",
+     "url": "https://github.com/service-mesh-performance/service-mesh-performance/issues/272",
+     "github": "service-mesh-performance/service-mesh-performance"
+    },
+    {
+     "name": "Knative",
+     "url": "https://github.com/knative/eventing/issues/3387",
+     "github": "knative/eventing"
+    }
+   ],
+   "2023": [
+    {
+     "name": "Armada",
+     "url": "https://github.com/armadaproject/armada/issues/2120",
+     "github": "armadaproject/armada"
+    },
+    {
+     "name": "Cilium",
+     "url": "https://github.com/cilium/tetragon/issues/794",
+     "github": "cilium/tetragon"
+    },
+    {
+     "name": "Cloud Native Buildpacks",
+     "url": "https://github.com/buildpacks/lifecycle/",
+     "github": "buildpacks/lifecycle"
+    },
+    {
+     "name": "CoreDNS",
+     "url": "https://github.com/coredns/coredns/issues/5583,",
+     "github": "coredns/coredns"
+    },
+    {
+     "name": "CRI-O"
+    },
+    {
+     "name": "Curve",
+     "url": "https://github.com/opencurve/curve/blob/master/src/mds/nameserver2/namespace_storage.cpp",
+     "github": "opencurve/curve"
+    },
+    {
+     "name": "Falco",
+     "url": "https://github.com/falcosecurity/libs",
+     "github": "falcosecurity/libs"
+    },
+    {
+     "name": "in-toto",
+     "url": "https://github.com/in-toto/attestation",
+     "github": "in-toto/attestation"
+    },
+    {
+     "name": "Jaeger",
+     "url": "https://github.com/jaegertracing/jaeger/issues/4196",
+     "github": "jaegertracing/jaeger"
+    },
+    {
+     "name": "Keptn",
+     "url": "https://github.com/keptn/integrations/issues/19",
+     "github": "keptn/integrations"
+    },
+    {
+     "name": "Knative",
+     "url": "https://github.com/knative/eventing/issues/6601",
+     "github": "knative/eventing"
+    },
+    {
+     "name": "KubeArmor",
+     "url": "https://github.com/kubearmor/kubearmor-client/",
+     "github": "kubearmor/kubearmor-client"
+    },
+    {
+     "name": "Kubebuilder",
+     "url": "https://github.com/kubernetes-sigs/kubebuilder/blob/master/designs/extensible-cli-and-scaffolding-plugins-phase-2.md",
+     "github": "kubernetes-sigs/kubebuilder"
+    },
+    {
+     "name": "Kubescape",
+     "url": "https://github.com/kubescape/kubescape/issues/1172",
+     "github": "kubescape/kubescape"
+    },
+    {
+     "name": "KubeVela",
+     "url": "https://github.com/kubevela/kubevela/issues/5366",
+     "github": "kubevela/kubevela"
+    },
+    {
+     "name": "Meshery",
+     "url": "https://github.com/meshery/meshery/issues/7019",
+     "github": "meshery/meshery"
+    },
+    {
+     "name": "OpenFeature",
+     "url": "https://github.com/open-feature/ofep/issues/48",
+     "github": "open-feature/ofep"
+    },
+    {
+     "name": "Prometheus",
+     "url": "https://github.com/prometheus/prometheus/issues/6541",
+     "github": "prometheus/prometheus"
+    },
+    {
+     "name": "Strimzi",
+     "url": "https://github.com/strimzi/strimzi-kafka-operator/issues/8030",
+     "github": "strimzi/strimzi-kafka-operator"
+    },
+    {
+     "name": "The Update Framework (TUF)",
+     "url": "https://github.com/theupdateframework/python-tuf/issues/2325",
+     "github": "theupdateframework/python-tuf"
+    },
+    {
+     "name": "WasmEdge",
+     "url": "https://github.com/WasmEdge/WasmEdge/tree/dev/serialize",
+     "github": "WasmEdge/WasmEdge"
+    }
+   ],
+   "2024": [
+    {
+     "name": "CNCF GOSST",
+     "url": "https://github.com/cncf/mentoring/issues/1196",
+     "github": "cncf/mentoring"
+    },
+    {
+     "name": "Falco",
+     "url": "https://github.com/falcosecurity/evolution/issues/362",
+     "github": "falcosecurity/evolution"
+    },
+    {
+     "name": "in-toto",
+     "url": "https://github.com/in-toto/in-toto-jenkins-plugin",
+     "github": "in-toto/in-toto-jenkins-plugin"
+    },
+    {
+     "name": "Jaeger",
+     "url": "https://github.com/jaegertracing/jaeger/issues/4843",
+     "github": "jaegertracing/jaeger"
+    },
+    {
+     "name": "Keptn",
+     "url": "https://github.com/keptn/lifecycle-toolkit/issues/2823",
+     "github": "keptn/lifecycle-toolkit"
+    },
+    {
+     "name": "Knative",
+     "url": "https://github.com/knative/func/issues/2151",
+     "github": "knative/func"
+    },
+    {
+     "name": "KubeArmor"
+    },
+    {
+     "name": "Kubernetes Gateway API",
+     "url": "https://github.com/kubernetes-sigs/ingress2gateway/issues/131",
+     "github": "kubernetes-sigs/ingress2gateway"
+    },
+    {
+     "name": "LitmusChaos",
+     "url": "https://github.com/litmuschaos/litmus/tree/master/chaoscenter",
+     "github": "litmuschaos/litmus"
+    },
+    {
+     "name": "Meshery",
+     "url": "https://github.com/meshery/meshery/issues/10264",
+     "github": "meshery/meshery"
+    },
+    {
+     "name": "Prometheus",
+     "url": "https://github.com/prometheus/proposals/pull/32.",
+     "github": "prometheus/proposals"
+    },
+    {
+     "name": "Service Mesh Performance",
+     "url": "https://github.com/service-mesh-performance/service-mesh-performance/issues/379",
+     "github": "service-mesh-performance/service-mesh-performance"
+    },
+    {
+     "name": "WasmEdge",
+     "url": "https://github.com/WasmEdge/WasmEdge/issues/3205",
+     "github": "WasmEdge/WasmEdge"
+    },
+    {
+     "name": "Open Cluster Management",
+     "url": "https://github.com/open-cluster-management-io/addon-contrib/tree/main/",
+     "github": "open-cluster-management-io/addon-contrib"
+    }
+   ],
+   "2025": [
+    {
+     "name": "etcd",
+     "url": "https://github.com/etcd-io/etcd/issues/19371",
+     "github": "etcd-io/etcd"
+    },
+    {
+     "name": "Harbor",
+     "url": "https://github.com/container-registry/harbor-satellite/blob/main/docs/images/satellite_use_case_1.svg",
+     "github": "container-registry/harbor-satellite"
+    },
+    {
+     "name": "Jaeger",
+     "url": "https://github.com/jaegertracing/jaeger/issues/6641",
+     "github": "jaegertracing/jaeger"
+    },
+    {
+     "name": "KCL",
+     "url": "https://github.com/kcl-lang/kpm/issues/598",
+     "github": "kcl-lang/kpm"
+    },
+    {
+     "name": "Knative Functions",
+     "url": "https://github.com/knative/func/issues/2690",
+     "github": "knative/func"
+    },
+    {
+     "name": "Konveyor",
+     "url": "https://github.com/konveyor/kai",
+     "github": "konveyor/kai"
+    },
+    {
+     "name": "KubeArmor",
+     "url": "https://github.com/kubearmor/KubeArmor/issues/1902",
+     "github": "kubearmor/KubeArmor"
+    },
+    {
+     "name": "KubeBuilder",
+     "url": "https://github.com/kubernetes-sigs/kubebuilder/pull/4302",
+     "github": "kubernetes-sigs/kubebuilder"
+    },
+    {
+     "name": "KubeStellar",
+     "url": "https://github.com/kubestellar/kubestellar/issues/2853",
+     "github": "kubestellar/kubestellar"
+    },
+    {
+     "name": "Kubewarden",
+     "url": "https://github.com/kubewarden/community/issues/37",
+     "github": "kubewarden/community"
+    },
+    {
+     "name": "Lima",
+     "url": "https://github.com/lima-vm/lima/blob/v1.0.5/pkg/driverutil/instance.go#L11-L20",
+     "github": "lima-vm/lima"
+    },
+    {
+     "name": "LitmusChaos",
+     "url": "https://github.com/litmuschaos/litmus/issues/5042",
+     "github": "litmuschaos/litmus"
+    },
+    {
+     "name": "Meshery",
+     "url": "https://github.com/meshery/meshery/issues/14084",
+     "github": "meshery/meshery"
+    },
+    {
+     "name": "Open Cluster Management",
+     "url": "https://github.com/securefederatedai/openfl",
+     "github": "securefederatedai/openfl"
+    },
+    {
+     "name": "ORAS",
+     "url": "https://github.com/oras-project/oras-java/issues",
+     "github": "oras-project/oras-java"
+    },
+    {
+     "name": "The Update Framework (TUF)",
+     "url": "https://github.com/theupdateframework/taps/blob/master/tap16.md",
+     "github": "theupdateframework/taps"
+    },
+    {
+     "name": "Vitess",
+     "url": "https://github.com/vitessio/vitess/issues/17690",
+     "github": "vitessio/vitess"
+    },
+    {
+     "name": "WasmEdge",
+     "url": "https://github.com/WasmEdge/WasmEdge/issues/4012",
+     "github": "WasmEdge/WasmEdge"
+    }
+   ],
+   "2026": [
+    {
+     "name": "Drasi",
+     "url": "https://github.com/drasi-project/drasi-platform/issues/383",
+     "github": "drasi-project/drasi-platform"
+    },
+    {
+     "name": "Inspektor Gadget",
+     "url": "https://github.com/inspektor-gadget/headlamp-plugin/issues/17",
+     "github": "inspektor-gadget/headlamp-plugin"
+    },
+    {
+     "name": "Jaeger",
+     "url": "https://github.com/jaegertracing/jaeger/issues/7827",
+     "github": "jaegertracing/jaeger"
+    },
+    {
+     "name": "kgateway",
+     "url": "https://github.com/kgateway-dev/kgateway/issues/12289",
+     "github": "kgateway-dev/kgateway"
+    },
+    {
+     "name": "KitOps",
+     "url": "https://github.com/kitops-ml/kitops/issues/858",
+     "github": "kitops-ml/kitops"
+    },
+    {
+     "name": "Kmesh",
+     "url": "https://github.com/kmesh-net/kmesh/issues/1552",
+     "github": "kmesh-net/kmesh"
+    },
+    {
+     "name": "kpt",
+     "url": "https://github.com/kptdev/kpt/issues/4326",
+     "github": "kptdev/kpt"
+    },
+    {
+     "name": "ModelPack",
+     "url": "https://github.com/modelpack/model-spec/issues/164",
+     "github": "modelpack/model-spec"
+    },
+    {
+     "name": "OpenKruise",
+     "url": "https://github.com/openkruise/rollouts/issues/323",
+     "github": "openkruise/rollouts"
+    },
+    {
+     "name": "OSCAL Compass",
+     "url": "https://github.com/oscal-compass/compliance-trestle/issues/2037",
+     "github": "oscal-compass/compliance-trestle"
+    },
+    {
+     "name": "PipeCD",
+     "url": "https://github.com/pipe-cd/pipecd/issues/6114",
+     "github": "pipe-cd/pipecd"
+    },
+    {
+     "name": "WasmEdge",
+     "url": "https://github.com/WasmEdge/WasmEdge/issues/4517",
+     "github": "WasmEdge/WasmEdge"
+    }
+   ]
+  }
+ },
+ "eclipse-foundation": {
+  "name": "Eclipse Foundation",
+  "github": "eclipse",
+  "membersByYear": {
+   "2017": {
+    "eclipse": 1
+   },
+   "2018": {
+    "ponder-lab": 1
+   },
+   "2025": {
+    "adoptium": 1
+   },
+   "2026": {
+    "eclipse-4diac": 1
+   }
+  },
+  "memberRepos": {
+   "eclipse": {
+    "omr": 1
+   },
+   "ponder-lab": {
+    "Null-to-Optional-Eclipse-Plugin": 1
+   },
+   "adoptium": {
+    "aqa-test-tools": 1
+   },
+   "eclipse-4diac": {
+    "4diac-website-hugo": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2024": [
+    {
+     "name": "Eclipse Winery",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/9"
+    },
+    {
+     "name": "Eclipse Cargo",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/8"
+    },
+    {
+     "name": "Eclipse Vert.x",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/2"
+    }
+   ],
+   "2025": [
+    {
+     "name": "Eclipse Theia",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/20",
+     "github": "eclipse-theia"
+    },
+    {
+     "name": "Eclipse LMOS",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/14",
+     "github": "eclipse-lmos"
+    },
+    {
+     "name": "Eclipse 4diac",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/13",
+     "github": "eclipse-4diac"
+    }
+   ],
+   "2026": [
+    {
+     "name": "Eclipse Theia",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/32",
+     "github": "eclipse-theia"
+    },
+    {
+     "name": "Eclipse ThreadX",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/29",
+     "github": "eclipse-threadx"
+    },
+    {
+     "name": "Eclipse Thingweb",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/28",
+     "github": "eclipse-thingweb"
+    },
+    {
+     "name": "Eclipse 4diac",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/27",
+     "github": "eclipse-4diac"
+    },
+    {
+     "name": "Eclipse EdiTDor",
+     "url": "https://gitlab.eclipse.org/eclipsefdn/emo-team/gsoc-at-the-ef/-/work_items/25",
+     "github": "eclipse-editdor"
+    }
+   ]
+  }
+ },
+ "gnu-project": {
+  "name": "GNU Project",
+  "github": null,
+  "membersByYear": {
+   "2020": {
+    "xaos-project": 1
+   }
+  },
+  "memberRepos": {
+   "xaos-project": {
+    "XaoS": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2023": [
+    {
+     "name": "GNU Guix",
+     "url": "https://www.gnu.org/software/guix"
+    },
+    {
+     "name": "GNU poke",
+     "url": "https://jemarch.net/poke"
+    },
+    {
+     "name": "GNUnet",
+     "url": "http://www.gnu.org/software/gnunet"
+    },
+    {
+     "name": "GNU LilyPond",
+     "url": "https://lilypond.org/"
+    },
+    {
+     "name": "GNU Hurd",
+     "url": "https://www.gnu.org/software/hurd"
+    },
+    {
+     "name": "GNU Mes",
+     "url": "https://www.gnu.org/software/mes"
+    },
+    {
+     "name": "GnuCOBOL",
+     "url": "https://www.gnu.org/software/gnucobol"
+    },
+    {
+     "name": "GNU Aris",
+     "url": "https://www.gnu.org/software/aris"
+    },
+    {
+     "name": "GNU XaoS",
+     "url": "https://www.gnu.org/software/xaos"
+    },
+    {
+     "name": "XaoS",
+     "url": "https://www.gnu.org/software/xaos"
+    },
+    {
+     "name": "GNU Astronomy Utilities",
+     "url": "https://www.gnu.org/software/gnuastro"
+    },
+    {
+     "name": "GNU Taler",
+     "url": "http://www.gnu.org/software/taler"
+    },
+    {
+     "name": "GNU social",
+     "url": "https://gnusocial.network"
+    },
+    {
+     "name": "Lilypond",
+     "url": "http://www.gnu.org/software/lilypond"
+    },
+    {
+     "name": "GNU Wget",
+     "url": "http://www.gnu.org/software/wget"
+    },
+    {
+     "name": "libmicrohttpd",
+     "url": "http://www.gnu.org/software/libmicrohttpd"
+    },
+    {
+     "name": "GNU Circuit Analysis Package",
+     "url": "http://gnucap.org"
+    },
+    {
+     "name": "GNU TeXmacs",
+     "url": "http://www.gnu.org/s/texmacs"
+    },
+    {
+     "name": "GNU Emacs",
+     "url": "http://www.gnu.org/s/emacs"
+    },
+    {
+     "name": "Other links"
+    }
+   ],
+   "2024": [
+    {
+     "name": "GNU poke",
+     "url": "https://jemarch.net/poke"
+    },
+    {
+     "name": "GNUnet",
+     "url": "http://www.gnu.org/software/gnunet"
+    },
+    {
+     "name": "GnuCOBOL",
+     "url": "https://www.gnu.org/software/gnucobol"
+    },
+    {
+     "name": "GNU Guix",
+     "url": "https://www.gnu.org/software/guix"
+    },
+    {
+     "name": "GNU LilyPond",
+     "url": "https://lilypond.org/"
+    },
+    {
+     "name": "GNU Hurd",
+     "url": "https://www.gnu.org/software/hurd"
+    },
+    {
+     "name": "GNU Mes",
+     "url": "https://www.gnu.org/software/mes"
+    },
+    {
+     "name": "GNU Aris",
+     "url": "https://www.gnu.org/software/aris"
+    },
+    {
+     "name": "GNU XaoS",
+     "url": "https://www.gnu.org/software/xaos"
+    },
+    {
+     "name": "Other links"
+    }
+   ],
+   "2025": [
+    {
+     "name": "GNU poke",
+     "url": "https://jemarch.net/poke"
+    },
+    {
+     "name": "GNUnet",
+     "url": "http://www.gnu.org/software/gnunet"
+    },
+    {
+     "name": "GnuCOBOL",
+     "url": "https://www.gnu.org/software/gnucobol"
+    },
+    {
+     "name": "GNU Guix",
+     "url": "https://www.gnu.org/software/guix"
+    },
+    {
+     "name": "GNU LilyPond",
+     "url": "https://lilypond.org/"
+    },
+    {
+     "name": "GNU Hurd",
+     "url": "https://www.gnu.org/software/hurd"
+    },
+    {
+     "name": "GNU Mes",
+     "url": "https://www.gnu.org/software/mes"
+    },
+    {
+     "name": "GNU Aris",
+     "url": "https://www.gnu.org/software/aris"
+    },
+    {
+     "name": "GNU XaoS",
+     "url": "https://github.com/xaos-project",
+     "github": "xaos-project"
+    },
+    {
+     "name": "Other links"
+    }
+   ],
+   "2026": [
+    {
+     "name": "GNU poke",
+     "url": "https://jemarch.net/poke"
+    },
+    {
+     "name": "GNUnet",
+     "url": "http://www.gnu.org/software/gnunet"
+    },
+    {
+     "name": "GnuCOBOL",
+     "url": "https://www.gnu.org/software/gnucobol"
+    },
+    {
+     "name": "GNU Guix",
+     "url": "https://www.gnu.org/software/guix"
+    },
+    {
+     "name": "GNU LilyPond",
+     "url": "https://lilypond.org/"
+    },
+    {
+     "name": "GNU Hurd",
+     "url": "https://www.gnu.org/software/hurd"
+    },
+    {
+     "name": "GNU Mes",
+     "url": "https://www.gnu.org/software/mes"
+    },
+    {
+     "name": "GNU Aris",
+     "url": "https://www.gnu.org/software/aris"
+    },
+    {
+     "name": "GNU XaoS",
+     "url": "https://github.com/xaos-project",
+     "github": "xaos-project"
+    },
+    {
+     "name": "Libcdio",
+     "url": "https://github.com/libcdio",
+     "github": "libcdio"
+    },
+    {
+     "name": "Other links"
+    }
+   ]
+  }
+ },
+ "haskellorg": {
+  "name": "Haskell.org",
+  "github": "haskell",
+  "membersByYear": {
+   "2019": {
+    "airalab": 1,
+    "haskell-CI": 1
+   },
+   "2021": {
+    "haskell": 1
+   },
+   "2024": {
+    "haskell": 1
+   },
+   "2025": {
+    "haskell": 1
+   }
+  },
+  "memberRepos": {
+   "haskell-CI": {
+    "hackage-matrix-builder": 1
+   },
+   "airalab": {
+    "hs-web3": 1
+   },
+   "haskell": {
+    "haskell-language-server": 3
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "incf": {
+  "name": "INCF",
+  "github": "INCF",
+  "membersByYear": {
+   "2016": {
+    "OpenSourceBrain": 1
+   },
+   "2017": {
+    "genn-team": 1
+   },
+   "2018": {
+    "genn-team": 1,
+    "INCF": 1
+   },
+   "2019": {
+    "brian-team": 1,
+    "openworm": 1
+   },
+   "2020": {
+    "GriffithsLab": 1,
+    "OpenSourceBrain": 1
+   },
+   "2021": {
+    "alan-turing-institute": 1,
+    "brian-team": 1,
+    "OpenSourceBrain": 1,
+    "RonCalabreseLab": 1
+   },
+   "2022": {
+    "nbdt-journal": 3,
+    "OpenSourceBrain": 3,
+    "jonescompneurolab": 1,
+    "nipype": 1,
+    "openworm": 1,
+    "OREL-group": 1
+   },
+   "2023": {
+    "jonescompneurolab": 2,
+    "brian-team": 1,
+    "OREL-group": 1,
+    "the-turing-way": 1
+   },
+   "2024": {
+    "DevoLearn": 1
+   },
+   "2025": {
+    "DevoLearn": 2,
+    "aces": 1,
+    "INCF": 1,
+    "m2b3": 1,
+    "OpenSourceBrain": 1
+   },
+   "2026": {
+    "aces": 1
+   }
+  },
+  "memberRepos": {
+   "OpenSourceBrain": {
+    "AllenInstituteNeuroML": 1,
+    "BahlEtAl2012_ReducedL5PyrCell": 1,
+    "DANDIArchiveShowcase": 1,
+    "GSoC_2021_OSB_NWB": 1,
+    "JoglekarEtAl18": 1,
+    "Macaque_auditory_thalamocortical_model_data": 1,
+    "Thalamocortical": 1
+   },
+   "genn-team": {
+    "genn": 1,
+    "neuron_visualisation": 1
+   },
+   "INCF": {
+    "BIDS-Starter-Kit": 1,
+    "knowledge-space-agent": 1
+   },
+   "openworm": {
+    "hodgkin_huxley_tutorial": 1,
+    "OpenData": 1
+   },
+   "brian-team": {
+    "brian2modelfitting": 2,
+    "brian-code-editor": 1
+   },
+   "GriffithsLab": {
+    "GSoC_2020_HA": 1
+   },
+   "RonCalabreseLab": {
+    "Leech-8Cell-Tutorial-NeuroML": 1
+   },
+   "alan-turing-institute": {
+    "AutisticaCitizenScience": 1
+   },
+   "OREL-group": {
+    "GSoC": 1,
+    "VRDR": 1
+   },
+   "nipype": {
+    "pydra": 1
+   },
+   "nbdt-journal": {
+    "XML-pipeline": 2,
+    "automatic-reviewer-assignment": 1
+   },
+   "jonescompneurolab": {
+    "hnn-core": 3
+   },
+   "the-turing-way": {
+    "the-turing-way": 1
+   },
+   "DevoLearn": {
+    "DevoGraph": 3
+   },
+   "aces": {
+    "cbrain-cli": 2
+   },
+   "m2b3": {
+    "gesturecap2025": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "jboss-community": {
+  "name": "JBoss Community",
+  "github": "jboss",
+  "membersByYear": {
+   "2016": {
+    "hawkular": 1,
+    "vert-x3": 1
+   },
+   "2019": {
+    "codeuino": 1
+   },
+   "2021": {
+    "3scale-labs": 2
+   },
+   "2026": {
+    "debezium": 4,
+    "wildfly-security-incubator": 1
+   }
+  },
+  "memberRepos": {
+   "hawkular": {
+    "hawkular-android-client": 1
+   },
+   "vert-x3": {
+    "vertx-hawkular-metrics": 1
+   },
+   "codeuino": {
+    "Social-Platform-Donut": 1
+   },
+   "3scale-labs": {
+    "gsoc-wasm-filters": 2
+   },
+   "debezium": {
+    "debezium-design-documents": 4
+   },
+   "wildfly-security-incubator": {
+    "google-summer-of-code": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2026": [
+    {
+     "name": "WildFly Elytron"
+    },
+    {
+     "name": "JBoss Web Server"
+    }
+   ]
+  }
+ },
+ "national-resource-for-network-biology-nrnb": {
+  "name": "National Resource for Network Biology (NRNB)",
+  "github": "nrnb",
+  "membersByYear": {
+   "2016": {
+    "cytoscape": 1,
+    "sbmlteam": 1,
+    "SBRG": 1
+   },
+   "2017": {
+    "BIMIB-DISCo": 1,
+    "PathVisio": 1
+   },
+   "2018": {
+    "BIMIB-DISCo": 1,
+    "cytoscape": 1,
+    "SynBioDex": 1,
+    "wikipathways": 1
+   },
+   "2019": {
+    "cytoscape": 1
+   },
+   "2020": {
+    "RBVI": 1
+   },
+   "2021": {
+    "cytoscape": 1,
+    "RBVI": 1
+   },
+   "2022": {
+    "BaderLab": 1,
+    "combine-org": 1,
+    "SynBioDex": 1
+   },
+   "2023": {
+    "RBVI": 1
+   },
+   "2024": {
+    "ndexbio": 1
+   },
+   "2025": {
+    "draeger-lab": 1
+   },
+   "2026": {
+    "cytoscape": 1,
+    "PathVisio": 1
+   }
+  },
+  "memberRepos": {
+   "sbmlteam": {
+    "jsbml": 1
+   },
+   "SBRG": {
+    "EscherConverter": 1
+   },
+   "cytoscape": {
+    "appstore": 3,
+    "cytoscape.js-tutorials": 1,
+    "enrichment-table-app": 1
+   },
+   "PathVisio": {
+    "gsoc2026-pathvisio-wp-github": 1,
+    "libGPML": 1
+   },
+   "BIMIB-DISCo": {
+    "cyTRON": 1,
+    "cyTRON-js": 1
+   },
+   "wikipathways": {
+    "wikipathways.org": 1
+   },
+   "SynBioDex": {
+    "dnaplotlib": 1,
+    "SBOL-utilities": 1
+   },
+   "RBVI": {
+    "clusterMaker2": 2,
+    "CyPlot": 1
+   },
+   "BaderLab": {
+    "openPIP": 1
+   },
+   "combine-org": {
+    "combine-notebooks": 1
+   },
+   "ndexbio": {
+    "gsoc_llm": 1
+   },
+   "draeger-lab": {
+    "SBOannotator": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "numfocus": {
+  "name": "NumFOCUS",
+  "github": "numfocus",
+  "membersByYear": {
+   "2016": {
+    "JuliaOpt": 1,
+    "matplotlib": 1
+   },
+   "2017": {
+    "matplotlib": 1,
+    "pymc-devs": 1
+   },
+   "2018": {
+    "JuliaBerry": 1,
+    "JuliaDiffEq": 1,
+    "RaRe-Technologies": 1,
+    "ropensci": 1
+   },
+   "2019": {
+    "JuliaOpt": 1,
+    "qutip": 1
+   },
+   "2020": {
+    "qgrad": 1
+   },
+   "2021": {
+    "equadratures": 1,
+    "gridap": 1,
+    "optuna": 1,
+    "pvlib": 1,
+    "qutip": 1
+   },
+   "2022": {
+    "arviz-devs": 2,
+    "SciML": 2,
+    "cvxpy": 1,
+    "econ-ark": 1,
+    "zarr-developers": 1
+   },
+   "2023": {
+    "cvxpy": 1,
+    "qutip": 1,
+    "taskflow": 1
+   },
+   "2024": {
+    "jupyterlab": 3,
+    "pvlib": 3,
+    "aiidateam": 1
+   },
+   "2025": {
+    "sbi-dev": 1,
+    "SciML": 1
+   },
+   "2026": {
+    "weecology": 2,
+    "pvlib": 1,
+    "pymc-devs": 1
+   }
+  },
+  "memberRepos": {
+   "JuliaOpt": {
+    "Dualization.jl": 1,
+    "MathProgBase.jl": 1
+   },
+   "matplotlib": {
+    "matplotlib": 2
+   },
+   "pymc-devs": {
+    "pymc-prop": 1,
+    "pymc3": 1
+   },
+   "ropensci": {
+    "rdataretriever": 1
+   },
+   "JuliaDiffEq": {
+    "FEniCS.jl": 1
+   },
+   "RaRe-Technologies": {
+    "gensim": 1
+   },
+   "JuliaBerry": {
+    "PiCraft.jl": 1
+   },
+   "qutip": {
+    "qutip": 1,
+    "qutip-cupy": 1,
+    "qutip-virtual-lab": 1
+   },
+   "qgrad": {
+    "qgrad": 1
+   },
+   "equadratures": {
+    "EQ-uq": 1
+   },
+   "optuna": {
+    "optuna-dashboard": 1
+   },
+   "gridap": {
+    "GridapMakie.jl": 1
+   },
+   "pvlib": {
+    "pvlib-python": 5
+   },
+   "zarr-developers": {
+    "codecs-registry": 1
+   },
+   "cvxpy": {
+    "org": 2
+   },
+   "SciML": {
+    "ModelOrderReduction.jl": 1,
+    "NeuralPDE.jl": 1,
+    "QuantumNLDiffEq.jl": 1
+   },
+   "arviz-devs": {
+    "arviz_dashboard": 1,
+    "ArviZGen.jl": 1
+   },
+   "econ-ark": {
+    "HARK": 1
+   },
+   "taskflow": {
+    "taskflow": 1
+   },
+   "aiidateam": {
+    "aiida-explorer": 1
+   },
+   "jupyterlab": {
+    "frontends-team-compass": 2,
+    "jupyterlab-builder": 1
+   },
+   "sbi-dev": {
+    "sbi": 1
+   },
+   "weecology": {
+    "forest-damage-segmentation": 1,
+    "recovering-computer-vision-annotations": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2022": [
+    {
+     "name": "ArviZ",
+     "url": "https://github.com/arviz-devs/arviz/wiki/GSoC-2022-projects",
+     "github": "arviz-devs/arviz"
+    },
+    {
+     "name": "CB-Geo MPM",
+     "url": "https://github.com/cb-geo/mpm/discussions/724",
+     "github": "cb-geo/mpm"
+    },
+    {
+     "name": "CuPy",
+     "url": "https://github.com/cupy/cupy/wiki/GSoC-2022-Project-Ideas",
+     "github": "cupy/cupy"
+    },
+    {
+     "name": "CVXPY",
+     "url": "https://github.com/cvxpy/GSOC2022",
+     "github": "cvxpy/GSOC2022"
+    },
+    {
+     "name": "Data Retriever",
+     "url": "https://github.com/weecology/retriever/wiki/GSoC-2022-Project-Ideas",
+     "github": "weecology/retriever"
+    },
+    {
+     "name": "Econ-ARK",
+     "url": "https://github.com/econ-ark/OverARK/wiki/GSoC-2022-Project-Ideas",
+     "github": "econ-ark/OverARK"
+    },
+    {
+     "name": "FEniCS",
+     "url": "https://github.com/FEniCS/gsoc/blob/fenics/ideas-2022/2022/ideas-list-fenics.md",
+     "github": "FEniCS/gsoc"
+    },
+    {
+     "name": "FluxML",
+     "url": "https://julialang.org/jsoc/gsoc/flux/"
+    },
+    {
+     "name": "GeoPandas",
+     "url": "https://github.com/geopandas/geopandas/wiki/Google-Summer-of-Code-2022",
+     "github": "geopandas/geopandas"
+    },
+    {
+     "name": "Gridap",
+     "url": "https://github.com/gridap/GSoC/blob/main/2022/ideas-list.md",
+     "github": "gridap/GSoC"
+    },
+    {
+     "name": "JuMP",
+     "url": "https://github.com/jump-dev/GSOC2022",
+     "github": "jump-dev/GSOC2022"
+    },
+    {
+     "name": "LFortran",
+     "url": "https://gitlab.com/lfortran/lfortran/-/wikis/GSoC%202022%20Ideas"
+    },
+    {
+     "name": "NetworkX",
+     "url": "https://networkx.org/documentation/latest/developer/projects.html"
+    },
+    {
+     "name": "Optuna",
+     "url": "https://github.com/optuna/optuna/wiki/Optuna-GSoC-2022",
+     "github": "optuna/optuna"
+    },
+    {
+     "name": "pvlib",
+     "url": "https://github.com/pvlib/pvlib-python/wiki/GSoC-2022-Projects",
+     "github": "pvlib/pvlib-python"
+    },
+    {
+     "name": "PyBaMM",
+     "url": "https://github.com/pybamm-team/PyBaMM/wiki/GSoC-2022-Projects",
+     "github": "pybamm-team/PyBaMM"
+    },
+    {
+     "name": "PyMC",
+     "url": "https://github.com/pymc-devs/pymc/wiki/GSoC-2022-projects",
+     "github": "pymc-devs/pymc"
+    },
+    {
+     "name": "PySAL",
+     "url": "https://github.com/pysal/pysal/wiki/Google-Summer-of-Code-2022",
+     "github": "pysal/pysal"
+    },
+    {
+     "name": "PyTorch-Ignite",
+     "url": "https://github.com/pytorch/ignite/wiki/GSoC-2022-project",
+     "github": "pytorch/ignite"
+    },
+    {
+     "name": "QuTiP",
+     "url": "https://github.com/qutip/qutip/wiki/Google-Summer-of-Code-2022",
+     "github": "qutip/qutip"
+    },
+    {
+     "name": "SciML",
+     "url": "https://sciml.ai/dev/#google_summer_of_code"
+    },
+    {
+     "name": "signac",
+     "url": "https://github.com/glotzerlab/signac/wiki/GSoC-2022-Projects",
+     "github": "glotzerlab/signac"
+    },
+    {
+     "name": "Taskflow",
+     "url": "https://github.com/taskflow/GSoC2022",
+     "github": "taskflow/GSoC2022"
+    },
+    {
+     "name": "Zarr",
+     "url": "https://github.com/zarr-developers/gsoc/blob/main/2022/ideas-list.md",
+     "github": "zarr-developers/gsoc"
+    }
+   ],
+   "2023": [
+    {
+     "name": "AiiDA",
+     "url": "https://github.com/aiidateam/aiida-core/wiki/GSoC-2023-Projects",
+     "github": "aiidateam/aiida-core"
+    },
+    {
+     "name": "ArviZ",
+     "url": "https://github.com/arviz-devs/arviz/wiki/GSoC-2023-projects",
+     "github": "arviz-devs/arviz"
+    },
+    {
+     "name": "CB-Geo MPM",
+     "url": "https://github.com/cb-geo/mpm/discussions/740",
+     "github": "cb-geo/mpm"
+    },
+    {
+     "name": "Colour Science",
+     "url": "https://github.com/colour-science/GSoC/blob/master/2023/GSoC-2023-Project-Ideas.md",
+     "github": "colour-science/GSoC"
+    },
+    {
+     "name": "conda-forge",
+     "url": "https://hackmd.io/@conda-forge/ryxecoj2j"
+    },
+    {
+     "name": "CuPy",
+     "url": "https://github.com/cupy/cupy/wiki/GSoC-2023-Project-Ideas",
+     "github": "cupy/cupy"
+    },
+    {
+     "name": "Data Retriever",
+     "url": "https://github.com/weecology/retriever/wiki/GSoC-2023-Project-Ideas",
+     "github": "weecology/retriever"
+    },
+    {
+     "name": "FEniCS",
+     "url": "https://github.com/FEniCS/gsoc/blob/fenics/gsoc-2023/2023/ideas-list-fenics.md",
+     "github": "FEniCS/gsoc"
+    },
+    {
+     "name": "FluxML",
+     "url": "https://fluxml.ai/gsoc"
+    },
+    {
+     "name": "Gridap",
+     "url": "https://github.com/gridap/GSoC/blob/main/2023/ideas-list.md",
+     "github": "gridap/GSoC"
+    },
+    {
+     "name": "JuMP",
+     "url": "https://github.com/jump-dev/GSOC2023",
+     "github": "jump-dev/GSOC2023"
+    },
+    {
+     "name": "matplotlib",
+     "url": "https://github.com/matplotlib/matplotlib/wiki/GSoC-2023-Ideas",
+     "github": "matplotlib/matplotlib"
+    },
+    {
+     "name": "Mesa",
+     "url": "https://github.com/projectmesa/mesa/wiki/Projects-for-Google-Summer-of-Code-2023",
+     "github": "projectmesa/mesa"
+    },
+    {
+     "name": "NetworkX",
+     "url": "https://networkx.org/documentation/latest/developer/projects.html#mentored-projects"
+    },
+    {
+     "name": "OpenFHE",
+     "url": "https://github.com/openfheorg/openfhe-development/wiki/GSOC-2023",
+     "github": "openfheorg/openfhe-development"
+    },
+    {
+     "name": "Open Science Labs",
+     "url": "https://hackmd.io/@GvoPVECJQAmNl6JmM2UPMQ/BJEITVBAj"
+    },
+    {
+     "name": "pvlib",
+     "url": "https://github.com/pvlib/pvlib-python/wiki/GSoC-2023-Projects",
+     "github": "pvlib/pvlib-python"
+    },
+    {
+     "name": "PyBaMM",
+     "url": "https://github.com/pybamm-team/PyBaMM/wiki/GSoC-2023-Projects",
+     "github": "pybamm-team/PyBaMM"
+    },
+    {
+     "name": "PyLops",
+     "url": "https://github.com/PyLops/pylops/wiki/GSoC-2023-Project-Ideas",
+     "github": "PyLops/pylops"
+    },
+    {
+     "name": "PyMC",
+     "url": "https://github.com/pymc-devs/pymc/wiki/GSoC-2023-projects",
+     "github": "pymc-devs/pymc"
+    },
+    {
+     "name": "PySAL",
+     "url": "https://github.com/pysal/pysal/wiki/Google-Summer-of-Code-2023",
+     "github": "pysal/pysal"
+    },
+    {
+     "name": "PyTorch-Ignite",
+     "url": "https://github.com/pytorch/ignite/wiki/GSoC-2023-project-ideas",
+     "github": "pytorch/ignite"
+    },
+    {
+     "name": "QuTiP",
+     "url": "https://github.com/qutip/qutip/wiki/Google-Summer-of-Code-2023",
+     "github": "qutip/qutip"
+    },
+    {
+     "name": "SciML",
+     "url": "https://sciml.ai/dev/#google_summer_of_code"
+    },
+    {
+     "name": "Taskflow",
+     "url": "https://github.com/taskflow/GSoC2023",
+     "github": "taskflow/GSoC2023"
+    },
+    {
+     "name": "TNL",
+     "url": "https://gitlab.com/tnl-project/tnl/-/wikis/GSoC-2023"
+    }
+   ],
+   "2024": [
+    {
+     "name": "aeon",
+     "url": "https://github.com/aeon-toolkit/aeon-admin/blob/main/gsoc/gsoc-2024-projects.md",
+     "github": "aeon-toolkit/aeon-admin"
+    },
+    {
+     "name": "AiiDA",
+     "url": "https://github.com/aiidateam/aiida-core/wiki/GSoC-2024-Projects",
+     "github": "aiidateam/aiida-core"
+    },
+    {
+     "name": "ArviZ",
+     "url": "https://github.com/arviz-devs/arviz/wiki/GSoC-2024-projects",
+     "github": "arviz-devs/arviz"
+    },
+    {
+     "name": "Bambi",
+     "url": "https://github.com/bambinos/bambi/wiki/GSoC-2024-projects",
+     "github": "bambinos/bambi"
+    },
+    {
+     "name": "biocommons",
+     "url": "https://github.com/orgs/biocommons/projects/8/views/1"
+    },
+    {
+     "name": "CB-Geo MPM",
+     "url": "https://github.com/cb-geo/mpm/issues/744",
+     "github": "cb-geo/mpm"
+    },
+    {
+     "name": "conda",
+     "url": "https://hackmd.io/@conda-community/conda-gsoc-ideas-2024"
+    },
+    {
+     "name": "CuPy",
+     "url": "https://github.com/cupy/cupy/wiki/GSoC-2024-Project-Ideas",
+     "github": "cupy/cupy"
+    },
+    {
+     "name": "Data Retriever",
+     "url": "https://github.com/weecology/retriever/wiki/GSoC-2024-Project-Ideas",
+     "github": "weecology/retriever"
+    },
+    {
+     "name": "FEniCS",
+     "url": "https://github.com/fenics/gsoc/blob/gsoc-2024/2024/fenics-ideas-list.md",
+     "github": "fenics/gsoc"
+    },
+    {
+     "name": "FluxML",
+     "url": "https://fluxml.ai/gsoc"
+    },
+    {
+     "name": "Gridap",
+     "url": "https://github.com/gridap/GSoC/blob/main/2024/ideas-list.md",
+     "github": "gridap/GSoC"
+    },
+    {
+     "name": "GOSST",
+     "url": "https://github.com/numfocus/gsoc/wiki/GSoC-2024-GOSST",
+     "github": "numfocus/gsoc"
+    },
+    {
+     "name": "JupyterLab",
+     "url": "https://github.com/orgs/jupyterlab/projects/8/views/1?pane=info"
+    },
+    {
+     "name": "matplotlib",
+     "url": "https://github.com/matplotlib/matplotlib/wiki/Matplotlib-GSoC-2024-Ideas",
+     "github": "matplotlib/matplotlib"
+    },
+    {
+     "name": "NetworkX",
+     "url": "https://networkx.org/documentation/latest/developer/projects.html"
+    },
+    {
+     "name": "Open Science Labs",
+     "url": "https://github.com/OpenScienceLabs/gsoc/blob/main/project-ideas/gsoc2024.md",
+     "github": "OpenScienceLabs/gsoc"
+    },
+    {
+     "name": "Optuna",
+     "url": "https://github.com/optuna/optuna/wiki/Optuna-GSoC-2024",
+     "github": "optuna/optuna"
+    },
+    {
+     "name": "pvlib",
+     "url": "https://github.com/pvlib/pvlib-python/wiki/GSoC-2024-Projects",
+     "github": "pvlib/pvlib-python"
+    },
+    {
+     "name": "PyBaMM",
+     "url": "https://pybamm.org/gsoc/2024/"
+    },
+    {
+     "name": "PyMC",
+     "url": "https://github.com/pymc-devs/pymc/wiki/GSoC-2024-projects",
+     "github": "pymc-devs/pymc"
+    },
+    {
+     "name": "PySAL",
+     "url": "https://github.com/pysal/pysal/wiki/Google-Summer-of-Code-2024",
+     "github": "pysal/pysal"
+    },
+    {
+     "name": "QuTiP",
+     "url": "https://github.com/qutip/qutip/wiki//Google-Summer-of-Code-2024",
+     "github": "qutip/qutip"
+    },
+    {
+     "name": "SciML",
+     "url": "https://sciml.ai/dev/#google_summer_of_code"
+    },
+    {
+     "name": "Taskflow",
+     "url": "https://github.com/taskflow/GSoC2024",
+     "github": "taskflow/GSoC2024"
+    },
+    {
+     "name": "Zarr",
+     "url": "https://github.com/zarr-developers/gsoc/blob/main/2024/ideas-list.md",
+     "github": "zarr-developers/gsoc"
+    }
+   ],
+   "2025": [
+    {
+     "name": "aeon",
+     "url": "https://github.com/aeon-toolkit/aeon-admin/blob/main/gsoc/gsoc-2025-projects.md",
+     "github": "aeon-toolkit/aeon-admin"
+    },
+    {
+     "name": "AiiDA",
+     "url": "https://github.com/aiidateam/aiida-core/wiki/GSoC-2025-Projects",
+     "github": "aiidateam/aiida-core"
+    },
+    {
+     "name": "ArviZ",
+     "url": "https://github.com/arviz-devs/arviz/wiki/GsoC-2025-projects",
+     "github": "arviz-devs/arviz"
+    },
+    {
+     "name": "conda / rattler",
+     "url": "https://github.com/conda/rattler/issues/1058",
+     "github": "conda/rattler"
+    },
+    {
+     "name": "Data Retriever",
+     "url": "https://github.com/weecology/retriever/wiki/GSoC-2025-Project-Ideas",
+     "github": "weecology/retriever"
+    },
+    {
+     "name": "DISCOVER Cookbook",
+     "url": "https://github.com/numfocus/DISCOVER-Cookbook/discussions/208",
+     "github": "numfocus/DISCOVER-Cookbook"
+    },
+    {
+     "name": "igraph",
+     "url": "https://github.com/igraph/igraph/wiki/Mentored-Projects",
+     "github": "igraph/igraph"
+    },
+    {
+     "name": "mlpack",
+     "url": "https://github.com/mlpack/mlpack/wiki/SummerOfCodeIdeas",
+     "github": "mlpack/mlpack"
+    },
+    {
+     "name": "NetworkX",
+     "url": "https://networkx.org/documentation/latest/developer/projects.html"
+    },
+    {
+     "name": "Open2C",
+     "url": "https://github.com/open2c/open2c.github.io/wiki/GSoC-2025",
+     "github": "open2c/open2c.github.io"
+    },
+    {
+     "name": "optimagic",
+     "url": "https://github.com/optimagic-dev/optimagic/discussions/559",
+     "github": "optimagic-dev/optimagic"
+    },
+    {
+     "name": "pvlib",
+     "url": "https://github.com/pvlib/pvlib-python/wiki/GSoC-2025-Projects",
+     "github": "pvlib/pvlib-python"
+    },
+    {
+     "name": "PyBaMM",
+     "url": "https://pybamm.org/gsoc/2025/"
+    },
+    {
+     "name": "PyMC",
+     "url": "https://github.com/pymc-devs/pymc/wiki/GSoC-2025-projects",
+     "github": "pymc-devs/pymc"
+    },
+    {
+     "name": "PySAL",
+     "url": "https://github.com/pysal/pysal/wiki/Google-Summer-of-Code-2025",
+     "github": "pysal/pysal"
+    },
+    {
+     "name": "Qutip",
+     "url": "https://github.com/qutip/qutip/wiki//Google-Summer-of-Code-2025",
+     "github": "qutip/qutip"
+    },
+    {
+     "name": "sbi",
+     "url": "https://github.com/sbi-dev/sbi/wiki/GSoC_2025_Projects",
+     "github": "sbi-dev/sbi"
+    },
+    {
+     "name": "SciML",
+     "url": "https://sciml.ai/dev/#google_summer_of_code"
+    },
+    {
+     "name": "Stan",
+     "url": "https://github.com/stan-dev/stan/wiki/GSOC-2025-Proposed-Projects",
+     "github": "stan-dev/stan"
+    },
+    {
+     "name": "TNL",
+     "url": "https://gitlab.com/tnl-project/tnl/-/wikis/GSoC-2025"
+    },
+    {
+     "name": "toqito",
+     "url": "https://github.com/vprusso/toqito/wiki/GSoC-2025-Projects",
+     "github": "vprusso/toqito"
+    },
+    {
+     "name": "Zarr",
+     "url": "https://github.com/zarr-developers/gsoc/blob/main/2025/ideas-list.md",
+     "github": "zarr-developers/gsoc"
+    }
+   ],
+   "2026": [
+    {
+     "name": "AiiDA",
+     "url": "https://github.com/aiidateam/aiida-core/wiki/GSoC-2026-Projects",
+     "github": "aiidateam/aiida-core"
+    },
+    {
+     "name": "ArviZ",
+     "url": "https://github.com/arviz-devs/arviz/wiki/GSoC-2026-projects",
+     "github": "arviz-devs/arviz"
+    },
+    {
+     "name": "CVXPY",
+     "url": "https://github.com/cvxpy/GSOC",
+     "github": "cvxpy/GSOC"
+    },
+    {
+     "name": "Data Retriever",
+     "url": "https://github.com/weecology/retriever/wiki/GSoC-2026-Project-Ideas",
+     "github": "weecology/retriever"
+    },
+    {
+     "name": "gammapy",
+     "url": "https://github.com/gammapy/gammapy/wiki/GSoC-2026-Project",
+     "github": "gammapy/gammapy"
+    },
+    {
+     "name": "GRASS",
+     "url": "https://grasswiki.osgeo.org/wiki/GRASS_GSoC_Ideas_2026"
+    },
+    {
+     "name": "HoloViz",
+     "url": "https://github.com/holoviz/holoviz/wiki/2026-GSoC-Project-List",
+     "github": "holoviz/holoviz"
+    },
+    {
+     "name": "Gridap",
+     "url": "https://github.com/gridap/GSoC/blob/main/2026/ideas-list.md",
+     "github": "gridap/GSoC"
+    },
+    {
+     "name": "JuMP",
+     "url": "https://github.com/jump-dev/GSOC",
+     "github": "jump-dev/GSOC"
+    },
+    {
+     "name": "matplotlib",
+     "url": "https://github.com/matplotlib/matplotlib/wiki/Matplotlib-GSoC-2026-Ideas",
+     "github": "matplotlib/matplotlib"
+    },
+    {
+     "name": "pvlib",
+     "url": "https://github.com/pvlib/pvlib-python/wiki/GSoC-2026-Projects",
+     "github": "pvlib/pvlib-python"
+    },
+    {
+     "name": "PyMC",
+     "url": "https://github.com/pymc-devs/pymc/wiki/GSoC-2026-projects",
+     "github": "pymc-devs/pymc"
+    },
+    {
+     "name": "PySAL",
+     "url": "https://github.com/pysal/pysal/wiki/Google-Summer-of-Code-2026",
+     "github": "pysal/pysal"
+    },
+    {
+     "name": "QuTiP",
+     "url": "https://github.com/qutip/qutip/wiki//Google-Summer-of-Code-current",
+     "github": "qutip/qutip"
+    },
+    {
+     "name": "scikit-bio",
+     "url": "https://github.com/scikit-bio/scikit-bio/wiki/GSOC-2026-project-ideas",
+     "github": "scikit-bio/scikit-bio"
+    },
+    {
+     "name": "SciML",
+     "url": "https://sciml.ai/dev/#google_summer_of_code"
+    },
+    {
+     "name": "Stan",
+     "url": "https://github.com/stan-dev/stan/wiki/GSOC-2026-Proposed-Projects",
+     "github": "stan-dev/stan"
+    },
+    {
+     "name": "sbi",
+     "url": "https://github.com/sbi-dev/sbi/wiki/GSoC%E2%80%902026%E2%80%90Projects",
+     "github": "sbi-dev/sbi"
+    },
+    {
+     "name": "toqito",
+     "url": "https://github.com/vprusso/toqito/wiki/GSoC-2026-Projects",
+     "github": "vprusso/toqito"
+    },
+    {
+     "name": "pytorch-ignite",
+     "url": "https://github.com/pytorch/ignite/wiki/GSoC-2026-project-idea",
+     "github": "pytorch/ignite"
+    }
+   ]
+  }
+ },
+ "open-bioinformatics-foundation-obf": {
+  "name": "Open Bioinformatics Foundation (OBF)",
+  "github": "OBF",
+  "membersByYear": {
+   "2016": {
+    "bionode": 1
+   },
+   "2017": {
+    "bionode": 1
+   },
+   "2019": {
+    "antismash": 1
+   },
+   "2021": {
+    "OpenMS": 1
+   }
+  },
+  "memberRepos": {
+   "bionode": {
+    "gsoc16": 1,
+    "GSoC17": 1
+   },
+   "antismash": {
+    "2019-gsoc-webui": 1
+   },
+   "OpenMS": {
+    "OpenMS": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "open-chemistry": {
+  "name": "Open Chemistry",
+  "github": "OpenChemistry",
+  "membersByYear": {
+   "2017": {
+    "msdk": 1
+   },
+   "2018": {
+    "rdkit": 2,
+    "mzmine": 1
+   },
+   "2019": {
+    "3dmol": 1,
+    "rdkit": 1
+   },
+   "2020": {
+    "rdkit": 2
+   },
+   "2021": {
+    "theochem": 1
+   },
+   "2022": {
+    "cyllab": 1,
+    "rdkit": 1
+   }
+  },
+  "memberRepos": {
+   "msdk": {
+    "msdk": 1
+   },
+   "rdkit": {
+    "rdkit": 5,
+    "neo4j-rdkit": 1
+   },
+   "mzmine": {
+    "mzmine2": 1
+   },
+   "3dmol": {
+    "3Dmol.js": 1
+   },
+   "theochem": {
+    "chemtools": 1
+   },
+   "cyllab": {
+    "CalcUS": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "open-genome-informatics": {
+  "name": "Open Genome Informatics",
+  "github": "intermine",
+  "membersByYear": {
+   "2017": {
+    "intermine": 1
+   },
+   "2021": {
+    "reactome": 2
+   }
+  },
+  "memberRepos": {
+   "intermine": {
+    "intermine-registry": 1
+   },
+   "reactome": {
+    "descartes_rpa": 1,
+    "reactome_gnn": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "openastronomy": {
+  "name": "OpenAstronomy",
+  "github": "OpenAstronomy",
+  "membersByYear": {
+   "2016": {
+    "sunpy": 1
+   },
+   "2019": {
+    "ctlearn-project": 1,
+    "sunpy": 1
+   },
+   "2020": {
+    "astronomy-commons": 1,
+    "einsteinpy": 1,
+    "JuliaAstro": 1,
+    "radis": 1
+   },
+   "2021": {
+    "radis": 2
+   },
+   "2022": {
+    "radis": 3
+   },
+   "2024": {
+    "OpenAstronomy": 1,
+    "sunpy": 1
+   },
+   "2026": {
+    "JuliaAstro": 1
+   }
+  },
+  "memberRepos": {
+   "sunpy": {
+    "sunpy": 2,
+    "irispy": 1
+   },
+   "ctlearn-project": {
+    "ctlearn_optimizer": 1
+   },
+   "radis": {
+    "radis": 6
+   },
+   "einsteinpy": {
+    "GSoC-2020": 1
+   },
+   "astronomy-commons": {
+    "sparkmanager": 1
+   },
+   "JuliaAstro": {
+    "CCDReduction.jl": 1,
+    "XraySpectra.jl": 1
+   },
+   "OpenAstronomy": {
+    "rnn-lightcurve-gapfill": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2022": [
+    {
+     "name": "Astropy",
+     "url": "http://www.astropy.org/",
+     "github": "astropy/astropy"
+    },
+    {
+     "name": "GNU Astronomy Utilities",
+     "url": "https://www.gnu.org/software/gnuastro/"
+    },
+    {
+     "name": "JuliaAstro",
+     "url": "https://juliaastro.github.io/",
+     "github": "JuliaAstro"
+    },
+    {
+     "name": "radis",
+     "url": "https://radis.readthedocs.io/",
+     "github": "radis/radis"
+    },
+    {
+     "name": "Stingray",
+     "url": "http://stingray.science",
+     "github": "StingraySoftware"
+    },
+    {
+     "name": "SunPy",
+     "url": "http://sunpy.org",
+     "github": "sunpy/sunpy"
+    }
+   ],
+   "2023": [
+    {
+     "name": "GNU Astronomy Utilities",
+     "url": "https://www.gnu.org/software/gnuastro/"
+    },
+    {
+     "name": "radis",
+     "url": "https://radis.readthedocs.io/",
+     "github": "radis/radis"
+    },
+    {
+     "name": "Stingray",
+     "url": "http://stingray.science",
+     "github": "StingraySoftware"
+    },
+    {
+     "name": "SunPy",
+     "url": "http://sunpy.org",
+     "github": "sunpy/sunpy"
+    }
+   ],
+   "2024": [
+    {
+     "name": "GNU Astronomy Utilities",
+     "url": "https://www.gnu.org/software/gnuastro/"
+    },
+    {
+     "name": "irsa-fornax",
+     "url": "https://openastronomy.org/gsoc/gsoc2024/"
+    },
+    {
+     "name": "radis",
+     "url": "https://radis.readthedocs.io/",
+     "github": "radis/radis"
+    },
+    {
+     "name": "Stingray",
+     "url": "http://stingray.science",
+     "github": "StingraySoftware"
+    },
+    {
+     "name": "SunPy",
+     "url": "http://sunpy.org",
+     "github": "sunpy/sunpy"
+    }
+   ],
+   "2025": [
+    {
+     "name": "JuliaAstro",
+     "url": "https://juliaastro.github.io/",
+     "github": "JuliaAstro"
+    },
+    {
+     "name": "radis",
+     "url": "https://radis.readthedocs.io/",
+     "github": "radis/radis"
+    },
+    {
+     "name": "Stingray",
+     "url": "http://stingray.science",
+     "github": "StingraySoftware"
+    },
+    {
+     "name": "SunPy",
+     "url": "http://sunpy.org",
+     "github": "sunpy/sunpy"
+    }
+   ],
+   "2026": [
+    {
+     "name": "Astropy",
+     "url": "http://www.astropy.org/",
+     "github": "astropy/astropy"
+    },
+    {
+     "name": "JuliaAstro",
+     "url": "https://juliaastro.github.io/",
+     "github": "JuliaAstro"
+    },
+    {
+     "name": "lincc-fw",
+     "url": "https://openastronomy.org/gsoc/gsoc2026/"
+    },
+    {
+     "name": "radis",
+     "url": "https://radis.readthedocs.io/",
+     "github": "radis/radis"
+    },
+    {
+     "name": "Reltrans",
+     "url": "https://reltrans.github.io/reltrans_website/Home.html",
+     "github": "reltrans"
+    },
+    {
+     "name": "Stingray",
+     "url": "http://stingray.science",
+     "github": "StingraySoftware"
+    },
+    {
+     "name": "SunPy",
+     "url": "http://sunpy.org",
+     "github": "sunpy/sunpy"
+    }
+   ]
+  }
+ },
+ "osgeo-open-source-geospatial-foundation": {
+  "name": "OSGeo (Open Source Geospatial Foundation)",
+  "github": "OSGeo",
+  "membersByYear": {
+   "2016": {
+    "pgRouting": 2
+   },
+   "2017": {
+    "OneBusAway": 1
+   },
+   "2018": {
+    "geopython": 1,
+    "pgRouting": 1
+   },
+   "2019": {
+    "pgRouting": 2
+   },
+   "2020": {
+    "pgRouting": 3
+   },
+   "2021": {
+    "pgRouting": 2,
+    "postgis": 1
+   },
+   "2022": {
+    "pgRouting": 3
+   },
+   "2023": {
+    "pgRouting": 4
+   },
+   "2024": {
+    "istSOS": 2,
+    "pgRouting": 1
+   },
+   "2025": {
+    "pgRouting": 3,
+    "ZOO-Project": 2
+   },
+   "2026": {
+    "pgRouting": 3
+   }
+  },
+  "memberRepos": {
+   "pgRouting": {
+    "pgrouting": 24
+   },
+   "OneBusAway": {
+    "onebusaway-android": 1
+   },
+   "geopython": {
+    "pywps": 1
+   },
+   "postgis": {
+    "postgis": 1
+   },
+   "istSOS": {
+    "istsos-miu": 1,
+    "istSOS4-STAC": 1
+   },
+   "ZOO-Project": {
+    "dcai": 1,
+    "zoo-cwl-runners": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2022": [
+    {
+     "name": "PostGIS",
+     "url": "https://trac.osgeo.org/postgis/wiki/GoogleSummerCode2022"
+    },
+    {
+     "name": "pgRouting",
+     "url": "https://github.com/pgRouting/pgrouting/wiki/GSoC-Ideas%3A-2022",
+     "github": "pgRouting/pgrouting"
+    },
+    {
+     "name": "ZOO-Project",
+     "url": "https://github.com/ZOO-Project/ZOO-Project/wiki/Google-Summer-of-Code-2022-Project-Ideas",
+     "github": "ZOO-Project/ZOO-Project"
+    },
+    {
+     "name": "Re3gistry 2",
+     "url": "https://github.com/ec-jrc/re3gistry/wiki/Google-Summer-of-Code-2022",
+     "github": "ec-jrc/re3gistry"
+    }
+   ],
+   "2023": [
+    {
+     "name": "PostGIS",
+     "url": "https://trac.osgeo.org/postgis/wiki/GoogleSummerCode2022"
+    },
+    {
+     "name": "pgRouting",
+     "url": "https://github.com/pgRouting/pgrouting/wiki/GSoC-Ideas:-2023",
+     "github": "pgRouting/pgrouting"
+    },
+    {
+     "name": "ZOO-Project",
+     "url": "https://github.com/ZOO-Project/ZOO-Project/wiki/Google-Summer-of-Code-2023-Project-Ideas",
+     "github": "ZOO-Project/ZOO-Project"
+    },
+    {
+     "name": "istSOS",
+     "url": "https://github.com/istSOS/istsos2/wiki/GSoC-2023-project-ideas",
+     "github": "istSOS/istsos2"
+    },
+    {
+     "name": "Re3gistry",
+     "url": "https://github.com/ec-jrc/re3gistry/wiki/Google-Summer-of-Code-2023",
+     "github": "ec-jrc/re3gistry"
+    }
+   ],
+   "2024": [
+    {
+     "name": "PostGIS",
+     "url": "https://trac.osgeo.org/postgis/wiki/GoogleSummerCode2022"
+    },
+    {
+     "name": "pgRouting",
+     "url": "https://github.com/pgRouting/pgrouting/wiki/GSoC-Ideas:-2024",
+     "github": "pgRouting/pgrouting"
+    },
+    {
+     "name": "ZOO-Project",
+     "url": "https://github.com/ZOO-Project/ZOO-Project/wiki/Google-Summer-of-Code-2024-Project-Ideas",
+     "github": "ZOO-Project/ZOO-Project"
+    },
+    {
+     "name": "istSOS",
+     "url": "https://github.com/istSOS/istsos2/wiki/istSOS-GSoC-2024",
+     "github": "istSOS/istsos2"
+    },
+    {
+     "name": "Re3gistry",
+     "url": "https://github.com/ec-jrc/re3gistry/wiki/Google-Summer-of-Code-2023",
+     "github": "ec-jrc/re3gistry"
+    }
+   ],
+   "2025": [
+    {
+     "name": "pgRouting",
+     "url": "https://github.com/pgRouting/pgrouting/wiki/GSoC-Ideas:-2025",
+     "github": "pgRouting/pgrouting"
+    },
+    {
+     "name": "ZOO-Project",
+     "url": "https://github.com/ZOO-Project/ZOO-Project/wiki/Google%E2%80%90Summer%E2%80%90of%E2%80%90Code%E2%80%902025%E2%80%90Project%E2%80%90Ideas",
+     "github": "ZOO-Project/ZOO-Project"
+    },
+    {
+     "name": "istSOS",
+     "url": "https://github.com/istSOS/istSOS4/wiki/Google%E2%80%90Summer%E2%80%90of%E2%80%90Code%E2%80%902025%E2%80%90Project%E2%80%90Ideas",
+     "github": "istSOS/istSOS4"
+    },
+    {
+     "name": "PostGIS",
+     "url": "https://trac.osgeo.org/postgis/wiki/GoogleSummerCode2022"
+    },
+    {
+     "name": "Re3gistry",
+     "url": "https://github.com/ec-jrc/re3gistry/wiki/Google-Summer-of-Code-2023",
+     "github": "ec-jrc/re3gistry"
+    }
+   ],
+   "2026": [
+    {
+     "name": "pgRouting",
+     "url": "https://github.com/pgRouting/pgrouting/wiki/GSoC-Ideas:-2026",
+     "github": "pgRouting/pgrouting"
+    },
+    {
+     "name": "QGIS",
+     "url": "https://github.com/qgis/QGIS/wiki/Google-Summer-of-Code-2026-Ideas",
+     "github": "qgis/QGIS"
+    },
+    {
+     "name": "istSOS",
+     "url": "https://github.com/istSOS/istSOS4/wiki/Google%E2%80%90Summer%E2%80%90of%E2%80%90Code%E2%80%902026%E2%80%90Project%E2%80%90Ideas",
+     "github": "istSOS/istSOS4"
+    },
+    {
+     "name": "ZOO-Project",
+     "url": "https://github.com/ZOO-Project/ZOO-Project/wiki/Google%E2%80%90Summer%E2%80%90of%E2%80%90Code%E2%80%902026%E2%80%90Project%E2%80%90Ideas",
+     "github": "ZOO-Project/ZOO-Project"
+    },
+    {
+     "name": "PostGIS",
+     "url": "https://trac.osgeo.org/postgis/wiki/GoogleSummerCode2022"
+    },
+    {
+     "name": "Re3gistry",
+     "url": "https://github.com/ec-jrc/re3gistry/wiki/Google-Summer-of-Code-2023",
+     "github": "ec-jrc/re3gistry"
+    }
+   ]
+  }
+ },
+ "owasp-foundation": {
+  "name": "OWASP Foundation",
+  "github": "OWASP",
+  "membersByYear": {
+   "2018": {
+    "zaproxy": 2
+   },
+   "2019": {
+    "zaproxy": 1
+   },
+   "2021": {
+    "DefectDojo": 1
+   },
+   "2022": {
+    "coreruleset": 1,
+    "owtf": 1
+   },
+   "2023": {
+    "coreruleset": 1,
+    "OWASP": 1
+   },
+   "2024": {
+    "owtf": 1
+   },
+   "2025": {
+    "OWASP": 2,
+    "OWASP-BLT": 1,
+    "owtf": 1
+   },
+   "2026": {
+    "OWASP": 4,
+    "GenAI-Security-Project": 1
+   }
+  },
+  "memberRepos": {
+   "zaproxy": {
+    "zaproxy": 3
+   },
+   "DefectDojo": {
+    "ui2-incubating": 1
+   },
+   "owtf": {
+    "owtf": 3
+   },
+   "coreruleset": {
+    "project-seaweed": 1,
+    "rules-performance-tests": 1
+   },
+   "OWASP": {
+    "Nest": 6,
+    "wrongsecrets-ctf-party": 1
+   },
+   "OWASP-BLT": {
+    "BLT": 1
+   },
+   "GenAI-Security-Project": {
+    "finbot-ctf": 1
+   }
+  },
+  "subOrgsByYear": {
+   "2022": [
+    {
+     "name": "OWASP Juice Shop",
+     "url": "https://owasp-juice.shop",
+     "github": "OWASP/www-project-juice-shop"
+    },
+    {
+     "name": "OWASP ZAP",
+     "url": "https://zaproxy.org/",
+     "github": "OWASP/www-project-zap"
+    },
+    {
+     "name": "OWASP Maryam",
+     "url": "https://github.com/saeeddhqan/Maryam",
+     "github": "saeeddhqan/Maryam"
+    },
+    {
+     "name": "OWASP DSOMM",
+     "url": "https://github.com/wurstbrot/DevSecOps-MaturityModel",
+     "github": "wurstbrot/DevSecOps-MaturityModel"
+    },
+    {
+     "name": "OWASP SecureTea",
+     "url": "https://securetea.org/",
+     "github": "OWASP/www-project-securetea"
+    },
+    {
+     "name": "OWASP PyGoat",
+     "url": "https://github.com/adeyosemanputra/pygoat",
+     "github": "adeyosemanputra/pygoat"
+    },
+    {
+     "name": "OWASP PurpleTeam",
+     "url": "https://purpleteam-labs.com/",
+     "github": "OWASP/www-project-purpleteam"
+    },
+    {
+     "name": "OWASP Threat Dragon",
+     "url": "https://github.com/OWASP/threat-dragon",
+     "github": "OWASP/threat-dragon"
+    },
+    {
+     "name": "OWASP Coraza Web Application Firewall",
+     "url": "https://github.com/corazawaf/coraza",
+     "github": "corazawaf/coraza"
+    },
+    {
+     "name": "OWASP ModSecurity Core Rule Set",
+     "url": "https://coreruleset.org",
+     "github": "OWASP/www-project-modsecurity-core-rule-set"
+    },
+    {
+     "name": "OWASP OWTF",
+     "url": "https://github.com/owtf/owtf",
+     "github": "owtf/owtf"
+    },
+    {
+     "name": "OWASP Python Honeypot",
+     "url": "https://github.com/OWASP/Python-Honeypot",
+     "github": "OWASP/Python-Honeypot"
+    },
+    {
+     "name": "OWASP Nettacker",
+     "url": "https://github.com/OWASP/Nettacker",
+     "github": "OWASP/Nettacker"
+    },
+    {
+     "name": "Security Knowledge Framework (SKF)",
+     "url": "https://github.com/blabla1337/skf-labs/tree/master/md",
+     "github": "blabla1337/skf-labs"
+    },
+    {
+     "name": "Bug Logging Tool (BLT)",
+     "url": "https://owasp.org/projects/blt",
+     "github": "OWASP/www-project-bug-logging-tool"
+    },
+    {
+     "name": "Spotlight: ' + member[\"name\"] + '"
+    },
+    {
+     "name": "Corporate Supporters"
+    }
+   ],
+   "2023": [
+    {
+     "name": "OWASP ZAP",
+     "url": "https://zaproxy.org/",
+     "github": "OWASP/www-project-zap"
+    },
+    {
+     "name": "Bug Logging Tool (BLT)",
+     "url": "https://owasp.org/projects/blt",
+     "github": "OWASP/www-project-bug-logging-tool"
+    },
+    {
+     "name": "OWASP Maryam",
+     "url": "https://owasp.org/projects/maryam",
+     "github": "OWASP/www-project-maryam"
+    },
+    {
+     "name": "OWASP SecureTea",
+     "url": "https://securetea.org/",
+     "github": "OWASP/www-project-securetea"
+    },
+    {
+     "name": "OWASP PyGoat",
+     "url": "https://owasp.org/projects/pygoat",
+     "github": "OWASP/www-project-pygoat"
+    },
+    {
+     "name": "OWASP Risk Assessment Framework",
+     "url": "https://owasp.org/projects/risk-assessment-framework",
+     "github": "OWASP/RiskAssessmentFramework"
+    },
+    {
+     "name": "OWASP Juice Shop",
+     "url": "https://owasp-juice.shop",
+     "github": "OWASP/www-project-juice-shop"
+    },
+    {
+     "name": "OWASP WrongSecrets",
+     "url": "https://owasp.org/projects/wrongsecrets",
+     "github": "OWASP/WrongSecrets"
+    },
+    {
+     "name": "OWASP DevSecOps Maturity Model",
+     "url": "https://dsomm.owasp.org",
+     "github": "OWASP/www-project-devsecops-maturity-model"
+    },
+    {
+     "name": "OWASP OWTF",
+     "url": "https://owasp.org/projects/owtf",
+     "github": "OWASP/www-project-owtf"
+    },
+    {
+     "name": "OWASP secureCodeBox",
+     "url": "https://www.securecodebox.io",
+     "github": "OWASP/secureCodeBox"
+    },
+    {
+     "name": "OWASP ModSecurity Core Rule Set",
+     "url": "https://coreruleset.org",
+     "github": "OWASP/www-project-modsecurity-core-rule-set"
+    },
+    {
+     "name": "OWASP Nettacker",
+     "url": "https://owasp.org/projects/nettacker",
+     "github": "OWASP/Nettacker"
+    },
+    {
+     "name": "Spotlight: ' + member[\"name\"] + '"
+    },
+    {
+     "name": "Corporate Supporters"
+    }
+   ],
+   "2024": [
+    {
+     "name": "Bug Logging Tool (BLT)",
+     "url": "https://owasp.org/projects/blt",
+     "github": "OWASP/www-project-bug-logging-tool"
+    },
+    {
+     "name": "OWASP Juice Shop",
+     "url": "https://owasp-juice.shop",
+     "github": "OWASP/www-project-juice-shop"
+    },
+    {
+     "name": "OWASP DevSecOps Maturity Model",
+     "url": "https://dsomm.owasp.org",
+     "github": "OWASP/www-project-devsecops-maturity-model"
+    },
+    {
+     "name": "OWASP OWTF",
+     "url": "https://owasp.org/projects/owtf",
+     "github": "OWASP/www-project-owtf"
+    },
+    {
+     "name": "OWASP secureCodeBox",
+     "url": "https://www.securecodebox.io",
+     "github": "OWASP/secureCodeBox"
+    },
+    {
+     "name": "OWASP Nettacker",
+     "url": "https://owasp.org/projects/nettacker",
+     "github": "OWASP/Nettacker"
+    },
+    {
+     "name": "OWASP Threat Dragon",
+     "url": "https://owasp.org/projects/threat-dragon",
+     "github": "OWASP/Threat-Dragon"
+    },
+    {
+     "name": "Spotlight: ' + member[\"name\"] + '"
+    },
+    {
+     "name": "Corporate Supporters"
+    }
+   ],
+   "2025": [
+    {
+     "name": "Bug Logging Tool (BLT)",
+     "url": "https://owasp.org/projects/blt",
+     "github": "OWASP/www-project-bug-logging-tool"
+    },
+    {
+     "name": "🔹 2025 GSoC Ideas / Large Projects"
+    },
+    {
+     "name": "✅ Expected Results"
+    },
+    {
+     "name": "📌 Knowledge Prerequisites"
+    },
+    {
+     "name": "👥 Mentors"
+    },
+    {
+     "name": "OWASP DevSecOps Maturity Model",
+     "url": "https://dsomm.owasp.org",
+     "github": "OWASP/www-project-devsecops-maturity-model"
+    },
+    {
+     "name": "OWASP Nettacker",
+     "url": "https://owasp.org/projects/nettacker",
+     "github": "OWASP/Nettacker"
+    },
+    {
+     "name": "OWASP Nest",
+     "url": "https://nest.owasp.org",
+     "github": "OWASP/Nest"
+    },
+    {
+     "name": "OWASP Juice Shop",
+     "url": "https://owasp-juice.shop",
+     "github": "OWASP/www-project-juice-shop"
+    },
+    {
+     "name": "PyGoat",
+     "url": "https://owasp.org/projects/pygoat",
+     "github": "OWASP/www-project-pygoat"
+    },
+    {
+     "name": "OpenCRE",
+     "url": "https://opencre.org/",
+     "github": "OWASP/OpenCRE"
+    },
+    {
+     "name": "OWTF",
+     "url": "https://owasp.org/projects/owtf",
+     "github": "OWASP/www-project-owtf"
+    },
+    {
+     "name": "Spotlight: ' + member[\"name\"] + '"
+    },
+    {
+     "name": "Corporate Supporters"
+    }
+   ],
+   "2026": [
+    {
+     "name": "Bug Logging Tool (BLT)",
+     "url": "https://owasp.org/projects/blt",
+     "github": "OWASP/www-project-bug-logging-tool"
+    },
+    {
+     "name": "OWASP DevSecOps Maturity Model",
+     "url": "https://dsomm.owasp.org",
+     "github": "OWASP/www-project-devsecops-maturity-model"
+    },
+    {
+     "name": "OWASP Nettacker",
+     "url": "https://owasp.org/projects/nettacker",
+     "github": "OWASP/Nettacker"
+    },
+    {
+     "name": "OWASP Nest",
+     "url": "https://nest.owasp.org",
+     "github": "OWASP/Nest"
+    },
+    {
+     "name": "OWASP Juice Shop",
+     "url": "https://owasp-juice.shop",
+     "github": "OWASP/www-project-juice-shop"
+    },
+    {
+     "name": "PyGoat",
+     "url": "https://owasp.org/projects/pygoat",
+     "github": "OWASP/www-project-pygoat"
+    },
+    {
+     "name": "OpenCRE",
+     "url": "https://opencre.org/",
+     "github": "OWASP/OpenCRE"
+    },
+    {
+     "name": "OWTF",
+     "url": "https://owasp.org/projects/owtf",
+     "github": "OWASP/www-project-owtf"
+    },
+    {
+     "name": "OWASP Cornucopia",
+     "url": "https://cornucopia.owasp.org/",
+     "github": "OWASP/Cornucopia"
+    },
+    {
+     "name": "OWASP Web Application Honeypot Project",
+     "url": "https://owasp.org/projects/honeypot"
+    },
+    {
+     "name": "Spotlight: ' + member[\"name\"] + '"
+    },
+    {
+     "name": "Corporate Supporters"
+    }
+   ]
+  }
+ },
+ "python-software-foundation": {
+  "name": "Python Software Foundation",
+  "github": "psf",
+  "membersByYear": {
+   "2016": {
+    "statsmodels": 3,
+    "pgmpy": 2,
+    "MDAnalysis": 1,
+    "pysal": 1
+   },
+   "2017": {
+    "statsmodels": 1
+   },
+   "2018": {
+    "mne-tools": 1
+   },
+   "2019": {
+    "LiberTEM": 2,
+    "panda3d": 1,
+    "PyAr": 1
+   },
+   "2020": {
+    "LiberTEM": 1,
+    "panda3d": 1
+   },
+   "2021": {
+    "PyAr": 5,
+    "Open-MSS": 2,
+    "mne-tools": 1
+   },
+   "2022": {
+    "intel": 2,
+    "Open-MSS": 2,
+    "EOS-uiux-Solutions": 1,
+    "mne-tools": 1,
+    "PyAr": 1
+   },
+   "2023": {
+    "Open-MSS": 2,
+    "PyAr": 1
+   },
+   "2024": {
+    "Open-MSS": 3,
+    "PyAr": 3,
+    "pocketpy": 2,
+    "GazzolaLab": 1,
+    "mne-tools": 1
+   },
+   "2025": {
+    "pocketpy": 2,
+    "vacanza": 2,
+    "ilastik": 1,
+    "mne-tools": 1,
+    "Open-MSS": 1,
+    "pyladies": 1
+   },
+   "2026": {
+    "mne-tools": 2,
+    "pocketpy": 1
+   }
+  },
+  "memberRepos": {
+   "pgmpy": {
+    "pgmpy": 2
+   },
+   "statsmodels": {
+    "statsmodels": 4
+   },
+   "MDAnalysis": {
+    "mdanalysis": 1
+   },
+   "pysal": {
+    "pysal": 1
+   },
+   "mne-tools": {
+    "mne-python": 4,
+    "mne-connectivity": 2,
+    "mne-qt-browser": 1
+   },
+   "LiberTEM": {
+    "LiberTEM": 3
+   },
+   "PyAr": {
+    "PyZombis": 7,
+    "pyafipws": 3,
+    "OpenLex": 1
+   },
+   "panda3d": {
+    "panda3d": 2
+   },
+   "Open-MSS": {
+    "MSS": 10
+   },
+   "intel": {
+    "dffml": 2
+   },
+   "EOS-uiux-Solutions": {
+    "eos-icons-frontend": 1
+   },
+   "GazzolaLab": {
+    "PyElastica": 1
+   },
+   "pocketpy": {
+    "pocketpy": 5
+   },
+   "ilastik": {
+    "ilastik": 1
+   },
+   "pyladies": {
+    "pyladiescon-portal": 1
+   },
+   "vacanza": {
+    "holidays": 2
+   }
+  },
+  "subOrgsByYear": {
+   "2022": [
+    {
+     "name": "CVE Binary Tool",
+     "url": "https://github.com/intel/cve-bin-tool/issues/1462",
+     "github": "intel/cve-bin-tool"
+    },
+    {
+     "name": "Activeloop",
+     "url": "https://github.com/activeloopai/Hub/wiki/Activeloop-GSoC-2022-project-ideas",
+     "github": "activeloopai/Hub"
+    },
+    {
+     "name": "DFFML",
+     "url": "https://github.com/intel/dffml/blob/master/docs/contributing/gsoc/2022/index.rst",
+     "github": "intel/dffml"
+    },
+    {
+     "name": "EOS Design System",
+     "url": "https://github.com/EOS-uiux-Solutions/",
+     "github": "EOS-uiux-Solutions"
+    },
+    {
+     "name": "FURY",
+     "url": "https://github.com/fury-gl/fury/wiki/Google-Summer-of-Code-2022-(GSOC2022)",
+     "github": "fury-gl/fury"
+    },
+    {
+     "name": "GNU Mailman"
+    },
+    {
+     "name": "LPython",
+     "url": "https://github.com/lcompilers/lpython/wiki/GSoC-2022-Ideas",
+     "github": "lcompilers/lpython"
+    },
+    {
+     "name": "MNE-Python",
+     "url": "https://github.com/mne-tools/mne-python/wiki/GSoC-Ideas#project-ideas",
+     "github": "mne-tools/mne-python"
+    },
+    {
+     "name": "MSS - Mission Support System",
+     "url": "https://github.com/Open-MSS/MSS",
+     "github": "Open-MSS/MSS"
+    },
+    {
+     "name": "PyElastica",
+     "url": "https://github.com/GazzolaLab/PyElastica/discussions/61",
+     "github": "GazzolaLab/PyElastica"
+    },
+    {
+     "name": "Python Argentina"
+    },
+    {
+     "name": "Python Software Foundation GSoC Team",
+     "url": "https://github.com/python-gsoc/python-blogs",
+     "github": "python-gsoc/python-blogs"
+    },
+    {
+     "name": "SciPy",
+     "url": "https://github.com/scipy/scipy/wiki/GSoC-2022-project-ideas",
+     "github": "scipy/scipy"
+    },
+    {
+     "name": "Scrapy",
+     "url": "https://github.com/scrapy",
+     "github": "scrapy"
+    },
+    {
+     "name": "Towhee",
+     "url": "https://github.com/towhee-io/towhee",
+     "github": "towhee-io/towhee"
+    },
+    {
+     "name": "Friends of the PSF"
+    }
+   ],
+   "2023": [
+    {
+     "name": "Borg Collective",
+     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2023-Ideas",
+     "github": "borgbase/vorta"
+    },
+    {
+     "name": "CVE Binary Tool",
+     "url": "https://github.com/intel/cve-bin-tool/issues/2230",
+     "github": "intel/cve-bin-tool"
+    },
+    {
+     "name": "D-SEAMS",
+     "url": "https://github.com/d-SEAMS/seams-core/wiki/GSoC-2023-Ideas",
+     "github": "d-SEAMS/seams-core"
+    },
+    {
+     "name": "DIPY",
+     "url": "https://github.com/dipy/dipy/wiki/Google-Summer-of-Code-2023",
+     "github": "dipy/dipy"
+    },
+    {
+     "name": "FURY",
+     "url": "https://github.com/fury-gl/fury/wiki/Google-Summer-of-Code-2023-(GSOC2023)",
+     "github": "fury-gl/fury"
+    },
+    {
+     "name": "GNU Mailman"
+    },
+    {
+     "name": "LPython",
+     "url": "https://github.com/lcompilers/lpython/wiki/GSoC-2023-Ideas",
+     "github": "lcompilers/lpython"
+    },
+    {
+     "name": "MNE-Python",
+     "url": "https://github.com/mne-tools/mne-python/wiki/GSoC-Ideas#project-ideas",
+     "github": "mne-tools/mne-python"
+    },
+    {
+     "name": "MSS - Mission Support System",
+     "url": "https://github.com/Open-MSS/MSS",
+     "github": "Open-MSS/MSS"
+    },
+    {
+     "name": "PyData/Sparse",
+     "url": "https://github.com/pydata/sparse/wiki/GSoC-2023-Ideas-Page",
+     "github": "pydata/sparse"
+    },
+    {
+     "name": "PyElastica",
+     "url": "https://github.com/GazzolaLab/PyElastica/discussions/225",
+     "github": "GazzolaLab/PyElastica"
+    },
+    {
+     "name": "Python Argentina"
+    },
+    {
+     "name": "xbitinfo",
+     "url": "https://github.com/observingClouds/xbitinfo/wiki/GSoC-Ideas",
+     "github": "observingClouds/xbitinfo"
+    },
+    {
+     "name": "Friends of the PSF"
+    }
+   ],
+   "2024": [
+    {
+     "name": "MSS - Mission Support System"
+    },
+    {
+     "name": "CVE Binary Tool",
+     "url": "https://github.com/intel/cve-bin-tool/issues/3550",
+     "github": "intel/cve-bin-tool"
+    },
+    {
+     "name": "xbitinfo",
+     "url": "https://github.com/observingClouds/xbitinfo/wiki/GSoC-Ideas",
+     "github": "observingClouds/xbitinfo"
+    },
+    {
+     "name": "MNE-Python",
+     "url": "https://github.com/mne-tools/mne-python/wiki/GSoC-Ideas",
+     "github": "mne-tools/mne-python"
+    },
+    {
+     "name": "pocketpy",
+     "url": "https://github.com/pocketpy/pocketpy",
+     "github": "pocketpy/pocketpy"
+    },
+    {
+     "name": "LPython",
+     "url": "https://github.com/lcompilers/lpython/wiki/GSoC-2024-Ideas",
+     "github": "lcompilers/lpython"
+    },
+    {
+     "name": "DIPY",
+     "url": "https://github.com/dipy/dipy/wiki/Google-Summer-of-Code-2024",
+     "github": "dipy/dipy"
+    },
+    {
+     "name": "FURY",
+     "url": "https://github.com/fury-gl/fury/discussions",
+     "github": "fury-gl/fury"
+    },
+    {
+     "name": "PyElastica",
+     "url": "https://github.com/GazzolaLab/PyElastica/discussions/326",
+     "github": "GazzolaLab/PyElastica"
+    },
+    {
+     "name": "D-SEAMS",
+     "url": "https://github.com/d-SEAMS/seams-core/discussions",
+     "github": "d-SEAMS/seams-core"
+    },
+    {
+     "name": "Seldon-code",
+     "url": "https://github.com/seldon-code",
+     "github": "seldon-code"
+    },
+    {
+     "name": "Borg Collective",
+     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2024-Ideas",
+     "github": "borgbase/vorta"
+    },
+    {
+     "name": "Python Argentina"
+    },
+    {
+     "name": "GNU Mailman"
+    },
+    {
+     "name": "Pwndbg",
+     "url": "https://github.com/pwndbg/pwndbg/issues/2014",
+     "github": "pwndbg/pwndbg"
+    },
+    {
+     "name": "Python",
+     "url": "https://github.com/python/cpython/issues/112301",
+     "github": "python/cpython"
+    },
+    {
+     "name": "Friends of the PSF"
+    }
+   ],
+   "2025": [
+    {
+     "name": "MSS - Mission Support System"
+    },
+    {
+     "name": "CVE Binary Tool",
+     "url": "https://github.com/intel/cve-bin-tool/issues/4732",
+     "github": "intel/cve-bin-tool"
+    },
+    {
+     "name": "Tölvera",
+     "url": "https://github.com/afhverjuekki/tolvera",
+     "github": "afhverjuekki/tolvera"
+    },
+    {
+     "name": "pocketpy",
+     "url": "https://github.com/pocketpy/pocketpy",
+     "github": "pocketpy/pocketpy"
+    },
+    {
+     "name": "Borg Collective",
+     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2025-Ideas",
+     "github": "borgbase/vorta"
+    },
+    {
+     "name": "MNE-Python",
+     "url": "https://github.com/mne-tools/mne-python/wiki/GSoC-Ideas",
+     "github": "mne-tools/mne-python"
+    },
+    {
+     "name": "ilastik",
+     "url": "https://github.com/ilastik/ilastik",
+     "github": "ilastik/ilastik"
+    },
+    {
+     "name": "PyLadiesCon",
+     "url": "https://github.com/pyladies/pyladiescon-portal/wiki/PyLadiesCon-Google-Summer-of-Code-2025-Ideas",
+     "github": "pyladies/pyladiescon-portal"
+    },
+    {
+     "name": "Open World Holidays Framework",
+     "url": "https://github.com/vacanza/holidays/issues/2345",
+     "github": "vacanza/holidays"
+    },
+    {
+     "name": "Pwndbg",
+     "url": "https://github.com/pwndbg/pwndbg/issues/2786",
+     "github": "pwndbg/pwndbg"
+    },
+    {
+     "name": "Friends of the PSF"
+    }
+   ],
+   "2026": [
+    {
+     "name": "pocketpy",
+     "url": "https://github.com/pocketpy/pocketpy",
+     "github": "pocketpy/pocketpy"
+    },
+    {
+     "name": "Borg Collective",
+     "url": "https://github.com/borgbase/vorta/wiki/Google-Summer-of-Code-2026-Ideas",
+     "github": "borgbase/vorta"
+    },
+    {
+     "name": "Open World Holidays Framework",
+     "url": "https://github.com/vacanza/holidays/wiki/GSoC-2026#project-ideas",
+     "github": "vacanza/holidays"
+    },
+    {
+     "name": "ilastik",
+     "url": "https://github.com/ilastik/ilastik",
+     "github": "ilastik/ilastik"
+    },
+    {
+     "name": "MNE-Python",
+     "url": "https://github.com/mne-tools/mne-python/wiki/GSoC-Ideas",
+     "github": "mne-tools/mne-python"
+    },
+    {
+     "name": "Pwndbg",
+     "url": "https://github.com/pwndbg/pwndbg/issues/3696",
+     "github": "pwndbg/pwndbg"
+    },
+    {
+     "name": "FURY",
+     "url": "https://github.com/fury-gl/fury/discussions/categories/gsoc-gsod",
+     "github": "fury-gl/fury"
+    },
+    {
+     "name": "DIPY",
+     "url": "https://github.com/dipy/dipy/discussions/categories/-gsoc-gsod",
+     "github": "dipy/dipy"
+    },
+    {
+     "name": "Not participating in GSoC2026"
+    },
+    {
+     "name": "Friends of the PSF"
+    }
+   ]
+  }
+ },
+ "r-project-for-statistical-computing": {
+  "name": "R project for statistical computing",
+  "github": "rstats-gsoc",
+  "membersByYear": {
+   "2016": {
+    "mablab": 1,
+    "mlr-org": 1
+   },
+   "2017": {
+    "mablab": 1,
+    "mlr-org": 1
+   },
+   "2018": {
+    "bd-R": 2
+   },
+   "2019": {
+    "bd-R": 2,
+    "DataSlingers": 1,
+    "vegawidget": 1
+   },
+   "2020": {
+    "bd-R": 1,
+    "rsqliteadmin": 1
+   },
+   "2021": {
+    "bd-R": 1,
+    "mlr-org": 1
+   },
+   "2022": {
+    "rsqliteadmin": 1
+   },
+   "2026": {
+    "rosetta-bioc": 1
+   }
+  },
+  "memberRepos": {
+   "mablab": {
+    "rpostgisLT": 2
+   },
+   "mlr-org": {
+    "mlr": 1,
+    "mlr3fairness": 1,
+    "mlrCPO": 1
+   },
+   "bd-R": {
+    "bdchecks": 3,
+    "bdDwC": 1,
+    "bdtools": 1,
+    "dashboard.demo": 1
+   },
+   "vegawidget": {
+    "ggvega": 1
+   },
+   "DataSlingers": {
+    "MoMA": 1
+   },
+   "rsqliteadmin": {
+    "rsqliteadmin": 2
+   },
+   "rosetta-bioc": {
+    "rosetta": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "the-julia-language": {
+  "name": "The Julia Language",
+  "github": "JuliaLang",
+  "membersByYear": {
+   "2017": {
+    "JuliaDiffEq": 2,
+    "JuliaLang": 1
+   },
+   "2019": {
+    "queryverse": 1
+   },
+   "2020": {
+    "FluxML": 1,
+    "JuliaGaussianProcesses": 1,
+    "SciML": 1
+   },
+   "2021": {
+    "JuliaReinforcementLearning": 1,
+    "JuliaSparse": 1
+   },
+   "2022": {
+    "xKDR": 2,
+    "JuliaAnimators": 1,
+    "JuliaML": 1,
+    "JuliaPluto": 1
+   },
+   "2023": {
+    "JuliaTopOpt": 1,
+    "TuringLang": 1
+   },
+   "2024": {
+    "JuliaGenAI": 2,
+    "JuliaHealth": 1,
+    "JuliaSymbolics": 1
+   },
+   "2025": {
+    "RimuQMC": 1,
+    "TuringLang": 1
+   },
+   "2026": {
+    "JuliaHealth": 2,
+    "JuliaMolSim": 1
+   }
+  },
+  "memberRepos": {
+   "JuliaDiffEq": {
+    "DiffEqOperators.jl": 1,
+    "NeuralNetDiffEq.jl": 1
+   },
+   "JuliaLang": {
+    "julialang.github.com": 1
+   },
+   "queryverse": {
+    "QuerySQLite.jl": 1
+   },
+   "FluxML": {
+    "Flux3D.jl": 1
+   },
+   "SciML": {
+    "Surrogates.jl": 1
+   },
+   "JuliaSparse": {
+    "SuiteSparseGraphBLAS.jl": 1
+   },
+   "JuliaReinforcementLearning": {
+    "GridWorlds.jl": 1
+   },
+   "xKDR": {
+    "GSoC": 2
+   },
+   "JuliaAnimators": {
+    "Javis.jl": 1
+   },
+   "JuliaPluto": {
+    "PlutoDesktop": 1
+   },
+   "JuliaML": {
+    "MLDatasets.jl": 1
+   },
+   "TuringLang": {
+    "JuliaBUGS.jl": 1,
+    "NormalizingFlows.jl": 1
+   },
+   "JuliaTopOpt": {
+    "SimpleTopOpt.jl": 1
+   },
+   "JuliaGenAI": {
+    "ColBERT.jl": 1,
+    "DocsScraper.jl": 1
+   },
+   "JuliaSymbolics": {
+    "Symbolics.jl": 1
+   },
+   "JuliaHealth": {
+    "KomaMRI.jl": 2,
+    "HealthLLM.jl": 1
+   },
+   "RimuQMC": {
+    "Rimu.jl": 1
+   },
+   "JuliaMolSim": {
+    "Molly.jl": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "the-linux-foundation": {
+  "name": "The Linux Foundation",
+  "github": "LinuxFoundationGSoC",
+  "membersByYear": {
+   "2016": {
+    "CanonicalLtd": 1
+   },
+   "2018": {
+    "OpenPrinting": 1
+   },
+   "2022": {
+    "kworkflow": 1
+   },
+   "2024": {
+    "analogdevicesinc": 1,
+    "OpenPrinting": 1,
+    "thesofproject": 1
+   },
+   "2025": {
+    "OpenPrinting": 3,
+    "spdx": 2,
+    "analogdevicesinc": 1
+   },
+   "2026": {
+    "OpenPrinting": 2
+   }
+  },
+  "memberRepos": {
+   "CanonicalLtd": {
+    "ceph_safe_disk": 1
+   },
+   "OpenPrinting": {
+    "fuzzing": 4,
+    "cups-filters": 1,
+    "go-mfp": 1,
+    "libpdfrip": 1
+   },
+   "kworkflow": {
+    "kworkflow": 1
+   },
+   "thesofproject": {
+    "sof": 1
+   },
+   "analogdevicesinc": {
+    "linux": 2
+   },
+   "spdx": {
+    "ntia-conformance-checker": 1,
+    "spdx-license-diff": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "uc-ospo": {
+  "name": "UC OSPO",
+  "github": "jlab-sensing",
+  "membersByYear": {
+   "2022": {
+    "The-OpenROAD-Project": 1
+   },
+   "2023": {
+    "jlab-sensing": 1
+   },
+   "2024": {
+    "The-OpenROAD-Project": 2,
+    "edulinq": 1,
+    "hpc-io": 1,
+    "jlab-sensing": 1,
+    "StatTag": 1
+   },
+   "2025": {
+    "BerkeleyLearnVerify": 1,
+    "p2plabsxyz": 1,
+    "UC-OSPO-Network": 1
+   },
+   "2026": {
+    "edulinq": 1,
+    "jlab-sensing": 1,
+    "nsb-ucsc": 1,
+    "ucsc-ospo": 1
+   }
+  },
+  "memberRepos": {
+   "The-OpenROAD-Project": {
+    "ORAssistant": 2,
+    "OpenLane": 1
+   },
+   "jlab-sensing": {
+    "DirtViz": 1,
+    "ENTS-backend": 1,
+    "ENTS-node-firmware": 1
+   },
+   "edulinq": {
+    "autograder-py": 1,
+    "lms-toolkit": 1
+   },
+   "StatTag": {
+    "StatWrap": 1
+   },
+   "hpc-io": {
+    "drishti-io": 1
+   },
+   "UC-OSPO-Network": {
+    "orb-showcase": 1
+   },
+   "BerkeleyLearnVerify": {
+    "Scenic": 1
+   },
+   "p2plabsxyz": {
+    "peersky-browser": 1
+   },
+   "nsb-ucsc": {
+    "nsb": 1
+   },
+   "ucsc-ospo": {
+    "ucsc-ospo.github.io": 1
+   }
+  },
+  "subOrgsByYear": {}
+ },
+ "wikimedia-foundation": {
+  "name": "Wikimedia Foundation",
+  "github": "wikimedia",
+  "membersByYear": {
+   "2016": {
+    "wikimedia": 1
+   },
+   "2017": {
+    "WikiEducationFoundation": 1
+   },
+   "2021": {
+    "wikimedia": 1
+   },
+   "2022": {
+    "commons-app": 1,
+    "wikimedia-gadgets": 1
+   },
+   "2023": {
+    "CanastaWiki": 1
+   }
+  },
+  "memberRepos": {
+   "wikimedia": {
+    "ifttt": 1,
+    "operations-software-bernard": 1
+   },
+   "WikiEducationFoundation": {
+    "WikiEduDashboard": 1
+   },
+   "commons-app": {
+    "apps-android-commons": 1
+   },
+   "wikimedia-gadgets": {
+    "Edit-Request-Wizard": 1
+   },
+   "CanastaWiki": {
+    "Canasta": 1
+   }
+  },
+  "subOrgsByYear": {}
+ }
+}

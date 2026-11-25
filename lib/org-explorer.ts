@@ -18,7 +18,11 @@ import { busiestRepo, type OrgIndex } from './org-index';
 import { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg, type LfxHistory } from './org-explorer-types';
 
 export { PROGRAM_FILTERS, type ProgramKey, type OrgCard, type OrgExplorerData, type GsocOrg } from './org-explorer-types';
-import { umbrellaMembers, type UmbrellaParent } from './org-explorer-types';
+import { umbrellaMembers, type UmbrellaDetail, type UmbrellaParent } from './org-explorer-types';
+import gsocUmbrellasJson from '../data/gsoc-umbrellas.json';
+
+/** What each umbrella's ideas lists and project code links say, by dataset slug. */
+export const GSOC_UMBRELLAS: Readonly<Record<string, UmbrellaDetail>> = gsocUmbrellasJson as unknown as Record<string, UmbrellaDetail>;
 
 /** The GSoC dataset (2016–2026), one record per organisation. */
 export const GSOC_ORGS: ReadonlyArray<GsocOrg> = gsocOrgsJson as GsocOrg[];
@@ -32,36 +36,59 @@ const GSOC_BY_LOGIN: ReadonlyMap<string, GsocOrg> = new Map(
 /** Umbrellas whose whole membership the explorer lists under a programme filter. */
 const UMBRELLA_PROGRAM: Record<string, ProgramKey> = { numfocus: 'numfocus', cncf: 'cncf', 'eclipse-foundation': 'eclipse' };
 
-/** The other direction: for every member project (lower-case login), the
- *  umbrellas it ran GSoC projects under, most projects first. */
+/** The other direction: for every sub-organisation with a GitHub login
+ *  (lower-case), the umbrellas whose ideas lists named it and whose GSoC
+ *  projects its code hosted, most projects first. */
 const GSOC_VIA_BY_LOGIN: ReadonlyMap<string, { login: string; parents: UmbrellaParent[] }> = (() => {
   const out = new Map<string, { login: string; parents: Map<string, UmbrellaParent> }>();
-  for (const o of GSOC_ORGS) {
-    for (const [year, counts] of Object.entries(o.umbrella?.membersByYear ?? {})) {
+  const parentFor = (slug: string, detail: UmbrellaDetail, login: string) => {
+    const lower = login.toLowerCase();
+    const e = out.get(lower) ?? { login, parents: new Map<string, UmbrellaParent>() };
+    const p = e.parents.get(slug) ?? { slug, name: detail.name, ...(detail.github ? { login: detail.github } : {}), listed: [], years: [], projects: 0, projectsByYear: {}, repos: detail.memberRepos?.[login] ?? {} };
+    e.parents.set(slug, p);
+    out.set(lower, e);
+    return p;
+  };
+  for (const [slug, detail] of Object.entries(GSOC_UMBRELLAS)) {
+    const self = detail.github?.toLowerCase();
+    for (const [year, counts] of Object.entries(detail.membersByYear)) {
       for (const [login, n] of Object.entries(counts)) {
-        const lower = login.toLowerCase();
         // A link into the umbrella's own account is not a member project.
-        if (o.github && lower === o.github.toLowerCase()) continue;
-        const e = out.get(lower) ?? { login, parents: new Map<string, UmbrellaParent>() };
-        const p = e.parents.get(o.slug) ?? { slug: o.slug, name: o.name, ...(o.github ? { login: o.github } : {}), years: [], projects: 0, projectsByYear: {}, repos: o.umbrella?.memberRepos?.[login] ?? {} };
+        if (login.toLowerCase() === self) continue;
+        const p = parentFor(slug, detail, login);
         p.years.push(Number(year));
         p.projects += n;
         p.projectsByYear[year] = (p.projectsByYear[year] ?? 0) + n;
-        e.parents.set(o.slug, p);
-        out.set(lower, e);
+      }
+    }
+    for (const [year, subs] of Object.entries(detail.subOrgsByYear)) {
+      for (const s of subs) {
+        const owner = s.github?.split('/')[0];
+        // Apache's sub-projects are repositories under apache itself: no card of their own.
+        if (!owner || owner.toLowerCase() === self) continue;
+        parentFor(slug, detail, owner).listed.push(Number(year));
       }
     }
   }
+  const uniq = (xs: number[]) => [...new Set(xs)].sort((a, b) => a - b);
   return new Map([...out].map(([lower, e]) => [lower, {
     login: e.login,
-    parents: [...e.parents.values()].map((p) => ({ ...p, years: [...new Set(p.years)].sort((a, b) => a - b) })).sort((a, b) => b.projects - a.projects || a.name.localeCompare(b.name)),
+    parents: [...e.parents.values()].map((p) => ({ ...p, years: uniq(p.years), listed: uniq(p.listed) })).sort((a, b) => b.projects - a.projects || b.listed.length - a.listed.length || a.name.localeCompare(b.name)),
   }]));
 })();
 
 function umbrellaOf(o: GsocOrg): OrgCard['umbrella'] | undefined {
-  if (!o.umbrella) return undefined;
+  const detail = o.umbrella ? GSOC_UMBRELLAS[o.slug] : undefined;
+  if (!detail) return undefined;
   const program = UMBRELLA_PROGRAM[o.slug];
-  return { members: umbrellaMembers(o).length, ...(program ? { program } : {}) };
+  const years = Object.keys(detail.subOrgsByYear).map(Number);
+  const latestYear = years.length ? Math.max(...years) : undefined;
+  return {
+    members: umbrellaMembers(detail).length,
+    subOrgs: latestYear ? detail.subOrgsByYear[String(latestYear)].length : 0,
+    ...(latestYear ? { latestYear } : {}),
+    ...(program ? { program } : {}),
+  };
 }
 
 /** Lower-case GitHub logins of the GSoC umbrella organisations: their own
@@ -191,7 +218,7 @@ export function buildOrgExplorer(input: {
     const slots = GSOC_SLOTS_BY_LOGIN.get(lower);
     if (slots && Object.keys(slots).length) card.gsocSlots = slots;
     if (via) {
-      // A member project took part in GSoC through its umbrella: it is a GSoC
+      // A sub-organisation took part in GSoC through its umbrella: it is a GSoC
       // organisation here too, with the umbrella's slots that went to it.
       card.via = via.parents;
       if (!card.programs.includes('gsoc')) card.programs.push('gsoc');
@@ -199,7 +226,7 @@ export function buildOrgExplorer(input: {
       if (!card.gsocSlots) {
         const acc: Record<string, number> = {};
         for (const p of via.parents) for (const [y, n] of Object.entries(p.projectsByYear)) acc[y] = (acc[y] ?? 0) + n;
-        card.gsocSlots = acc;
+        if (Object.keys(acc).length) card.gsocSlots = acc;
       }
     }
     const lfx = LFX_BY_LOGIN.get(lower);

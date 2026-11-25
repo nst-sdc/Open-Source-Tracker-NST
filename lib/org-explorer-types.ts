@@ -60,11 +60,16 @@ export interface OrgCard {
    *  member projects. `members` counts the member organisations seen in the
    *  projects' code links; `program` is the explorer filter that lists the
    *  whole membership, when there is one. */
-  umbrella?: { members: number; program?: ProgramKey };
-  /** A member project of one or more GSoC umbrellas: the umbrellas its GSoC
-   *  projects were mentored under, with the years and project counts the
-   *  projects' code links show. Partial: projects that linked no code are
-   *  not counted. */
+  umbrella?: {
+    /** Member organisations seen in the projects' code links. */
+    members: number;
+    /** Sub-organisations on the latest ideas list, and that list's year. */
+    subOrgs: number;
+    latestYear?: number;
+    program?: ProgramKey;
+  };
+  /** A sub-organisation of one or more GSoC umbrellas: the umbrellas whose
+   *  ideas lists named it and whose GSoC projects its code hosted. */
   via?: UmbrellaParent[];
 }
 
@@ -73,6 +78,9 @@ export interface UmbrellaParent {
   slug: string;
   name: string;
   login?: string;
+  /** Years the umbrella's ideas list named this sub-organisation. */
+  listed: number[];
+  /** Years its code hosted the umbrella's GSoC projects, and how many. */
   years: number[];
   projects: number;
   projectsByYear: Record<string, number>;
@@ -118,24 +126,41 @@ export interface GsocOrg {
   topics: string[];
   projects: number;
   projectsByYear: Record<string, number>;
-  /** Umbrella organisations only: member organisations per year, as the
-   *  projects' code links name them, with how many projects each ran. */
-  umbrella?: {
-    membersByYear: Record<string, Record<string, number>>;
-    /** The repositories those projects were in, per member, with project counts. */
-    memberRepos?: Record<string, Record<string, number>>;
-  };
+  /** An umbrella organisation: GSoC counts its slots as one organisation, the
+   *  work happens in sub-organisations. The detail is in data/gsoc-umbrellas.json. */
+  umbrella?: boolean;
+}
+
+/** One sub-organisation as an umbrella's ideas list names it. */
+export interface UmbrellaSubOrg {
+  name: string;
+  /** Its ideas page, as the umbrella links it. */
+  url?: string;
+  /** "owner" or "owner/repo" on GitHub, when the list links it or GitHub confirmed it. */
+  github?: string;
+}
+
+/** data/gsoc-umbrellas.json: what an umbrella's ideas lists and its projects' code links say. */
+export interface UmbrellaDetail {
+  name: string;
+  github: string | null;
+  /** Sub-organisations per year from the umbrella's own ideas list. */
+  subOrgsByYear: Record<string, UmbrellaSubOrg[]>;
+  /** Member organisations per year, as the projects' code links name them, with how many projects each ran. */
+  membersByYear: Record<string, Record<string, number>>;
+  /** The repositories those projects were in, per member, with project counts. */
+  memberRepos?: Record<string, Record<string, number>>;
 }
 
 export interface UmbrellaMember { login: string; projects: number; years: number[]; repos: Record<string, number> }
 
-/** An umbrella's member organisations across every year, most projects first. */
-export function umbrellaMembers(org: Pick<GsocOrg, 'umbrella'>): UmbrellaMember[] {
+/** An umbrella's member organisations seen in project code links across every year, most projects first. */
+export function umbrellaMembers(detail: Pick<UmbrellaDetail, 'membersByYear' | 'memberRepos'>): UmbrellaMember[] {
   const acc = new Map<string, UmbrellaMember>();
-  for (const [year, counts] of Object.entries(org.umbrella?.membersByYear ?? {})) {
+  for (const [year, counts] of Object.entries(detail.membersByYear ?? {})) {
     for (const [login, n] of Object.entries(counts)) {
       const key = login.toLowerCase();
-      const m = acc.get(key) ?? { login, projects: 0, years: [], repos: org.umbrella?.memberRepos?.[login] ?? {} };
+      const m = acc.get(key) ?? { login, projects: 0, years: [], repos: detail.memberRepos?.[login] ?? {} };
       m.projects += n;
       m.years.push(Number(year));
       acc.set(key, m);
