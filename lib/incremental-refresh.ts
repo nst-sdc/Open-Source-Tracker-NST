@@ -29,6 +29,7 @@ import { refreshOrgLanguages } from '@/lib/org-languages';
 import { primeVouchedOrgs } from '@/lib/kv-vouched-orgs';
 import { primePrValueWeighting } from '@/lib/kv-pr-value';
 import { buildCommunityTimeline, readCommunityTimeline, writeCommunityTimeline, timelineIsStale } from '@/lib/community-timeline';
+import { reconcileRosterForForms } from '@/lib/kv-forms';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { revalidatePath } from 'next/cache';
@@ -46,6 +47,16 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
   //    tokens are currently available (cursor-based round-robin, O(1) KV reads)
   await primeVouchedOrgs();
   await primePrValueWeighting();
+
+  // Forms that add respondents to the roster: anyone whose add was deferred
+  // by a busy roster lock, or lost to a roster outage, goes on now.
+  try {
+    const r = await reconcileRosterForForms();
+    if (r.added > 0 || r.deferred > 0) console.log(`[Incremental Refresh] form roster reconcile: ${r.added} added, ${r.deferred} deferred of ${r.checked} responses`);
+  } catch (err) {
+    console.error('[Incremental Refresh] form roster reconcile failed:', err);
+  }
+
   console.log('[Incremental Refresh] Starting stale profile updates...');
   const { updated, attempted } = await updateStaleProfiles();
   console.log('[Incremental Refresh] Updated users:', updated, 'Attempted users:', attempted);

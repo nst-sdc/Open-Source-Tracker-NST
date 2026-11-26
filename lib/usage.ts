@@ -20,7 +20,7 @@
  *   usage:u:<day>      HLL   signed-in users (GitHub account ids)
  */
 import { createHash } from 'node:crypto';
-import { kvConfigured, kvGet, kvPipeline, kvSet } from './kv';
+import { runCommands } from './kv-commands';
 
 export const USAGE_RETENTION_DAYS = 400;
 export const USAGE_MAX_RANGE_DAYS = 365;
@@ -108,42 +108,9 @@ export function visitorKey(clientId: unknown, ip: string, userAgent: string): st
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────
-// Development has no Redis, so the five commands used here are also
-// implemented over one JSON document in the disk fallback. Sets stand in for
-// HyperLogLogs there, which is exact and fine at development sizes.
-
-const LOCAL_KEY = 'usage_local';
-type LocalStore = Record<string, Record<string, number> | string[]>;
-
-function runLocal(store: LocalStore, [op, key, ...args]: string[]): unknown {
-  switch (op) {
-    case 'HINCRBY': {
-      const hash = (store[key] ??= {}) as Record<string, number>;
-      hash[args[0]] = (hash[args[0]] ?? 0) + Number(args[1]);
-      return hash[args[0]];
-    }
-    case 'PFADD': {
-      const set = (store[key] ??= []) as string[];
-      if (set.includes(args[0])) return 0;
-      set.push(args[0]);
-      return 1;
-    }
-    case 'HGETALL':
-      return Object.entries((store[key] ?? {}) as Record<string, number>).flatMap(([k, v]) => [k, String(v)]);
-    case 'PFCOUNT':
-      return new Set([key, ...args].flatMap((k) => (store[k] ?? []) as string[])).size;
-    default:
-      return null; // EXPIRE: nothing to do on disk
-  }
-}
-
-async function run(commands: string[][]): Promise<{ ok: boolean; results: unknown[] }> {
-  if (kvConfigured()) return kvPipeline(commands);
-  const store = (await kvGet<LocalStore>(LOCAL_KEY)) ?? {};
-  const results = commands.map((c) => runLocal(store, c));
-  if (commands.some((c) => c[0] === 'HINCRBY' || c[0] === 'PFADD')) await kvSet(LOCAL_KEY, store);
-  return { ok: true, results };
-}
+// Commands go through lib/kv-commands.ts, which has the development
+// fallback over one JSON document.
+const run = runCommands;
 
 // ─── Write ───────────────────────────────────────────────────────────────────
 
