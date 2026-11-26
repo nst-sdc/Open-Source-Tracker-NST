@@ -73,7 +73,8 @@ export async function POST(request: Request, { params }: Params) {
   const { response, created } = result;
   void recordFormEvent(slug, created ? 'registered' : 'updated').catch(() => {});
 
-  let roster: 'added' | 'already' | 'updated' | 'unavailable' | 'off' = 'off';
+  // 'deferred': the roster lock stayed busy; the refresh tick's reconcile adds them within the hour.
+  let roster: 'added' | 'already' | 'updated' | 'unavailable' | 'deferred' | 'off' = 'off';
   if (def.addToRoster) {
     roster = await ensureOnRoster(viewer.login, checked.answers);
     if (roster === 'added') {

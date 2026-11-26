@@ -1,16 +1,27 @@
 /**
  * lib/kv-forms.ts — storage for admin-defined forms and their responses.
  *
- * Keys: `forms` (FormDef[]) and `form_responses:<slug>` (FormResponse[]).
- * One response per GitHub account per form, keyed on the numeric id so a
- * rename cannot duplicate it. Identity always comes from the session.
+ * Keys: `forms` (FormDef[], admin-only writes) and `form_resp:<slug>`, a
+ * hash of GitHub id -> response JSON. One response per GitHub account per
+ * form, keyed on the numeric id so a rename cannot duplicate it. Identity
+ * always comes from the session.
+ *
+ * The hash matters: HSET of one field is atomic in the store, so two
+ * students submitting in the same instant on different pods cannot
+ * overwrite each other, which a read-modify-write of one JSON list would.
+ * Roster additions still rewrite the roster list, so they run under a
+ * short lock and are reconciled by the refresh tick (reconcileRosterForForms)
+ * in case the lock was busy.
  */
-import { kvGet, kvSet } from './kv';
+import { kvDel, kvGet, kvSet } from './kv';
+import { hashEntries, runCommands, withLock } from './kv-commands';
 import { addStudent, getStudentsKV, findStudent, updateStudentDetails, RosterUnavailableError } from './kv-students';
 import { DEFAULT_FORMS, rosterDetails, type FormDef, type FormResponse, type RosterCampus, type RosterYear } from './form-defs';
 
 export const FORMS_KEY = 'forms';
-export const responsesKey = (slug: string) => `form_responses:${slug}`;
+export const responsesKey = (slug: string) => `form_resp:${slug}`;
+/** The pre-hash list key, carried over on first read. */
+const legacyListKey = (slug: string) => `form_responses:${slug}`;
 
 /** Every definition; seeds the defaults the first time, so /interest exists on day one. */
 export async function getForms(): Promise<FormDef[]> {
@@ -42,17 +53,36 @@ export async function deleteForm(slug: string): Promise<{ ok: boolean; error?: s
   const kept = forms.filter((f) => f.slug !== slug);
   if (kept.length === forms.length) return { ok: false, error: 'No such form.' };
   if (!(await kvSet(FORMS_KEY, kept))) return { ok: false, error: 'The store did not accept the change.' };
-  await kvSet(responsesKey(slug), []);
+  await runCommands([['DEL', responsesKey(slug)]]);
+  await kvDel(legacyListKey(slug));
   return { ok: true };
 }
 
 interface LegacyInterest { githubId: number; github: string; avatarUrl?: string; name: string; email: string; batch: string; campus: string; channel?: string; createdAt: string; updatedAt: string; rosterAddedAt?: string }
 const LEGACY_CHANNEL: Record<string, string> = { whatsapp: 'WhatsApp', gchat: 'Google Spaces', email: 'Email' };
 
-export async function getResponses(slug: string): Promise<FormResponse[]> {
-  const list = await kvGet<FormResponse[]>(responsesKey(slug));
-  if (Array.isArray(list)) return list;
-  // The interest form predates this module; carry its rows over once.
+const parseRow = (raw: string): FormResponse | null => {
+  try {
+    const r = JSON.parse(raw) as FormResponse;
+    return r && typeof r === 'object' && typeof r.githubId === 'number' ? r : null;
+  } catch {
+    return null;
+  }
+};
+
+async function writeRows(slug: string, rows: FormResponse[]): Promise<boolean> {
+  if (rows.length === 0) return true;
+  const { ok } = await runCommands([['HSET', responsesKey(slug), ...rows.flatMap((r) => [String(r.githubId), JSON.stringify(r)])]]);
+  return ok;
+}
+
+/** Rows written before the hash existed (a JSON list, or the interest form's own key), moved over once. */
+async function migrateLegacy(slug: string): Promise<FormResponse[]> {
+  const list = await kvGet<FormResponse[]>(legacyListKey(slug));
+  if (Array.isArray(list) && list.length > 0) {
+    if (await writeRows(slug, list)) await kvDel(legacyListKey(slug));
+    return list;
+  }
   if (slug === 'interest') {
     const legacy = await kvGet<LegacyInterest[]>('interest_registrations');
     if (Array.isArray(legacy) && legacy.length > 0) {
@@ -65,31 +95,45 @@ export async function getResponses(slug: string): Promise<FormResponse[]> {
         updatedAt: r.updatedAt,
         ...(r.rosterAddedAt ? { rosterAddedAt: r.rosterAddedAt } : {}),
       }));
-      await kvSet(responsesKey(slug), rows);
+      if (await writeRows(slug, rows)) await kvDel('interest_registrations');
       return rows;
     }
   }
   return [];
 }
 
+export async function getResponses(slug: string): Promise<FormResponse[]> {
+  const { ok, results } = await runCommands([['HGETALL', responsesKey(slug)]]);
+  if (!ok) return [];
+  const rows = Object.values(hashEntries(results[0])).map(parseRow).filter((r): r is FormResponse => r !== null);
+  if (rows.length > 0) return rows;
+  return migrateLegacy(slug);
+}
+
 export async function findResponse(slug: string, githubId: number): Promise<FormResponse | null> {
+  const { ok, results } = await runCommands([['HGET', responsesKey(slug), String(githubId)]]);
+  if (!ok) return null;
+  if (typeof results[0] === 'string') return parseRow(results[0]);
+  // An empty hash may mean rows not yet carried over.
   return (await getResponses(slug)).find((r) => r.githubId === githubId) ?? null;
 }
 
-/** Inserts or updates the signed-in account's response; the io is injectable for tests. */
+/**
+ * Inserts or updates the signed-in account's response with one HSET, so
+ * concurrent submissions from other accounts can never be lost. The io is
+ * injectable for tests.
+ */
 export async function upsertResponse(
   slug: string,
   viewer: { id: number; login: string; avatarUrl?: string },
   answers: Record<string, string>,
   nowIso = new Date().toISOString(),
-  io: { read: () => Promise<FormResponse[]>; write: (list: FormResponse[]) => Promise<boolean> } = {
-    read: () => getResponses(slug),
-    write: (list) => kvSet(responsesKey(slug), list),
+  io: { read: (githubId: number) => Promise<FormResponse | null>; write: (r: FormResponse) => Promise<boolean> } = {
+    read: (githubId) => findResponse(slug, githubId),
+    write: (r) => writeRows(slug, [r]),
   },
 ): Promise<{ ok: true; response: FormResponse; created: boolean } | { ok: false; error: string }> {
-  const list = await io.read();
-  const i = list.findIndex((r) => r.githubId === viewer.id);
-  const base = i >= 0 ? list[i] : null;
+  const base = await io.read(viewer.id);
   const response: FormResponse = {
     githubId: viewer.id,
     github: viewer.login,
@@ -99,49 +143,85 @@ export async function upsertResponse(
     updatedAt: nowIso,
     ...(base?.rosterAddedAt ? { rosterAddedAt: base.rosterAddedAt } : {}),
   };
-  if (i >= 0) list[i] = response;
-  else list.push(response);
-  if (!(await io.write(list))) return { ok: false, error: 'The store did not accept your response. Please try again.' };
-  return { ok: true, response, created: i < 0 };
+  if (!(await io.write(response))) return { ok: false, error: 'The store did not accept your response. Please try again.' };
+  return { ok: true, response, created: base === null };
 }
 
 export async function removeResponse(slug: string, githubId: number): Promise<{ ok: boolean; removed: boolean }> {
-  const list = await getResponses(slug);
-  const kept = list.filter((r) => r.githubId !== githubId);
-  if (kept.length === list.length) return { ok: true, removed: false };
-  return { ok: await kvSet(responsesKey(slug), kept), removed: true };
+  await getResponses(slug); // carries legacy rows over first, so the delete is real
+  const { ok, results } = await runCommands([['HDEL', responsesKey(slug), String(githubId)]]);
+  return { ok, removed: Number(results[0]) > 0 };
 }
 
 export async function markRosterAdded(slug: string, githubId: number, nowIso = new Date().toISOString()): Promise<void> {
-  const list = await getResponses(slug);
-  const row = list.find((r) => r.githubId === githubId);
+  const row = await findResponse(slug, githubId);
   if (!row || row.rosterAddedAt) return;
-  row.rosterAddedAt = nowIso;
-  await kvSet(responsesKey(slug), list);
+  await writeRows(slug, [{ ...row, rosterAddedAt: nowIso }]);
 }
+
+/** The lock every roster list rewrite from a form takes; see withLock. */
+export const ROSTER_LOCK = 'roster';
+const ROSTER_LOCK_TTL_MS = 5000;
 
 /**
  * Puts the account on the roster if it is not there, with the year and
  * campus the form collected; fills only the fields the roster lacks for a
- * student already on it. Never throws for a roster outage.
+ * student already on it. The roster is one list rewritten whole, so this
+ * runs under a short lock; if the lock stays busy the add is 'deferred'
+ * and reconcileRosterForForms does it on the next refresh tick. Never
+ * throws for a roster outage.
  */
 export async function ensureOnRoster(
   login: string,
   answers: Record<string, string>,
   deps = { getStudentsKV, addStudent, updateStudentDetails },
-): Promise<'added' | 'already' | 'updated' | 'unavailable'> {
+  lock: typeof withLock = withLock,
+): Promise<'added' | 'already' | 'updated' | 'unavailable' | 'deferred'> {
   const { year, campus } = rosterDetails(answers);
   try {
-    const existing = findStudent(await deps.getStudentsKV(), login);
-    if (!existing) {
-      const res = await deps.addStudent(login, year, campus);
-      return res.ok ? 'added' : 'already';
-    }
-    if ((existing.year || !year) && (existing.campus || !campus)) return 'already';
-    const res = await deps.updateStudentDetails(login, (existing.year ?? year) as RosterYear | undefined, (existing.campus ?? campus) as RosterCampus | undefined);
-    return res.ok ? 'updated' : 'already';
+    const result = await lock(ROSTER_LOCK, ROSTER_LOCK_TTL_MS, async () => {
+      const existing = findStudent(await deps.getStudentsKV(), login);
+      if (!existing) {
+        const res = await deps.addStudent(login, year, campus);
+        return res.ok ? 'added' : 'already';
+      }
+      if ((existing.year || !year) && (existing.campus || !campus)) return 'already';
+      const res = await deps.updateStudentDetails(login, (existing.year ?? year) as RosterYear | undefined, (existing.campus ?? campus) as RosterCampus | undefined);
+      return res.ok ? 'updated' : 'already';
+    });
+    return result ?? 'deferred';
   } catch (err) {
     if (err instanceof RosterUnavailableError) return 'unavailable';
     throw err;
   }
+}
+
+/**
+ * Safety net for add-to-roster forms: every response whose account is not
+ * on the roster gets added now (a submission that was deferred by a busy
+ * lock, or a roster outage at the time). Called by the refresh tick.
+ */
+export async function reconcileRosterForForms(
+  deps = { getStudentsKV, addStudent, updateStudentDetails },
+  lock: typeof withLock = withLock,
+): Promise<{ checked: number; added: number; deferred: number }> {
+  const out = { checked: 0, added: 0, deferred: 0 };
+  const forms = (await getForms()).filter((f) => f.addToRoster);
+  if (forms.length === 0) return out;
+  const roster = new Set((await deps.getStudentsKV()).map((s) => s.github.toLowerCase()));
+  for (const form of forms) {
+    for (const r of await getResponses(form.slug)) {
+      out.checked++;
+      if (roster.has(r.github.toLowerCase())) continue;
+      const result = await ensureOnRoster(r.github, r.answers, deps, lock);
+      if (result === 'added') {
+        out.added++;
+        roster.add(r.github.toLowerCase());
+        await markRosterAdded(form.slug, r.githubId);
+      } else if (result === 'deferred' || result === 'unavailable') {
+        out.deferred++;
+      }
+    }
+  }
+  return out;
 }
