@@ -4,6 +4,7 @@ import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-lim
 import { findInterestRegistration, upsertInterestRegistration, validateInterestInput, ensureOnRoster, markRosterAdded } from '@/lib/kv-interest';
 import { invalidateSummaryCache } from '@/lib/summary-cache';
 import { revalidatePath } from 'next/cache';
+import { recordInterestEvent } from '@/lib/usage';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     authenticated: true,
     viewer: { login: viewer.login, name: viewer.name, avatarUrl: viewer.avatarUrl },
-    registration: registration ? { name: registration.name, email: registration.email, batch: registration.batch, campus: registration.campus, createdAt: registration.createdAt, updatedAt: registration.updatedAt } : null,
+    registration: registration ? { name: registration.name, email: registration.email, batch: registration.batch, campus: registration.campus, channel: registration.channel ?? null, createdAt: registration.createdAt, updatedAt: registration.updatedAt } : null,
   });
 }
 
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
   const result = await upsertInterestRegistration({ id: viewer.id, login: viewer.login, avatarUrl: viewer.avatarUrl }, checked.input);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 503 });
   const { registration, created } = result;
+  void recordInterestEvent(created ? 'registered' : 'updated').catch(() => {});
 
   // Registering is joining: the account goes on the roster so its work is
   // counted from the next refresh. A roster outage is reported, not fatal.
@@ -69,6 +71,6 @@ export async function POST(request: Request) {
     ok: true,
     created,
     roster,
-    registration: { name: registration.name, email: registration.email, batch: registration.batch, campus: registration.campus, createdAt: registration.createdAt, updatedAt: registration.updatedAt },
+    registration: { name: registration.name, email: registration.email, batch: registration.batch, campus: registration.campus, channel: registration.channel ?? null, createdAt: registration.createdAt, updatedAt: registration.updatedAt },
   }, { status: created ? 201 : 200 });
 }

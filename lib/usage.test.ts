@@ -10,7 +10,7 @@ vi.mock('./kv', () => {
   };
 });
 const kv = await import('./kv');
-const { usageDay, usageHour, usageDays, normalizePath, isBot, referrerHost, visitorKey, recordPageview, readUsage } = await import('./usage');
+const { usageDay, usageHour, usageDays, normalizePath, isBot, referrerHost, visitorKey, recordPageview, readUsage, recordInterestEvent, readInterestUsage, isInterestEvent } = await import('./usage');
 
 describe('usage: days are Indian days', () => {
   it('rolls over at 18:30 UTC', () => {
@@ -87,5 +87,29 @@ describe('usage: record and report', () => {
     expect(r.days).toHaveLength(30);
     expect(r.totalViews).toBe(0);
     expect(r.pages).toEqual([]);
+  });
+});
+
+describe('interest funnel', () => {
+  it('counts events per day, distinct openers across the range, and ignores unknown events', async () => {
+    const mon = new Date('2026-11-30T08:00:00Z');
+    const tue = new Date('2026-12-01T08:00:00Z');
+    await recordInterestEvent('open', 'a', mon);
+    await recordInterestEvent('open', 'a', mon);
+    await recordInterestEvent('open', 'b', mon);
+    await recordInterestEvent('signin', 'a', mon);
+    await recordInterestEvent('form', 'a', mon);
+    await recordInterestEvent('registered', null, mon);
+    await recordInterestEvent('go:gsoc', 'a', mon);
+    await recordInterestEvent('open', 'a', tue);
+    await recordInterestEvent('done', 'a', tue);
+    const r = (await readInterestUsage(7, tue))!;
+    expect(r.days.at(-2)).toEqual({ day: '2026-11-30', open: 3, form: 1, registered: 1 });
+    expect(r.days.at(-1)).toEqual({ day: '2026-12-01', open: 1, form: 0, registered: 0 });
+    expect(r.openers).toBe(2);
+    expect(r.totals).toMatchObject({ open: 4, signin: 1, form: 1, done: 1, registered: 1, updated: 0, 'go:gsoc': 1, 'go:lfx': 0 });
+    expect(isInterestEvent('go:gsoc')).toBe(true);
+    expect(isInterestEvent('go:evil')).toBe(false);
+    expect(normalizePath('/interest')).toBe('/interest');
   });
 });

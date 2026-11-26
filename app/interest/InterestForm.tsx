@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BATCHES, CAMPUSES, type Batch, type Campus } from '@/lib/interest-form';
+import { BATCHES, CAMPUSES, CHANNELS, channelLabel, type Batch, type Campus, type Channel } from '@/lib/interest-form';
 
 /**
  * The open-source interest form. Identity comes from the GitHub sign-in;
@@ -10,9 +10,21 @@ import { BATCHES, CAMPUSES, type Batch, type Campus } from '@/lib/interest-form'
  * shows what they registered and lets them update it.
  */
 interface Viewer { login: string; name: string; avatarUrl: string }
-interface Registration { name: string; email: string; batch: Batch; campus: Campus; createdAt: string; updatedAt: string }
+interface Registration { name: string; email: string; batch: Batch; campus: Campus; channel: Channel | null; createdAt: string; updatedAt: string }
 
 const FORM_PATH = '/interest';
+
+/** One funnel event, never awaited and never allowed to throw. Counts only; see lib/usage.ts. */
+function track(event: string) {
+  try {
+    let v: string | null = null;
+    try { v = localStorage.getItem('ost_visitor'); } catch { /* private mode */ }
+    const body = JSON.stringify({ e: event, v });
+    if (!navigator.sendBeacon?.('/api/interest/event', body)) {
+      void fetch('/api/interest/event', { method: 'POST', body, keepalive: true }).catch(() => {});
+    }
+  } catch { /* nothing to do */ }
+}
 const SIGN_IN = `/api/auth/github?next=${encodeURIComponent(FORM_PATH)}`;
 
 const selectStyle = {
@@ -26,11 +38,11 @@ const labelClass = 'block text-xs font-[550] text-ink-soft uppercase tracking-wi
 
 /** The summer programmes named on the registered screen. */
 const PROGRAMMES = [
-  { name: 'GSoC', href: '/programs#gsoc' },
-  { name: 'LFX Mentorship', href: '/programs#lfx' },
-  { name: 'Summer of Bitcoin', href: '/organizations?program=sob' },
-  { name: 'European Summer of Code', href: '/organizations?program=esoc' },
-  { name: 'Outreachy', href: '/programs#outreachy' },
+  { name: 'GSoC', href: '/programs#gsoc', event: 'go:gsoc' },
+  { name: 'LFX Mentorship', href: '/programs#lfx', event: 'go:lfx' },
+  { name: 'Summer of Bitcoin', href: '/organizations?program=sob', event: 'go:sob' },
+  { name: 'European Summer of Code', href: '/organizations?program=esoc', event: 'go:esoc' },
+  { name: 'Outreachy', href: '/programs#outreachy', event: 'go:outreachy' },
 ];
 
 const when = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -43,11 +55,13 @@ export function InterestForm() {
   const [email, setEmail] = useState('');
   const [batch, setBatch] = useState<Batch | ''>('');
   const [campus, setCampus] = useState<Campus | ''>('');
+  const [channel, setChannel] = useState<Channel | ''>('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
+    track('open');
     fetch('/api/interest')
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
@@ -61,10 +75,13 @@ export function InterestForm() {
           setEmail(data.registration.email);
           setBatch(data.registration.batch);
           setCampus(data.registration.campus);
+          setChannel(data.registration.channel ?? '');
           setPhase('done');
+          track('done');
         } else {
           setName(data.viewer.name || '');
           setPhase('form');
+          track('form');
         }
       })
       .catch(() => { if (!cancelled) setPhase('unavailable'); });
@@ -79,7 +96,7 @@ export function InterestForm() {
       const res = await fetch('/api/interest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, batch, campus }),
+        body: JSON.stringify({ name, email, batch, campus, channel }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) { setPhase('anonymous'); return; }
@@ -129,11 +146,12 @@ export function InterestForm() {
               </p>
               <ul className="text-ink-soft text-sm space-y-1.5">
                 <li>· Your GitHub account identifies you, so there is nothing to type twice.</li>
-                <li>· We ask for your name, college email, batch and campus.</li>
+                <li>· We ask for your name, college email, batch, campus, and where you actually read messages.</li>
                 <li>· You can come back and update it any time.</li>
               </ul>
               <a
                 href={SIGN_IN}
+                onClick={() => track('signin')}
                 className="w-full bg-brand-solid hover:bg-brand-solid-hover text-white font-[550] py-3.5 rounded-2xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -159,12 +177,12 @@ export function InterestForm() {
             <div className="space-y-5">
               <div className="bg-success-0 border border-success-100 rounded-2xl p-4 text-success-600 text-sm leading-snug">
                 <p className="font-[650]">Thank you, {existing.name.split(' ')[0]}. You&apos;re registered.</p>
-                <p className="mt-1">We&apos;ll write to <span className="font-[600]">{existing.email}</span>.</p>
+                <p className="mt-1">We&apos;ll write to <span className="font-[600]">{existing.email}</span>{existing.channel ? <> and ping you on <span className="font-[600]">{channelLabel(existing.channel)}</span></> : null}.</p>
               </div>
 
               <p className="text-ink-mid text-sm leading-relaxed">
                 This tracker counts every pull request and issue NST students open on GitHub, and your account now counts too.{' '}
-                <Link href="/contributors" className="text-violet-600 hover:text-violet-500 underline font-[550] whitespace-nowrap">See the leaderboard →</Link>
+                <Link href="/contributors" onClick={() => track('go:leaderboard')} className="text-violet-600 hover:text-violet-500 underline font-[550] whitespace-nowrap">See the leaderboard →</Link>
               </p>
 
               <p className="text-ink-mid text-sm leading-relaxed">
@@ -172,10 +190,10 @@ export function InterestForm() {
                 {PROGRAMMES.map((p, i) => (
                   <span key={p.name}>
                     {i > 0 && ', '}
-                    <Link href={p.href} className="text-violet-600 hover:text-violet-500 underline font-[550]">{p.name}</Link>
+                    <Link href={p.href} onClick={() => track(p.event)} className="text-violet-600 hover:text-violet-500 underline font-[550]">{p.name}</Link>
                   </span>
                 ))}
-                {' '}and <Link href="/programs" className="text-violet-600 hover:text-violet-500 underline font-[550]">more</Link>.
+                {' '}and <Link href="/programs" onClick={() => track('go:more')} className="text-violet-600 hover:text-violet-500 underline font-[550]">more</Link>.
               </p>
 
               <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
@@ -215,6 +233,19 @@ export function InterestForm() {
                 </div>
               </div>
 
+              <fieldset className="space-y-2">
+                <legend className={labelClass}>Where do you actually read messages?</legend>
+                <p className="text-ink-soft text-xs">Pick the one you&apos;d notice first.</p>
+                <div className="flex flex-wrap gap-2 pt-0.5">
+                  {CHANNELS.map((c) => (
+                    <label key={c.key} className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-colors ${channel === c.key ? 'border-brand-500 bg-brand-0 text-brand-700 font-[550]' : 'border-line text-ink-mid hover:border-line-strong'}`}>
+                      <input type="radio" name="channel" value={c.key} checked={channel === c.key} onChange={() => setChannel(c.key)} className="sr-only" required />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               {error && (
                 <div className="flex items-start gap-3 bg-error-0 border border-error-100 rounded-2xl p-4 text-error-600 text-sm">
                   <p className="leading-snug">{error}</p>
@@ -223,7 +254,7 @@ export function InterestForm() {
 
               <button
                 type="submit"
-                disabled={submitting || !name.trim() || !email.trim() || !batch || !campus}
+                disabled={submitting || !name.trim() || !email.trim() || !batch || !campus || !channel}
                 className="w-full bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-[550] py-3.5 rounded-2xl transition-all shadow-brand-btn hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {submitting ? 'Saving…' : existing ? 'Save changes' : 'Register'}
@@ -237,9 +268,9 @@ export function InterestForm() {
 
         <div className="mt-6 text-center text-xs text-ink-soft">
           Already contributing? See the{' '}
-          <Link href="/contributors" className="text-violet-600 hover:text-violet-500 underline font-[500]">leaderboard</Link>
+          <Link href="/contributors" onClick={() => track('go:leaderboard')} className="text-violet-600 hover:text-violet-500 underline font-[500]">leaderboard</Link>
           {' '}or{' '}
-          <Link href="/join" className="text-violet-600 hover:text-violet-500 underline font-[500]">join the tracker</Link>.
+          <Link href="/join" onClick={() => track('go:join')} className="text-violet-600 hover:text-violet-500 underline font-[500]">join the tracker</Link>.
         </div>
       </div>
     </main>

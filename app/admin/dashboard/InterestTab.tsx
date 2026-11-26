@@ -1,7 +1,25 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { InterestRegistration } from '@/lib/interest-form';
+import { channelLabel, type InterestRegistration } from '@/lib/interest-form';
+import type { InterestUsage } from '@/lib/usage';
+
+const GO_LABELS: Record<string, string> = {
+  'go:leaderboard': 'Leaderboard', 'go:profile': 'Their profile', 'go:gsoc': 'GSoC', 'go:lfx': 'LFX Mentorship',
+  'go:sob': 'Summer of Bitcoin', 'go:esoc': 'European Summer of Code', 'go:outreachy': 'Outreachy', 'go:more': 'All programmes', 'go:join': 'Join the tracker',
+};
+
+function Tile({ label, value, note }: { label: string; value: number; note?: string }) {
+  return (
+    <div className="bg-panel border border-line rounded-xl px-4 py-3 min-w-[9rem]">
+      <div className="text-ink-soft text-xs">{label}</div>
+      <div className="text-ink text-2xl font-[600] tabular-nums mt-0.5">{value.toLocaleString('en-IN')}</div>
+      {note && <div className="text-ink-soft text-xs mt-0.5">{note}</div>}
+    </div>
+  );
+}
+
+const pct = (n: number, of: number) => (of > 0 ? `${Math.round((n / of) * 100)}%` : '');
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -10,20 +28,26 @@ export default function InterestTab() {
   const [rows, setRows] = useState<Array<InterestRegistration & { onRoster?: boolean }> | null>(null);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
+  const [usage, setUsage] = useState<InterestUsage | null>(null);
+  const [days, setDays] = useState<7 | 30 | 90>(30);
 
   useEffect(() => {
-    fetch('/api/admin/interest')
+    fetch(`/api/admin/interest?days=${days}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
-        if (res.ok) setRows(data.registrations ?? []);
+        if (res.ok) { setRows(data.registrations ?? []); setUsage(data.usage ?? null); }
         else setError(data.error ?? 'Could not load registrations.');
       })
       .catch(() => setError('Could not load registrations.'));
-  }, []);
+  }, [days]);
+
+  const t = usage?.totals;
+  const went = t ? Object.entries(GO_LABELS).map(([k, label]) => ({ label, n: t[k as keyof typeof t] ?? 0 })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n) : [];
 
   const needle = q.trim().toLowerCase();
-  const shown = (rows ?? []).filter((r) => !needle || [r.name, r.email, r.github, r.batch, r.campus].some((v) => v.toLowerCase().includes(needle)));
+  const shown = (rows ?? []).filter((r) => !needle || [r.name, r.email, r.github, r.batch, r.campus, r.channel ? channelLabel(r.channel) : ''].some((v) => v.toLowerCase().includes(needle)));
   const byCampus = (rows ?? []).reduce<Record<string, number>>((m, r) => ((m[r.campus] = (m[r.campus] ?? 0) + 1), m), {});
+  const byChannel = (rows ?? []).reduce<Record<string, number>>((m, r) => { const k = r.channel ? channelLabel(r.channel) : 'not asked'; m[k] = (m[k] ?? 0) + 1; return m; }, {});
 
   return (
     <div className="space-y-5">
@@ -34,6 +58,7 @@ export default function InterestTab() {
             {rows ? `${rows.length} registered` : 'Loading…'}
             {rows && rows.length > 0 && ` · ${Object.entries(byCampus).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(' · ')}`}
             {rows && rows.length > 0 && ` · ${rows.filter((r) => r.onRoster).length} on the roster`}
+            {rows && rows.length > 0 && ` · reads messages on: ${Object.entries(byChannel).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(', ')}`}
             {' · '}shareable link: <span className="font-mono">/interest</span>
           </p>
         </div>
@@ -44,6 +69,47 @@ export default function InterestTab() {
       </div>
 
       {error && <div className="bg-error-0 border border-error-100 rounded-xl p-3 text-error-600 text-sm">{error}</div>}
+
+      {/* Funnel: opened → clicked sign in → saw the form → registered; then where they went */}
+      <div className="bg-ground border border-line rounded-xl p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-ink text-sm font-[600]">How the form is doing</h3>
+          <div className="flex items-center gap-1 rounded-full border border-line bg-panel p-0.5" role="tablist" aria-label="Range">
+            {([7, 30, 90] as const).map((d) => (
+              <button key={d} type="button" role="tab" aria-selected={days === d} onClick={() => setDays(d)}
+                className={`px-2.5 py-1 rounded-full text-[11.5px] font-[550] transition-colors ${days === d ? 'bg-ground text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}>
+                {d} days
+              </button>
+            ))}
+          </div>
+        </div>
+        {!t ? (
+          <p className="text-ink-soft text-xs">No usage counts yet.</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-3">
+              <Tile label="Opened the form" value={usage!.openers} note={`${t.open.toLocaleString('en-IN')} views`} />
+              <Tile label="Clicked sign in" value={t.signin} note={pct(t.signin, usage!.openers) && `${pct(t.signin, usage!.openers)} of openers`} />
+              <Tile label="Saw the form signed in" value={t.form} note={`${t.done.toLocaleString('en-IN')} returned already registered`} />
+              <Tile label="Registered" value={t.registered} note={`${t.updated.toLocaleString('en-IN')} updated their details`} />
+            </div>
+            <div>
+              <div className="text-ink-soft text-xs mb-1.5">Where they went next</div>
+              {went.length === 0 ? (
+                <p className="text-ink-soft text-xs">No clicks yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {went.map((w) => (
+                    <span key={w.label} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel px-2.5 py-1 text-[12px] text-ink-mid">
+                      {w.label} <span className="tabular-nums font-[600] text-ink">{w.n.toLocaleString('en-IN')}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       {rows && rows.length === 0 && <p className="text-ink-soft text-sm">No registrations yet.</p>}
 
@@ -57,6 +123,7 @@ export default function InterestTab() {
                 <th className="px-4 py-2.5 font-[550]">GitHub</th>
                 <th className="px-4 py-2.5 font-[550]">Batch</th>
                 <th className="px-4 py-2.5 font-[550]">Campus</th>
+                <th className="px-4 py-2.5 font-[550]">Reads on</th>
                 <th className="px-4 py-2.5 font-[550]">Roster</th>
                 <th className="px-4 py-2.5 font-[550]">Registered</th>
               </tr>
@@ -74,6 +141,7 @@ export default function InterestTab() {
                   </td>
                   <td className="px-4 py-2.5 text-ink-mid whitespace-nowrap">{r.batch}</td>
                   <td className="px-4 py-2.5 text-ink-mid">{r.campus}</td>
+                  <td className="px-4 py-2.5 text-ink-mid whitespace-nowrap">{r.channel ? channelLabel(r.channel) : <span className="text-ink-faint">—</span>}</td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     {r.onRoster
                       ? <span className="text-success-600 text-xs font-[550]">{r.rosterAddedAt ? 'added by form' : 'on roster'}</span>

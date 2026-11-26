@@ -5,20 +5,23 @@ import { RosterUnavailableError, type Student } from './kv-students';
 
 describe('validateInterestInput', () => {
   it('normalises name and email and accepts a known batch and campus', () => {
-    const r = validateInterestInput({ name: '  Asha   Rao ', email: ' Asha@Example.EDU ', batch: '2nd year', campus: 'ADYPU' });
-    expect(r).toEqual({ ok: true, input: { name: 'Asha Rao', email: 'asha@example.edu', batch: '2nd year', campus: 'ADYPU' } });
+    const r = validateInterestInput({ name: '  Asha   Rao ', email: ' Asha@Example.EDU ', batch: '2nd year', campus: 'ADYPU', channel: 'whatsapp' });
+    expect(r).toEqual({ ok: true, input: { name: 'Asha Rao', email: 'asha@example.edu', batch: '2nd year', campus: 'ADYPU', channel: 'whatsapp' } });
   });
-  it('rejects a short name, a bad email, and unknown batch or campus', () => {
-    expect(validateInterestInput({ name: 'A', email: 'a@b.co', batch: '1st year', campus: 'SMRU' })).toMatchObject({ ok: false });
-    expect(validateInterestInput({ name: 'Asha', email: 'not-an-email', batch: '1st year', campus: 'SMRU' })).toMatchObject({ ok: false });
-    expect(validateInterestInput({ name: 'Asha', email: 'a@b.co', batch: '5th year', campus: 'SMRU' })).toMatchObject({ ok: false });
-    expect(validateInterestInput({ name: 'Asha', email: 'a@b.co', batch: '1st year', campus: 'Mars' })).toMatchObject({ ok: false });
+  it('rejects a short name, a bad email, an unknown batch, campus or channel', () => {
+    const ok = { name: 'Asha', email: 'a@b.co', batch: '1st year', campus: 'SMRU', channel: 'email' };
+    expect(validateInterestInput({ ...ok, name: 'A' })).toMatchObject({ ok: false });
+    expect(validateInterestInput({ ...ok, email: 'not-an-email' })).toMatchObject({ ok: false });
+    expect(validateInterestInput({ ...ok, batch: '5th year' })).toMatchObject({ ok: false });
+    expect(validateInterestInput({ ...ok, campus: 'Mars' })).toMatchObject({ ok: false });
+    expect(validateInterestInput({ ...ok, channel: 'pigeon' })).toMatchObject({ ok: false });
+    expect(validateInterestInput({ ...ok, channel: undefined })).toMatchObject({ ok: false });
     expect(validateInterestInput(null)).toMatchObject({ ok: false });
   });
 });
 
 describe('upsertInterestRegistration', () => {
-  const input = { name: 'Asha Rao', email: 'asha@example.edu', batch: '2nd year' as const, campus: 'ADYPU' as const };
+  const input = { name: 'Asha Rao', email: 'asha@example.edu', batch: '2nd year' as const, campus: 'ADYPU' as const, channel: 'gchat' as const };
   it('creates a row keyed on the GitHub id and updates it in place on a second submit, keeping createdAt', async () => {
     let store: InterestRegistration[] = [];
     const io = { read: async () => store, write: async (l: InterestRegistration[]) => { store = l; return true; } };
@@ -42,7 +45,7 @@ describe('interestCsv', () => {
     });
     const csv = interestCsv([row({ githubId: 2, createdAt: '2026-12-01T00:00:00Z', name: 'Rao, Asha "AR"' }), row({ githubId: 1 })]);
     const lines = csv.split('\r\n');
-    expect(lines[0]).toBe('name,email,github,batch,campus,registered_at,updated_at,github_id');
+    expect(lines[0]).toBe('name,email,github,batch,campus,reads_messages_on,registered_at,updated_at,github_id');
     expect(lines[1]).toContain(',1');
     expect(lines[2].startsWith('"Rao, Asha ""AR""",')).toBe(true);
   });
