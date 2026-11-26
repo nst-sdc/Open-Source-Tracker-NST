@@ -127,7 +127,7 @@ export function InterestForm() {
             </div>
             <div>
               <h1 className="text-xl font-[650] text-ink leading-tight">Open Source Interest Form</h1>
-              <p className="text-ink-soft text-xs mt-0.5">NST students · sign in with GitHub, fill four fields, done</p>
+              <p className="text-ink-soft text-xs mt-0.5">NST students · sign in with GitHub, fill five fields, done</p>
             </div>
           </div>
 
