@@ -51,7 +51,7 @@ spec:
                     values: [nst-n3, nst-n4, nst-n6, nst-n7]
       containers:
         - name: opensource-tracker
-          image: docker.io/saiudayagiri/opensource-tracker:35d9df2
+          image: docker.io/saiudayagiri/opensource-tracker:2afb84d
           ports:
             - containerPort: 3000
           envFrom:
