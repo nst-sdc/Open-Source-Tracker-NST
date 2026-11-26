@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useId, useMemo, useState } from 'react';
 import type { MonthBucket, ChartRanges } from '@/lib/community-timeline';
+import { PROutcomeCapsule } from './PROutcomeCapsule';
 
 /**
  * The community's activity by month: four thin lines (merged, opened, and
@@ -291,7 +292,7 @@ export function CommunityChart({
 
   const tooltip = hovered && (
     <div
-      className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-xl border border-line bg-ground/95 backdrop-blur px-3 py-2.5 shadow-pop text-[12px] min-w-[190px]"
+      className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-xl border border-line bg-ground/95 backdrop-blur px-3 py-2.5 shadow-pop text-[12px] min-w-[224px]"
       style={{ left: `clamp(100px, ${tipLeftPct}%, calc(100% - 100px))` }}
     >
       <div className="font-[650] text-ink mb-1.5">
@@ -315,6 +316,12 @@ export function CommunityChart({
         <span>Students active</span>
         <span className="tabular-nums font-[600] text-ink">{(hovered.active ?? 0).toLocaleString('en-IN')}</span>
       </div>
+      {(hovered.openedMerged ?? 0) + (hovered.openedClosed ?? 0) + (hovered.openedStillOpen ?? 0) > 0 && (
+        <div className="border-t border-line mt-1 pt-1.5">
+          <div className="text-[11px] text-ink-soft">PRs opened this month</div>
+          <PROutcomeCapsule merged={hovered.openedMerged ?? 0} open={hovered.openedStillOpen ?? 0} closed={hovered.openedClosed ?? 0} />
+        </div>
+      )}
     </div>
   );
 
