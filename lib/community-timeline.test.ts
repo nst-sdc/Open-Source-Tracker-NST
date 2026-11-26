@@ -37,9 +37,29 @@ describe('foldStudent', () => {
       keep,
     );
     const seg = segmentKey(alice);
-    expect(months['2026-09'][seg]).toEqual({ opened: 2, merged: 0, closed: 0, issues: 0, contributors: 0 });
-    expect(months['2026-10'][seg]).toEqual({ opened: 1, merged: 2, closed: 1, issues: 1, contributors: 1 });
+    expect(months['2026-09'][seg]).toEqual({ opened: 2, merged: 0, closed: 0, issues: 0, contributors: 0, active: 1 });
+    expect(months['2026-10'][seg]).toEqual({ opened: 1, merged: 2, closed: 1, issues: 1, contributors: 1, active: 1 });
     expect(months['2024-01']).toBeUndefined();
+  });
+
+  it('counts a student as active in a month with only an issue, or only a closed PR, but as a contributor only with a merge', () => {
+    const months: CommunityTimeline['months'] = {};
+    const keep = new Set(lastMonths(12, NOW));
+    const bob = { github: 'bob', campus: 'ADYPU' as const, year: '2nd year' as const };
+    foldStudent(
+      months,
+      bob,
+      {
+        prs: [pr('apache/beam', 1, '2026-08-20T00:00:00Z', undefined, '2026-09-03T00:00:00Z')],
+        issues: [{ created_at: '2026-10-01T00:00:00Z' } as never, { created_at: '2026-10-09T00:00:00Z' } as never],
+      },
+      {},
+      keep,
+    );
+    const seg = segmentKey(bob);
+    expect(months['2026-08'][seg]).toMatchObject({ opened: 1, active: 1, contributors: 0 });
+    expect(months['2026-09'][seg]).toMatchObject({ closed: 1, active: 1, contributors: 0 });
+    expect(months['2026-10'][seg]).toMatchObject({ issues: 2, active: 1, contributors: 0 });
   });
 });
 
@@ -49,8 +69,8 @@ describe('seriesFor', () => {
       builtAt: new Date(NOW).toISOString(),
       studentsCounted: 3,
       months: {
-        '2026-10': { 'ADYPU|2nd year': { opened: 3, merged: 2, closed: 1, issues: 1, contributors: 2 }, 'Rishihood|3rd year': { opened: 5, merged: 4, closed: 0, issues: 0, contributors: 3 } },
-        '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, closed: 0, issues: 0, contributors: 1 } },
+        '2026-10': { 'ADYPU|2nd year': { opened: 3, merged: 2, closed: 1, issues: 1, contributors: 2, active: 2 }, 'Rishihood|3rd year': { opened: 5, merged: 4, closed: 0, issues: 0, contributors: 3, active: 3 } },
+        '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, closed: 0, issues: 0, contributors: 1, active: 1 } },
       },
     };
     const all = seriesFor(t, {}, 3, NOW);
@@ -91,9 +111,9 @@ describe('year ranges', () => {
     builtAt: new Date(NOW).toISOString(),
     studentsCounted: 1,
     months: {
-      '2025-03': { 'ADYPU|2nd year': { opened: 2, merged: 1, closed: 0, issues: 0, contributors: 1 } },
-      '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, closed: 0, issues: 0, contributors: 1 } },
-      '2024-07': { '-|-': { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 } },
+      '2025-03': { 'ADYPU|2nd year': { opened: 2, merged: 1, closed: 0, issues: 0, contributors: 1, active: 1 } },
+      '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, closed: 0, issues: 0, contributors: 1, active: 1 } },
+      '2024-07': { '-|-': { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0 } },
     },
   };
   it('lists years with activity newest first and ignores empty months', () => {
