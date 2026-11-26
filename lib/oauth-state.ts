@@ -27,10 +27,12 @@ const RETURN_ALLOWLIST = new Set([
   'contributors',
   'documentation',
   'get-started',
+  'interest',
   'issues',
   'join',
   'kairi',
   'login',
+  'organizations',
   'programs',
   'repo-activity',
 ]);
