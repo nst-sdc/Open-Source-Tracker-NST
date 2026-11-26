@@ -1,0 +1,44 @@
+# One-off in-cluster load test: runs loadtest/journey.js from a pod in the
+# app's namespace against the Service directly (no Cloudflare, no Traefik),
+# so it measures the app and the store alone. Run from n1:
+#
+#   sudo kubectl -n opensource-tracker create configmap load-test \
+#     --from-file=journey.js=loadtest/journey.js --from-file=logins.json=loadtest/logins.json \
+#     --dry-run=client -o yaml | sudo kubectl apply -f -
+#   sudo kubectl apply -f deploy/jobs/load-test.yaml
+#   sudo kubectl -n opensource-tracker logs -f job/load-test
+#
+# Change RATE/HOLD below for a different profile (100/min for 10+40+10 min
+# is ~6,000 visits in an hour). Delete with `kubectl delete job load-test`.
+# To test the full public path instead, set BASE_URL to https://os.nstsdc.org.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-test
+  namespace: opensource-tracker
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:0.54.0
+          args: ['run', '/t/journey.js']
+          workingDir: /t
+          env:
+            - { name: BASE_URL, value: 'http://opensource-tracker.opensource-tracker.svc.cluster.local' }
+            - { name: RATE, value: '100' }
+            - { name: RAMP, value: '10m' }
+            - { name: HOLD, value: '40m' }
+            - { name: DOWN, value: '10m' }
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: '1', memory: 1Gi }
+          volumeMounts:
+            - { name: script, mountPath: /t }
+      volumes:
+        - name: script
+          configMap:
+            name: load-test
