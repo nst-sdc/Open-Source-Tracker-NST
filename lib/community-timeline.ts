@@ -33,6 +33,12 @@ export interface Counts {
    *  without merge, or an issue opened. Records built before this field
    *  existed lack it; readers treat it as 0. */
   active: number;
+  /** Outcome so far of the PRs opened in this month: merged, closed without
+   *  merge, or still open. Together they sum to `opened`. Records built
+   *  before these fields existed lack them; readers treat them as 0. */
+  openedMerged?: number;
+  openedClosed?: number;
+  openedStillOpen?: number;
 }
 
 export interface MonthBucket extends Counts {
@@ -102,8 +108,8 @@ export function foldStudent(
   const bump = (month: string, field: keyof Counts, by = 1) => {
     if (!keepMonths.has(month)) return;
     const row = (months[month] ??= {});
-    const c = (row[seg] ??= { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0 });
-    c[field] += by;
+    const c = (row[seg] ??= { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0, openedMerged: 0, openedClosed: 0, openedStillOpen: 0 });
+    c[field] = (c[field] ?? 0) + by;
   };
   const mergedMonths = new Set<string>();
   const activeMonths = new Set<string>();
@@ -117,6 +123,7 @@ export function foldStudent(
     if (filters.excludesPR?.(repo, mergedAt)) continue;
     if (pr.created_at) {
       bump(monthOf(pr.created_at), 'opened');
+      bump(monthOf(pr.created_at), mergedAt ? 'openedMerged' : pr.state === 'closed' ? 'openedClosed' : 'openedStillOpen');
       touch(monthOf(pr.created_at));
     }
     if (mergedAt) {
@@ -196,7 +203,7 @@ export function seriesFor(
   const keys = lastMonths(n, nowMs);
   const current = keys[keys.length - 1];
   return keys.map((month) => {
-    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0 };
+    const acc: Required<Counts> = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0, openedMerged: 0, openedClosed: 0, openedStillOpen: 0 };
     for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
       if (!segmentMatches(seg, filters)) continue;
       acc.opened += c.opened;
@@ -205,6 +212,9 @@ export function seriesFor(
       acc.issues += c.issues;
       acc.contributors += c.contributors;
       acc.active += c.active ?? 0;
+      acc.openedMerged += c.openedMerged ?? 0;
+      acc.openedClosed += c.openedClosed ?? 0;
+      acc.openedStillOpen += c.openedStillOpen ?? 0;
     }
     return { month, partial: month === current, ...acc };
   });
@@ -233,7 +243,7 @@ export function seriesForYear(
   for (let m = 1; m <= 12; m++) {
     const month = `${year}-${String(m).padStart(2, '0')}`;
     if (month > current) break;
-    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0 };
+    const acc: Required<Counts> = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0, openedMerged: 0, openedClosed: 0, openedStillOpen: 0 };
     for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
       if (!segmentMatches(seg, filters)) continue;
       acc.opened += c.opened;
@@ -242,6 +252,9 @@ export function seriesForYear(
       acc.issues += c.issues;
       acc.contributors += c.contributors;
       acc.active += c.active ?? 0;
+      acc.openedMerged += c.openedMerged ?? 0;
+      acc.openedClosed += c.openedClosed ?? 0;
+      acc.openedStillOpen += c.openedStillOpen ?? 0;
     }
     out.push({ month, partial: month === current, ...acc });
   }
