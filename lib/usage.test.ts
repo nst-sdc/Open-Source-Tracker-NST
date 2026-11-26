@@ -10,7 +10,7 @@ vi.mock('./kv', () => {
   };
 });
 const kv = await import('./kv');
-const { usageDay, usageHour, usageDays, normalizePath, isBot, referrerHost, visitorKey, recordPageview, readUsage, recordInterestEvent, readInterestUsage, isInterestEvent } = await import('./usage');
+const { usageDay, usageHour, usageDays, normalizePath, isBot, referrerHost, visitorKey, recordPageview, readUsage, recordFormEvent, readFormUsage, isFormEvent } = await import('./usage');
 
 describe('usage: days are Indian days', () => {
   it('rolls over at 18:30 UTC', () => {
@@ -90,26 +90,31 @@ describe('usage: record and report', () => {
   });
 });
 
-describe('interest funnel', () => {
-  it('counts events per day, distinct openers across the range, and ignores unknown events', async () => {
+describe('form funnel', () => {
+  it('counts events per day and form, distinct openers across the range, and ignores unknown events', async () => {
     const mon = new Date('2026-11-30T08:00:00Z');
     const tue = new Date('2026-12-01T08:00:00Z');
-    await recordInterestEvent('open', 'a', mon);
-    await recordInterestEvent('open', 'a', mon);
-    await recordInterestEvent('open', 'b', mon);
-    await recordInterestEvent('signin', 'a', mon);
-    await recordInterestEvent('form', 'a', mon);
-    await recordInterestEvent('registered', null, mon);
-    await recordInterestEvent('go:gsoc', 'a', mon);
-    await recordInterestEvent('open', 'a', tue);
-    await recordInterestEvent('done', 'a', tue);
-    const r = (await readInterestUsage(7, tue))!;
+    await recordFormEvent('interest', 'open', 'a', mon);
+    await recordFormEvent('interest', 'open', 'a', mon);
+    await recordFormEvent('interest', 'open', 'b', mon);
+    await recordFormEvent('interest', 'signin', 'a', mon);
+    await recordFormEvent('interest', 'form', 'a', mon);
+    await recordFormEvent('interest', 'registered', null, mon);
+    await recordFormEvent('interest', 'open', 'a', tue);
+    await recordFormEvent('interest', 'done', 'a', tue);
+    await recordFormEvent('hack-day', 'open', 'z', tue);
+    const r = (await readFormUsage('interest', 7, tue))!;
     expect(r.days.at(-2)).toEqual({ day: '2026-11-30', open: 3, form: 1, registered: 1 });
     expect(r.days.at(-1)).toEqual({ day: '2026-12-01', open: 1, form: 0, registered: 0 });
     expect(r.openers).toBe(2);
-    expect(r.totals).toMatchObject({ open: 4, signin: 1, form: 1, done: 1, registered: 1, updated: 0, 'go:gsoc': 1, 'go:lfx': 0 });
-    expect(isInterestEvent('go:gsoc')).toBe(true);
-    expect(isInterestEvent('go:evil')).toBe(false);
+    expect(r.totals).toMatchObject({ open: 4, signin: 1, form: 1, done: 1, registered: 1, updated: 0 });
+    const h = (await readFormUsage('hack-day', 7, tue))!;
+    expect(h.totals.open).toBe(1);
+    expect(h.openers).toBe(1);
+    expect(isFormEvent('go:join')).toBe(true);
+    expect(isFormEvent('go:evil')).toBe(false);
     expect(normalizePath('/interest')).toBe('/interest');
+    expect(normalizePath('/forms/hack-day')).toBe('/forms/hack-day');
+    expect(normalizePath('/forms/Hack Day')).toBe(null);
   });
 });
