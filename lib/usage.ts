@@ -32,7 +32,7 @@ const TIME_ZONE = 'Asia/Kolkata';
  *  fields a day's page hash can ever have. */
 const SECTIONS = new Set([
   'achievers', 'check-work', 'contributors', 'documentation', 'get-started', 'issues',
-  'join', 'kairi', 'login', 'organizations', 'programs', 'repo-activity',
+  'interest', 'join', 'kairi', 'login', 'organizations', 'programs', 'repo-activity',
 ]);
 /** Sections whose second segment is a GitHub login; collapsed to one row. */
 const PROFILE_SECTIONS = new Set(['achievers', 'check-work', 'contributors']);
@@ -180,6 +180,66 @@ export async function recordPageview(view: Pageview): Promise<boolean> {
   if (view.referrer) commands.push(['HINCRBY', k.refs, view.referrer, '1'], ['EXPIRE', k.refs, TTL]);
 
   return (await run(commands)).ok;
+}
+
+// ─── Interest form funnel ────────────────────────────────────────────────────
+//
+// What happens on /interest, as counts per Indian day under
+// usage:interest:<day> (hash event -> count) and usage:io:<day> (HLL of the
+// browsers that opened the form). Same rule as the rest of this module:
+// numbers, never people. The event names are a closed list so the hash can
+// never grow past it.
+
+export const INTEREST_EVENTS = [
+  'open', // the form page was shown
+  'signin', // "Sign in with GitHub" was clicked
+  'form', // the signed-in form was shown (not yet registered)
+  'done', // the registered view was shown (already registered)
+  'registered', // a registration was created (server-side, exact)
+  'updated', // a registration was updated (server-side, exact)
+  'go:leaderboard', 'go:profile', 'go:gsoc', 'go:lfx', 'go:sob', 'go:esoc', 'go:outreachy', 'go:more', 'go:join',
+] as const;
+export type InterestEvent = (typeof INTEREST_EVENTS)[number];
+const INTEREST_EVENT_SET: ReadonlySet<string> = new Set(INTEREST_EVENTS);
+
+export function isInterestEvent(raw: unknown): raw is InterestEvent {
+  return typeof raw === 'string' && INTEREST_EVENT_SET.has(raw);
+}
+
+/** Counts one funnel event; `visitor` (from visitorKey) only matters for 'open'. */
+export async function recordInterestEvent(event: InterestEvent, visitor?: string | null, now: Date = new Date()): Promise<boolean> {
+  const day = usageDay(now);
+  const commands: string[][] = [
+    ['HINCRBY', `usage:interest:${day}`, event, '1'],
+    ['EXPIRE', `usage:interest:${day}`, TTL],
+  ];
+  if (event === 'open' && visitor) commands.push(['PFADD', `usage:io:${day}`, visitor], ['EXPIRE', `usage:io:${day}`, TTL]);
+  return (await run(commands)).ok;
+}
+
+export interface InterestUsage {
+  days: Array<{ day: string; open: number; form: number; registered: number }>;
+  /** Event -> count over the whole range. Every event is present, 0 when unseen. */
+  totals: Record<InterestEvent, number>;
+  /** Distinct browsers that opened the form over the range. */
+  openers: number;
+}
+
+/** The last `days` days of the interest funnel, or null when the store did not answer. */
+export async function readInterestUsage(days: number, now: Date = new Date()): Promise<InterestUsage | null> {
+  const span = Math.min(USAGE_MAX_RANGE_DAYS, Math.max(1, Math.floor(days) || 30));
+  const list = usageDays(span, now);
+  const commands = list.map((d) => ['HGETALL', `usage:interest:${d}`]);
+  commands.push(['PFCOUNT', ...list.map((d) => `usage:io:${d}`)]);
+  const { ok, results } = await run(commands);
+  if (!ok) return null;
+  const totals = Object.fromEntries(INTEREST_EVENTS.map((e) => [e, 0])) as Record<InterestEvent, number>;
+  const rows = list.map((day, i) => {
+    const h = hashOf(results[i]);
+    for (const [event, n] of Object.entries(h)) if (isInterestEvent(event)) totals[event] += n;
+    return { day, open: h.open ?? 0, form: h.form ?? 0, registered: h.registered ?? 0 };
+  });
+  return { days: rows, totals, openers: Number(results[list.length]) || 0 };
 }
 
 // ─── Read ────────────────────────────────────────────────────────────────────
