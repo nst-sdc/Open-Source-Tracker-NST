@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => true) }));
-import { validateInterestInput, upsertInterestRegistration, interestCsv, ensureOnRoster, type InterestRegistration } from './kv-interest';
+import { validateInterestInput, upsertInterestRegistration, interestCsv, ensureOnRoster, removeInterestRegistration, type InterestRegistration } from './kv-interest';
 import { RosterUnavailableError, type Student } from './kv-students';
 
 describe('validateInterestInput', () => {
@@ -77,5 +77,16 @@ describe('ensureOnRoster', () => {
   it('reports an unavailable roster instead of throwing', async () => {
     const d = { ...deps([]), getStudentsKV: async () => { throw new RosterUnavailableError(); } };
     expect(await ensureOnRoster('asha', '2nd year', 'ADYPU', d)).toBe('unavailable');
+  });
+});
+
+describe('removeInterestRegistration', () => {
+  it('drops only the matching account and reports whether anything was removed', async () => {
+    const kv = await import('./kv');
+    const row = (githubId: number): InterestRegistration => ({ githubId, github: `u${githubId}`, name: 'N', email: 'e@x.io', batch: '1st year', campus: 'SMRU', channel: 'email', createdAt: '2026-11-30T09:00:00Z', updatedAt: '2026-11-30T09:00:00Z' });
+    (kv.kvGet as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([row(1), row(2)]);
+    expect(await removeInterestRegistration(1)).toEqual({ ok: true, removed: true });
+    expect((kv.kvSet as unknown as { mock: { calls: unknown[][] } }).mock.calls.at(-1)?.[1]).toEqual([row(2)]);
+    expect(await removeInterestRegistration(9)).toEqual({ ok: true, removed: false });
   });
 });

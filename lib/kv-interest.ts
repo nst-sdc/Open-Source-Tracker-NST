@@ -93,3 +93,11 @@ export async function markRosterAdded(githubId: number, nowIso = new Date().toIS
   row.rosterAddedAt = nowIso;
   await kvSet(KV_KEY, list);
 }
+
+/** Admin-only: drops the account's registration (test rows, withdrawals). The roster is untouched. */
+export async function removeInterestRegistration(githubId: number): Promise<{ ok: boolean; removed: boolean }> {
+  const list = await getInterestRegistrations();
+  const kept = list.filter((r) => r.githubId !== githubId);
+  if (kept.length === list.length) return { ok: true, removed: false };
+  return { ok: await kvSet(KV_KEY, kept), removed: true };
+}

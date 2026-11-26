@@ -41,6 +41,13 @@ export default function InterestTab() {
       .catch(() => setError('Could not load registrations.'));
   }, [days]);
 
+  async function remove(r: InterestRegistration) {
+    if (!confirm(`Remove ${r.name} (@${r.github}) from the interest form? Their roster entry is not touched.`)) return;
+    const res = await fetch(`/api/admin/interest?githubId=${r.githubId}`, { method: 'DELETE' });
+    if (res.ok) setRows((rows) => (rows ?? []).filter((x) => x.githubId !== r.githubId));
+    else setError('Could not remove the registration.');
+  }
+
   const t = usage?.totals;
   const went = t ? Object.entries(GO_LABELS).map(([k, label]) => ({ label, n: t[k as keyof typeof t] ?? 0 })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n) : [];
 
@@ -126,6 +133,7 @@ export default function InterestTab() {
                 <th className="px-4 py-2.5 font-[550]">Reads on</th>
                 <th className="px-4 py-2.5 font-[550]">Roster</th>
                 <th className="px-4 py-2.5 font-[550]">Registered</th>
+                <th className="px-4 py-2.5 font-[550]"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -148,6 +156,9 @@ export default function InterestTab() {
                       : <span className="text-warning-600 text-xs font-[550]" title="The roster was unavailable when they registered; add them from the Students tab">not on roster</span>}
                   </td>
                   <td className="px-4 py-2.5 text-ink-soft whitespace-nowrap tabular-nums" title={r.updatedAt !== r.createdAt ? `updated ${when(r.updatedAt)}` : undefined}>{when(r.createdAt)}</td>
+                  <td className="px-2 py-2.5 text-right">
+                    <button type="button" onClick={() => remove(r)} className="text-ink-faint hover:text-error-600 text-xs font-[550]" title="Remove this registration">Remove</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
