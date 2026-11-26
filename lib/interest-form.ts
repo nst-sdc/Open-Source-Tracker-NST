@@ -21,6 +21,9 @@ export interface InterestRegistration {
   campus: Campus;
   createdAt: string;
   updatedAt: string;
+  /** When this registration put the student on the roster (absent if they
+   *  were already on it, or the roster was unavailable at the time). */
+  rosterAddedAt?: string;
 }
 
 export interface InterestInput {

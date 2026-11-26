@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getViewer } from '@/lib/session';
 import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-limit';
-import { findInterestRegistration, upsertInterestRegistration, validateInterestInput } from '@/lib/kv-interest';
+import { findInterestRegistration, upsertInterestRegistration, validateInterestInput, ensureOnRoster, markRosterAdded } from '@/lib/kv-interest';
+import { invalidateSummaryCache } from '@/lib/summary-cache';
+import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,9 +55,20 @@ export async function POST(request: Request) {
   const result = await upsertInterestRegistration({ id: viewer.id, login: viewer.login, avatarUrl: viewer.avatarUrl }, checked.input);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 503 });
   const { registration, created } = result;
+
+  // Registering is joining: the account goes on the roster so its work is
+  // counted from the next refresh. A roster outage is reported, not fatal.
+  const roster = await ensureOnRoster(viewer.login, checked.input.batch, checked.input.campus);
+  if (roster === 'added') {
+    await markRosterAdded(viewer.id);
+    await invalidateSummaryCache();
+    revalidatePath('/contributors');
+    revalidatePath('/');
+  }
   return NextResponse.json({
     ok: true,
     created,
+    roster,
     registration: { name: registration.name, email: registration.email, batch: registration.batch, campus: registration.campus, createdAt: registration.createdAt, updatedAt: registration.updatedAt },
   }, { status: created ? 201 : 200 });
 }

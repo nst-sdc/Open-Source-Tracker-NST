@@ -9,6 +9,7 @@
  * campus. Re-submitting updates the existing row in place.
  */
 import { kvGet, kvSet } from './kv';
+import { addStudent, getStudentsKV, findStudent, updateStudentDetails, RosterUnavailableError } from './kv-students';
 import { type InterestInput, type InterestRegistration } from './interest-form';
 
 export * from './interest-form';
@@ -53,4 +54,42 @@ export async function upsertInterestRegistration(
   else list.push(registration);
   if (!(await io.write(list))) return { ok: false, error: 'The store did not accept the registration. Please try again.' };
   return { ok: true, registration, created: i < 0 };
+}
+
+/**
+ * Every account that registers goes on the roster, so the tracker starts
+ * counting their work without an admin approving a join request. A student
+ * already on the roster keeps their row; batch and campus are filled in
+ * only where the roster had none, so an admin's classification is never
+ * overwritten by a self-report. Never throws for a roster outage: the
+ * registration itself must not be lost over it.
+ */
+export async function ensureOnRoster(
+  login: string,
+  batch: InterestInput['batch'],
+  campus: InterestInput['campus'],
+  deps = { getStudentsKV, addStudent, updateStudentDetails },
+): Promise<'added' | 'already' | 'updated' | 'unavailable'> {
+  try {
+    const existing = findStudent(await deps.getStudentsKV(), login);
+    if (!existing) {
+      const res = await deps.addStudent(login, batch, campus);
+      return res.ok ? 'added' : 'already';
+    }
+    if (existing.year && existing.campus) return 'already';
+    const res = await deps.updateStudentDetails(login, existing.year ?? batch, existing.campus ?? campus);
+    return res.ok ? 'updated' : 'already';
+  } catch (err) {
+    if (err instanceof RosterUnavailableError) return 'unavailable';
+    throw err;
+  }
+}
+
+/** Stamps rosterAddedAt on the account's row; a no-op without a row or if already stamped. */
+export async function markRosterAdded(githubId: number, nowIso = new Date().toISOString()): Promise<void> {
+  const list = await getInterestRegistrations();
+  const row = list.find((r) => r.githubId === githubId);
+  if (!row || row.rosterAddedAt) return;
+  row.rosterAddedAt = nowIso;
+  await kvSet(KV_KEY, list);
 }

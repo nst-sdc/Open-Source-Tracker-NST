@@ -7,7 +7,7 @@ const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'nume
 
 /** Who has filled the open-source interest form, with a CSV download. */
 export default function InterestTab() {
-  const [rows, setRows] = useState<InterestRegistration[] | null>(null);
+  const [rows, setRows] = useState<Array<InterestRegistration & { onRoster?: boolean }> | null>(null);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
 
@@ -33,6 +33,7 @@ export default function InterestTab() {
           <p className="text-ink-soft text-xs mt-0.5">
             {rows ? `${rows.length} registered` : 'Loading…'}
             {rows && rows.length > 0 && ` · ${Object.entries(byCampus).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(' · ')}`}
+            {rows && rows.length > 0 && ` · ${rows.filter((r) => r.onRoster).length} on the roster`}
             {' · '}shareable link: <span className="font-mono">/interest</span>
           </p>
         </div>
@@ -56,6 +57,7 @@ export default function InterestTab() {
                 <th className="px-4 py-2.5 font-[550]">GitHub</th>
                 <th className="px-4 py-2.5 font-[550]">Batch</th>
                 <th className="px-4 py-2.5 font-[550]">Campus</th>
+                <th className="px-4 py-2.5 font-[550]">Roster</th>
                 <th className="px-4 py-2.5 font-[550]">Registered</th>
               </tr>
             </thead>
@@ -72,6 +74,11 @@ export default function InterestTab() {
                   </td>
                   <td className="px-4 py-2.5 text-ink-mid whitespace-nowrap">{r.batch}</td>
                   <td className="px-4 py-2.5 text-ink-mid">{r.campus}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    {r.onRoster
+                      ? <span className="text-success-600 text-xs font-[550]">{r.rosterAddedAt ? 'added by form' : 'on roster'}</span>
+                      : <span className="text-warning-600 text-xs font-[550]" title="The roster was unavailable when they registered; add them from the Students tab">not on roster</span>}
+                  </td>
                   <td className="px-4 py-2.5 text-ink-soft whitespace-nowrap tabular-nums" title={r.updatedAt !== r.createdAt ? `updated ${when(r.updatedAt)}` : undefined}>{when(r.createdAt)}</td>
                 </tr>
               ))}

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => true) }));
-import { validateInterestInput, upsertInterestRegistration, interestCsv, type InterestRegistration } from './kv-interest';
+import { validateInterestInput, upsertInterestRegistration, interestCsv, ensureOnRoster, type InterestRegistration } from './kv-interest';
+import { RosterUnavailableError, type Student } from './kv-students';
 
 describe('validateInterestInput', () => {
   it('normalises name and email and accepts a known batch and campus', () => {
@@ -44,5 +45,34 @@ describe('interestCsv', () => {
     expect(lines[0]).toBe('name,email,github,batch,campus,registered_at,updated_at,github_id');
     expect(lines[1]).toContain(',1');
     expect(lines[2].startsWith('"Rao, Asha ""AR""",')).toBe(true);
+  });
+});
+
+describe('ensureOnRoster', () => {
+  const deps = (roster: Student[]) => {
+    const calls: string[] = [];
+    return {
+      calls,
+      getStudentsKV: async () => roster,
+      addStudent: async (g: string, y?: string, c?: string) => { calls.push(`add ${g} ${y} ${c}`); return { ok: true }; },
+      updateStudentDetails: async (g: string, y?: string, c?: string) => { calls.push(`update ${g} ${y} ${c}`); return { ok: true }; },
+    };
+  };
+  it('adds an unknown account with batch and campus', async () => {
+    const d = deps([]);
+    expect(await ensureOnRoster('asha', '2nd year', 'ADYPU', d)).toBe('added');
+    expect(d.calls).toEqual(['add asha 2nd year ADYPU']);
+  });
+  it('leaves a fully classified student alone and fills only missing fields otherwise', async () => {
+    const full = deps([{ github: 'Asha', year: '1st year', campus: 'SMRU' }]);
+    expect(await ensureOnRoster('asha', '2nd year', 'ADYPU', full)).toBe('already');
+    expect(full.calls).toEqual([]);
+    const partial = deps([{ github: 'asha', year: '1st year' }]);
+    expect(await ensureOnRoster('asha', '2nd year', 'ADYPU', partial)).toBe('updated');
+    expect(partial.calls).toEqual(['update asha 1st year ADYPU']);
+  });
+  it('reports an unavailable roster instead of throwing', async () => {
+    const d = { ...deps([]), getStudentsKV: async () => { throw new RosterUnavailableError(); } };
+    expect(await ensureOnRoster('asha', '2nd year', 'ADYPU', d)).toBe('unavailable');
   });
 });

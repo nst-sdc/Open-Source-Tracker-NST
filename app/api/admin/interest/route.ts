@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/admin-auth';
 import { getInterestRegistrations, interestCsv } from '@/lib/kv-interest';
+import { getStudentsKV } from '@/lib/kv-students';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,9 @@ export async function GET(request: Request) {
       },
     });
   }
-  const registrations = [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return NextResponse.json({ total: registrations.length, registrations });
+  const roster = new Set((await getStudentsKV()).map((s) => s.github.toLowerCase()));
+  const registrations = [...list]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((r) => ({ ...r, onRoster: roster.has(r.github.toLowerCase()) }));
+  return NextResponse.json({ total: registrations.length, onRoster: registrations.filter((r) => r.onRoster).length, registrations });
 }
