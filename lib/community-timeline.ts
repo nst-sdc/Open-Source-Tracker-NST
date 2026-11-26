@@ -29,6 +29,10 @@ export interface Counts {
   issues: number;
   /** Students with at least one merged PR that month. */
   contributors: number;
+  /** Students with any activity that month: a PR opened, merged or closed
+   *  without merge, or an issue opened. Records built before this field
+   *  existed lack it; readers treat it as 0. */
+  active: number;
 }
 
 export interface MonthBucket extends Counts {
@@ -98,26 +102,40 @@ export function foldStudent(
   const bump = (month: string, field: keyof Counts, by = 1) => {
     if (!keepMonths.has(month)) return;
     const row = (months[month] ??= {});
-    const c = (row[seg] ??= { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 });
+    const c = (row[seg] ??= { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0 });
     c[field] += by;
   };
   const mergedMonths = new Set<string>();
+  const activeMonths = new Set<string>();
+  const touch = (month: string) => {
+    if (keepMonths.has(month)) activeMonths.add(month);
+  };
   for (const pr of profile.prs ?? []) {
     const repo = repoOf(pr.repository_url);
     const mergedAt = pr.pull_request?.merged_at ?? null;
     if (filters.flaggedPRIds?.has(`${repo}#${pr.number}`)) continue;
     if (filters.excludesPR?.(repo, mergedAt)) continue;
-    if (pr.created_at) bump(monthOf(pr.created_at), 'opened');
+    if (pr.created_at) {
+      bump(monthOf(pr.created_at), 'opened');
+      touch(monthOf(pr.created_at));
+    }
     if (mergedAt) {
       const m = monthOf(mergedAt);
       bump(m, 'merged');
       if (keepMonths.has(m)) mergedMonths.add(m);
+      touch(m);
     } else if (pr.state === 'closed' && pr.closed_at) {
       bump(monthOf(pr.closed_at), 'closed');
+      touch(monthOf(pr.closed_at));
     }
   }
-  for (const is of profile.issues ?? []) if (is.created_at) bump(monthOf(is.created_at), 'issues');
+  for (const is of profile.issues ?? []) {
+    if (!is.created_at) continue;
+    bump(monthOf(is.created_at), 'issues');
+    touch(monthOf(is.created_at));
+  }
   for (const m of mergedMonths) bump(m, 'contributors');
+  for (const m of activeMonths) bump(m, 'active');
 }
 
 export async function buildCommunityTimeline(
@@ -178,7 +196,7 @@ export function seriesFor(
   const keys = lastMonths(n, nowMs);
   const current = keys[keys.length - 1];
   return keys.map((month) => {
-    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 };
+    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0 };
     for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
       if (!segmentMatches(seg, filters)) continue;
       acc.opened += c.opened;
@@ -186,6 +204,7 @@ export function seriesFor(
       acc.closed += c.closed ?? 0; // records built before this field existed
       acc.issues += c.issues;
       acc.contributors += c.contributors;
+      acc.active += c.active ?? 0;
     }
     return { month, partial: month === current, ...acc };
   });
@@ -214,7 +233,7 @@ export function seriesForYear(
   for (let m = 1; m <= 12; m++) {
     const month = `${year}-${String(m).padStart(2, '0')}`;
     if (month > current) break;
-    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 };
+    const acc: Counts = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0 };
     for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
       if (!segmentMatches(seg, filters)) continue;
       acc.opened += c.opened;
@@ -222,6 +241,7 @@ export function seriesForYear(
       acc.closed += c.closed ?? 0;
       acc.issues += c.issues;
       acc.contributors += c.contributors;
+      acc.active += c.active ?? 0;
     }
     out.push({ month, partial: month === current, ...acc });
   }

@@ -268,7 +268,7 @@ export function CommunityChart({
 
       {/* Invisible hit strips so touch and keyboard users can land on a month */}
       {series.map((b, i) => (
-        <rect key={`hit${b.month}`} x={i === 0 ? padLeft : (xFor(i - 1) + xFor(i)) / 2} y={0} width={i === 0 ? (xFor(1) ?? xFor(0)) / 2 - padLeft + (n === 1 ? plotW : 0) : (xFor(Math.min(n - 1, i + 1)) - xFor(i - 1)) / 2} height={height} fill="transparent" onPointerEnter={() => setHover(i)} onFocus={() => { setHover(i); setOnLine(true); }} onBlur={() => setOnLine(false)} tabIndex={compact ? -1 : 0} aria-label={`${monthLabel(b.month, true)}: ${b.merged} merged, ${b.opened} opened, ${b.closed} closed unmerged, ${b.issues} issues, ${b.contributors} students with a merge`} />
+        <rect key={`hit${b.month}`} x={i === 0 ? padLeft : (xFor(i - 1) + xFor(i)) / 2} y={0} width={i === 0 ? (xFor(1) ?? xFor(0)) / 2 - padLeft + (n === 1 ? plotW : 0) : (xFor(Math.min(n - 1, i + 1)) - xFor(i - 1)) / 2} height={height} fill="transparent" onPointerEnter={() => setHover(i)} onFocus={() => { setHover(i); setOnLine(true); }} onBlur={() => setOnLine(false)} tabIndex={compact ? -1 : 0} aria-label={`${monthLabel(b.month, true)}: ${b.merged} merged, ${b.opened} opened, ${b.closed} closed unmerged, ${b.issues} issues, ${b.contributors} students with a merge, ${b.active ?? 0} students active`} />
       ))}
       {/* Wide, invisible stroke over the merged line: the hover target that
           reveals the other series. Drawn above the month hit strips so it
@@ -310,6 +310,10 @@ export function CommunityChart({
       <div className="flex items-center justify-between gap-4 leading-6 border-t border-line mt-1 pt-1 text-ink-mid">
         <span>Students with a merge</span>
         <span className="tabular-nums font-[600] text-ink">{hovered.contributors.toLocaleString('en-IN')}</span>
+      </div>
+      <div className="flex items-center justify-between gap-4 leading-6 text-ink-mid" title="Students with any PR opened, merged or closed, or any issue opened, this month">
+        <span>Students active</span>
+        <span className="tabular-nums font-[600] text-ink">{(hovered.active ?? 0).toLocaleString('en-IN')}</span>
       </div>
     </div>
   );
