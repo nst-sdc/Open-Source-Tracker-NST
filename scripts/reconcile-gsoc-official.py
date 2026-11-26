@@ -47,6 +47,9 @@ UMBRELLAS = {
     'open-genome-informatics', 'uc-ospo', 'wikimedia-foundation',
 }
 ARCHIVE = os.path.join(ROOT, 'data', 'gsoc-projects-archive.json')
+UMBRELLAS_OUT = os.path.join(ROOT, 'data', 'gsoc-umbrellas.json')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gsoc_ideas import sub_orgs  # noqa: E402
 CODE_OWNER = re.compile(r'https?://(?:www\.)?github\.com/([A-Za-z0-9_.-]+)/')
 CODE_REPO = re.compile(r'https?://(?:www\.)?github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)')
 
@@ -183,15 +186,24 @@ def main(src):
         known.update(l.lower() for l in section)
     owners = {o['slug']: code_owners(o['slug'], src) for o in orgs if o['slug'] in UMBRELLAS}
     types = owner_types([l for per_year, _ in owners.values() for counts in per_year.values() for l in counts], src)
-    umbrellas = 0
+    umbrellas = {}
     for o in orgs:
         o.pop('umbrella', None)
         if o['slug'] in UMBRELLAS:
             per_year, repos = owners[o['slug']]
             by_year = member_projects(per_year, types, known)
             kept = {owner for counts in by_year.values() for owner in counts}
-            o['umbrella'] = {'membersByYear': by_year, 'memberRepos': member_repos(repos, kept)}
-            umbrellas += 1
+            # The dataset record only flags the umbrella; the detail lives in its own file,
+            # read on the server for the cards and fetched by the sheet when it opens.
+            o['umbrella'] = True
+            umbrellas[o['slug']] = {
+                'name': o['name'], 'github': o.get('github'),
+                'membersByYear': by_year, 'memberRepos': member_repos(repos, kept),
+                'subOrgsByYear': sub_orgs(src, o['slug']),
+            }
+    with open(UMBRELLAS_OUT, 'w') as fh:
+        json.dump(umbrellas, fh, ensure_ascii=False, indent=1)
+        fh.write('\n')
     missing = UMBRELLAS - {o['slug'] for o in orgs}
     if missing:
         print(f'!! umbrella slugs not in the dataset: {sorted(missing)}')
@@ -211,7 +223,7 @@ def main(src):
     for y in YEARS:
         after = set(l.lower() for l in prog[f'gsoc{y}'])
         print(f'gsoc{y}: {len(after)} organisations (dropped {len(before[y] - after)} unconfirmed, added {len(after - before[y])})')
-    print(f'{len(orgs)} dataset records ({new_records} new), {counts_known} official year counts applied, {umbrellas} umbrellas with member projects -> {ORGS}, {PROG}')
+    print(f'{len(orgs)} dataset records ({new_records} new), {counts_known} official year counts applied, {len(umbrellas)} umbrellas with member projects -> {ORGS}, {PROG}, {UMBRELLAS_OUT}')
 
 
 if __name__ == '__main__':

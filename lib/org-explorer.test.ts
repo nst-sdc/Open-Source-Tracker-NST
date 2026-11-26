@@ -41,13 +41,18 @@ describe('org explorer', () => {
     // Umbrellas carry their own login, not a member's, and know their member projects.
     const numfocus = data.cards.find((c) => c.login === 'numfocus')!;
     expect(numfocus.gsocSlug).toBe('numfocus');
-    expect(numfocus.umbrella).toEqual({ members: expect.any(Number), program: 'numfocus' });
+    expect(numfocus.umbrella).toEqual({ members: expect.any(Number), subOrgs: 20, latestYear: 2026, program: 'numfocus' });
     expect(numfocus.umbrella!.members).toBeGreaterThan(10);
     expect(numfocus.gsocSlots?.['2025']).toBe(31);
-    expect(data.cards.find((c) => c.login === 'psf')?.umbrella).toEqual({ members: expect.any(Number) });
+    expect(data.cards.find((c) => c.login === 'psf')?.umbrella).toEqual({ members: expect.any(Number), subOrgs: 10, latestYear: 2026 });
+    // A sub-organisation the ideas list names, even with no code link yet, is a GSoC organisation here.
+    const gammapy = data.cards.find((c) => c.login.toLowerCase() === 'gammapy')!;
+    expect(gammapy.via?.[0]).toMatchObject({ slug: 'numfocus', listed: expect.arrayContaining([2026]) });
+    expect(gammapy.programs).toContain('gsoc');
     // ...and the member projects point back: pvlib ran GSoC projects under NumFOCUS.
     const pvlib = data.cards.find((c) => c.login.toLowerCase() === 'pvlib')!;
     expect(pvlib.via?.map((p) => p.slug)).toEqual(['numfocus']);
+    expect(pvlib.via![0].listed).toEqual(expect.arrayContaining([2022, 2026]));
     expect(pvlib.programs).toContain('gsoc');
     expect(pvlib.gsocSlots).toBeDefined();
     expect(Object.values(pvlib.gsocSlots!).reduce((a, n) => a + n, 0)).toBe(pvlib.via![0].projects);
