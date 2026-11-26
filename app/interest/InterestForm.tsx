@@ -24,13 +24,13 @@ const selectStyle = {
 const fieldClass = 'w-full bg-ground border border-line rounded-2xl px-4 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-panel transition-all';
 const labelClass = 'block text-xs font-[550] text-ink-soft uppercase tracking-wider';
 
-/** What a registered student is pointed at next. Dates stay general on purpose; the programme pages carry the exact ones. */
+/** The summer programmes named on the registered screen. */
 const PROGRAMMES = [
-  { name: 'Google Summer of Code', note: 'Applications open in March · 12 weeks, May to August', href: '/programs#gsoc' },
-  { name: 'LFX Mentorship', note: 'Linux Foundation · spring term applications in January', href: '/programs#lfx' },
-  { name: 'Summer of Bitcoin', note: 'Bitcoin and Lightning projects · summer internship', href: '/organizations?program=sob' },
-  { name: 'European Summer of Code', note: 'European open-source projects · summer', href: '/organizations?program=esoc' },
-  { name: 'Outreachy', note: 'Two rounds a year · for people under-represented in tech', href: '/programs#outreachy' },
+  { name: 'GSoC', href: '/programs#gsoc' },
+  { name: 'LFX Mentorship', href: '/programs#lfx' },
+  { name: 'Summer of Bitcoin', href: '/organizations?program=sob' },
+  { name: 'European Summer of Code', href: '/organizations?program=esoc' },
+  { name: 'Outreachy', href: '/programs#outreachy' },
 ];
 
 const when = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -156,58 +156,27 @@ export function InterestForm() {
           )}
 
           {phase === 'done' && existing && viewer && (
-            <div className="space-y-6">
-              <div className="bg-success-0 border border-success-100 rounded-2xl p-4">
-                <div className="flex items-start gap-3 text-success-600 text-sm">
-                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.8-9.8a1 1 0 00-1.6-1.2L9 11.2l-1.2-1.2a1 1 0 00-1.6 1.4l2 2a1 1 0 001.6 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <div className="leading-snug">
-                    <p className="font-[650]">Thank you, {existing.name.split(' ')[0]}. You&apos;re on the list.</p>
-                    <p className="mt-1">We&apos;ll write to <span className="font-[600]">{existing.email}</span> about sessions, mentors and deadlines.</p>
-                  </div>
-                </div>
+            <div className="space-y-5">
+              <div className="bg-success-0 border border-success-100 rounded-2xl p-4 text-success-600 text-sm leading-snug">
+                <p className="font-[650]">Thank you, {existing.name.split(' ')[0]}. You&apos;re registered.</p>
+                <p className="mt-1">We&apos;ll write to <span className="font-[600]">{existing.email}</span>.</p>
               </div>
 
-              <div className="space-y-3">
-                <h2 className="text-ink text-sm font-[650]">You&apos;re on the tracker now</h2>
-                <p className="text-ink-mid text-sm leading-relaxed">
-                  This site watches GitHub for every pull request and issue an NST student opens, checks what actually got merged, and ranks everyone across all four campuses. Nothing to report by hand: your account was just added to the roster, so your work starts counting from the next refresh.
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  <Link href="/contributors" className="inline-flex items-center gap-1.5 bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[550] px-4 py-2.5 rounded-xl transition-all shadow-brand-btn">
-                    See the leaderboard →
-                  </Link>
-                  <Link href={`/contributors/${viewer.login}`} className="inline-flex items-center gap-1.5 border border-line hover:border-line-strong text-ink text-sm font-[550] px-4 py-2.5 rounded-xl transition-all">
-                    Your profile
-                  </Link>
-                </div>
-              </div>
+              <p className="text-ink-mid text-sm leading-relaxed">
+                This tracker counts every pull request and issue NST students open on GitHub, and your account now counts too.{' '}
+                <Link href="/contributors" className="text-violet-600 hover:text-violet-500 underline font-[550] whitespace-nowrap">See the leaderboard →</Link>
+              </p>
 
-              <div className="space-y-3">
-                <h2 className="text-ink text-sm font-[650]">Want to spend your summer on one of these?</h2>
-                <p className="text-ink-mid text-sm leading-relaxed">
-                  Paid, remote, with a mentor from a real project. Students from NST have been selected for several of them. Applications close fast, and the ones who get in usually have merged PRs in the organisation months earlier, so this is the time to start.
-                </p>
-                <ul className="divide-y divide-line border border-line rounded-2xl overflow-hidden">
-                  {PROGRAMMES.map((p) => (
-                    <li key={p.name}>
-                      <Link href={p.href} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-panel transition-colors">
-                        <span className="min-w-0">
-                          <span className="block text-ink text-sm font-[550]">{p.name}</span>
-                          <span className="block text-ink-soft text-xs mt-0.5">{p.note}</span>
-                        </span>
-                        <span className="text-ink-faint text-sm shrink-0">→</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-ink-soft text-xs">
-                  <Link href="/programs" className="text-violet-600 hover:text-violet-500 underline">All programmes</Link>
-                  {' · '}
-                  <Link href="/organizations" className="text-violet-600 hover:text-violet-500 underline">Organisations that take students</Link>
-                </p>
-              </div>
+              <p className="text-ink-mid text-sm leading-relaxed">
+                Want to spend your summer on open source? Upcoming programmes:{' '}
+                {PROGRAMMES.map((p, i) => (
+                  <span key={p.name}>
+                    {i > 0 && ', '}
+                    <Link href={p.href} className="text-violet-600 hover:text-violet-500 underline font-[550]">{p.name}</Link>
+                  </span>
+                ))}
+                {' '}and <Link href="/programs" className="text-violet-600 hover:text-violet-500 underline font-[550]">more</Link>.
+              </p>
 
               <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
                 <p className="text-ink-soft text-xs">Registered {when(existing.createdAt)}{existing.updatedAt !== existing.createdAt ? ` · updated ${when(existing.updatedAt)}` : ''}</p>
