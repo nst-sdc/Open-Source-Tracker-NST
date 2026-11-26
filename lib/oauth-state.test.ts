@@ -16,6 +16,8 @@ describe('sanitizeReturnPath', () => {
     ['/contributors/octocat', '/contributors/octocat'],
     ['/kairi?seed=stuck', '/kairi'],
     ['/issues#top', '/issues'],
+    ['/interest', '/interest'],
+    ['/organizations?program=gsoc', '/organizations'],
   ])('keeps the same-site path %s', (input, expected) => {
     expect(sanitizeReturnPath(input)).toBe(expected);
   });
