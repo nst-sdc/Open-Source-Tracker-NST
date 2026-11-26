@@ -225,3 +225,89 @@ export function FormRenderer({ slug, initial }: { slug: string; initial?: Public
     </main>
   );
 }
+
+/** Sample answers for a preview: first option for choices, placeholder-ish text otherwise. */
+function sampleAnswers(form: PublicForm): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of form.fields) {
+    if (f.type === 'select' || f.type === 'radio') out[f.key] = f.options?.[0] ?? '';
+    else if (f.type === 'email') out[f.key] = 'asha.rao@example.edu';
+    else if (f.key === 'name') out[f.key] = 'Asha Rao';
+    else out[f.key] = f.placeholder || 'Sample answer';
+  }
+  return out;
+}
+
+/**
+ * The form as a student will see it, in its three states, with nothing
+ * fetched or saved: for the admin editor. Sample answers fill the fields and
+ * the thank-you text.
+ */
+export function FormPreview({ form }: { form: PublicForm }) {
+  const [view, setView] = useState<'intro' | 'form' | 'done'>('intro');
+  const [answers, setAnswers] = useState<Record<string, string>>(() => sampleAnswers(form));
+  const viewer: Viewer = { login: 'preview-student', name: 'Asha Rao', avatarUrl: 'https://avatars.githubusercontent.com/u/9919?s=80' };
+  const now = new Date().toISOString();
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-1 rounded-full border border-line bg-panel p-0.5 w-fit" role="tablist" aria-label="Preview state">
+        {([['intro', 'Before sign-in'], ['form', 'The form'], ['done', 'Thank-you']] as const).map(([k, label]) => (
+          <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={`px-2.5 py-1 rounded-full text-[11.5px] font-[550] transition-colors ${view === k ? 'bg-ground text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}>{label}</button>
+        ))}
+        <span className="px-2 text-[11px] text-ink-faint">preview · nothing is saved</span>
+      </div>
+      <div className="bg-panel rounded-2xl p-4 md:p-8">
+        <div className="mx-auto w-full max-w-lg bg-ground border border-line rounded-2xl p-8 shadow-card">
+          <div className="flex items-center gap-3.5 mb-6">
+            <div className="w-11 h-11 rounded-xl bg-brand-0 border border-violet-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M8 9l-4 3 4 3m8-6 4 3-4 3M14 4l-4 16" /></svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-[650] text-ink leading-tight">{form.title || 'Untitled form'}</h2>
+              {form.subtitle && <p className="text-ink-soft text-xs mt-0.5">{form.subtitle}</p>}
+            </div>
+          </div>
+
+          {view === 'intro' && (
+            <div className="space-y-5">
+              {form.intro && <p className="text-ink-mid text-sm leading-relaxed">{form.intro}</p>}
+              {form.bullets && form.bullets.length > 0 && <ul className="text-ink-soft text-sm space-y-1.5">{form.bullets.map((b) => <li key={b}>· {b}</li>)}</ul>}
+              <div className="w-full bg-brand-solid text-white font-[550] py-3.5 rounded-2xl shadow-brand-btn flex items-center justify-center gap-2 opacity-90">Sign in with GitHub to continue</div>
+            </div>
+          )}
+
+          {view !== 'intro' && (
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-violet-0 border border-violet-100 mb-6">
+              <img src={viewer.avatarUrl} alt="" className="w-10 h-10 rounded-full ring-2 ring-violet-100 object-cover" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-[550] text-ink truncate">{viewer.name}</div>
+                <div className="text-violet-600 text-xs font-mono">@{viewer.login}</div>
+              </div>
+              <span className="text-xs text-ink-soft">Not you?</span>
+            </div>
+          )}
+
+          {view === 'form' && (
+            <form onSubmit={(e) => { e.preventDefault(); setView('done'); }} className="space-y-5">
+              {form.fields.map((f) => <Field key={f.key || f.label} f={f} value={answers[f.key] ?? ''} onChange={(v) => setAnswers((a) => ({ ...a, [f.key]: v }))} />)}
+              <button type="submit" className="w-full bg-brand-solid hover:bg-brand-solid-hover text-white font-[550] py-3.5 rounded-2xl shadow-brand-btn flex items-center justify-center gap-2">Submit</button>
+            </form>
+          )}
+
+          {view === 'done' && (
+            <div className="space-y-5">
+              <div className="bg-success-0 border border-success-100 rounded-2xl p-4 text-success-600 text-sm leading-snug">
+                <p className="font-[650]">{fillTemplate(form.thanks, answers)}</p>
+                {form.thanksNote && <p className="mt-1">{fillTemplate(form.thanksNote, answers)}</p>}
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
+                <p className="text-ink-soft text-xs">Submitted {when(now)}</p>
+                <span className="text-ink-soft text-xs font-[550] underline">Update my answers</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

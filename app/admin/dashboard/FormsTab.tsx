@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { FIELD_TYPES, keyify, slugify, type FormDef, type FormField, type FormResponse } from '@/lib/form-defs';
 import type { FormUsage } from '@/lib/usage';
+import { FormPreview } from '@/app/forms/FormRenderer';
 
 /**
  * Forms: every admin-defined form, its responses (table, CSV, remove) and
@@ -37,10 +38,17 @@ const toDraft = (f: FormDef): Draft => ({
   fields: f.fields.map((x) => ({ ...x, optionsText: (x.options ?? []).join(', ') })),
 });
 
+const draftToForm = (d: Draft) => ({
+  slug: d.slug, title: d.title, subtitle: d.subtitle || undefined, intro: d.intro, bullets: d.bullets.split('\n').map((b) => b.trim()).filter(Boolean),
+  thanks: d.thanks, thanksNote: d.thanksNote || undefined, open: d.open,
+  fields: d.fields.map(({ optionsText, ...f }) => ({ ...f, key: f.key || keyify(f.label), options: optionsText.split(/\r?\n|,/).map((o) => o.trim()).filter(Boolean) })),
+});
+
 function Editor({ draft: initial, onSaved, onCancel }: { draft: Draft; onSaved: (f: FormDef) => void; onCancel: () => void }) {
   const [d, setD] = useState<Draft>(initial);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState(false);
   const set = (patch: Partial<Draft>) => setD((x) => ({ ...x, ...patch }));
   const setField = (i: number, patch: Partial<Draft['fields'][number]>) => setD((x) => ({ ...x, fields: x.fields.map((f, j) => (j === i ? { ...f, ...patch } : f)) }));
   const move = (i: number, dir: -1 | 1) => setD((x) => {
@@ -108,10 +116,12 @@ function Editor({ draft: initial, onSaved, onCancel }: { draft: Draft; onSaved: 
         <label className="flex items-center gap-2 text-ink-mid" title='Needs fields with the keys "batch" and "campus" whose options match the roster'><input type="checkbox" checked={d.addToRoster} onChange={(e) => set({ addToRoster: e.target.checked })} />Add respondents to the roster</label>
       </div>
       {error && <div className="bg-error-0 border border-error-100 rounded-lg p-3 text-error-600 text-sm">{error}</div>}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button type="button" onClick={save} disabled={saving} className="px-4 py-2 rounded-lg bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-50 text-white text-sm font-[550]">{saving ? 'Saving…' : 'Save form'}</button>
+        <button type="button" onClick={() => setPreview((p) => !p)} className="px-4 py-2 rounded-lg border border-line text-ink-mid text-sm hover:border-line-strong">{preview ? 'Hide preview' : 'Preview'}</button>
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-line text-ink-mid text-sm hover:border-line-strong">Cancel</button>
       </div>
+      {preview && <FormPreview key={JSON.stringify(d)} form={draftToForm(d)} />}
     </div>
   );
 }
@@ -124,6 +134,7 @@ export default function FormsTab() {
   const [detail, setDetail] = useState<{ form: FormDef; responses: ResponseRow[]; usage: FormUsage | null } | null>(null);
   const [days, setDays] = useState<7 | 30 | 90>(30);
   const [q, setQ] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
 
   const [reload, setReload] = useState(0);
   const loadForms = () => setReload((n) => n + 1);
@@ -203,11 +214,14 @@ export default function FormsTab() {
               {detail.responses.length > 0 && detail.form.addToRoster && ` · ${detail.responses.filter((r) => r.onRoster).length} on the roster`}
             </div>
             <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setShowPreview((p) => !p)} className="px-3 py-1.5 rounded-lg border border-line text-ink-mid text-sm hover:border-line-strong">{showPreview ? 'Hide preview' : 'Preview'}</button>
               <button type="button" onClick={() => setEditing(toDraft(detail.form))} className="px-3 py-1.5 rounded-lg border border-line text-ink-mid text-sm hover:border-line-strong">Edit form</button>
               <a href={`/api/admin/forms/${detail.form.slug}?format=csv`} className="px-3 py-1.5 rounded-lg bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[550]">Download CSV</a>
               {detail.form.slug !== 'interest' && <button type="button" onClick={() => deleteForm(detail.form.slug)} className="px-3 py-1.5 rounded-lg border border-line text-error-600 text-sm hover:border-error-400">Delete</button>}
             </div>
           </div>
+
+          {showPreview && <FormPreview key={detail.form.updatedAt} form={detail.form} />}
 
           <div className="bg-ground border border-line rounded-xl p-4 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
