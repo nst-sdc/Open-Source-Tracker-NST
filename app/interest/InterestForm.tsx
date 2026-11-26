@@ -24,6 +24,15 @@ const selectStyle = {
 const fieldClass = 'w-full bg-ground border border-line rounded-2xl px-4 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-panel transition-all';
 const labelClass = 'block text-xs font-[550] text-ink-soft uppercase tracking-wider';
 
+/** What a registered student is pointed at next. Dates stay general on purpose; the programme pages carry the exact ones. */
+const PROGRAMMES = [
+  { name: 'Google Summer of Code', note: 'Applications open in March · 12 weeks, May to August', href: '/programs#gsoc' },
+  { name: 'LFX Mentorship', note: 'Linux Foundation · spring term applications in January', href: '/programs#lfx' },
+  { name: 'Summer of Bitcoin', note: 'Bitcoin and Lightning projects · summer internship', href: '/organizations?program=sob' },
+  { name: 'European Summer of Code', note: 'European open-source projects · summer', href: '/organizations?program=esoc' },
+  { name: 'Outreachy', note: 'Two rounds a year · for people under-represented in tech', href: '/programs#outreachy' },
+];
+
 const when = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function InterestForm() {
@@ -120,7 +129,7 @@ export function InterestForm() {
               </p>
               <ul className="text-ink-soft text-sm space-y-1.5">
                 <li>· Your GitHub account identifies you, so there is nothing to type twice.</li>
-                <li>· We ask for your name, email, batch and campus.</li>
+                <li>· We ask for your name, college email, batch and campus.</li>
                 <li>· You can come back and update it any time.</li>
               </ul>
               <a
@@ -146,24 +155,66 @@ export function InterestForm() {
             </div>
           )}
 
-          {phase === 'done' && existing && (
-            <div className="space-y-5">
-              <div className="flex items-start gap-3 bg-success-0 border border-success-100 rounded-2xl p-4 text-success-600 text-sm">
-                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.8-9.8a1 1 0 00-1.6-1.2L9 11.2l-1.2-1.2a1 1 0 00-1.6 1.4l2 2a1 1 0 001.6 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <p className="leading-snug">You&apos;re registered. We&apos;ll be in touch at <span className="font-[600]">{existing.email}</span>.</p>
+          {phase === 'done' && existing && viewer && (
+            <div className="space-y-6">
+              <div className="bg-success-0 border border-success-100 rounded-2xl p-4">
+                <div className="flex items-start gap-3 text-success-600 text-sm">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.8-9.8a1 1 0 00-1.6-1.2L9 11.2l-1.2-1.2a1 1 0 00-1.6 1.4l2 2a1 1 0 001.6 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <div className="leading-snug">
+                    <p className="font-[650]">Thank you, {existing.name.split(' ')[0]}. You&apos;re on the list.</p>
+                    <p className="mt-1">We&apos;ll write to <span className="font-[600]">{existing.email}</span> about sessions, mentors and deadlines.</p>
+                  </div>
+                </div>
               </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <div><dt className={labelClass}>Name</dt><dd className="text-ink mt-1">{existing.name}</dd></div>
-                <div><dt className={labelClass}>Email</dt><dd className="text-ink mt-1 break-all">{existing.email}</dd></div>
-                <div><dt className={labelClass}>Batch</dt><dd className="text-ink mt-1">{existing.batch}</dd></div>
-                <div><dt className={labelClass}>Campus</dt><dd className="text-ink mt-1">{existing.campus}</dd></div>
-              </dl>
-              <p className="text-ink-soft text-xs">Registered {when(existing.createdAt)}{existing.updatedAt !== existing.createdAt ? ` · updated ${when(existing.updatedAt)}` : ''}</p>
-              <button type="button" onClick={() => setPhase('form')} className="w-full border border-line hover:border-line-strong text-ink font-[550] py-3 rounded-2xl transition-all text-sm">
-                Update my details
-              </button>
+
+              <div className="space-y-3">
+                <h2 className="text-ink text-sm font-[650]">You&apos;re on the tracker now</h2>
+                <p className="text-ink-mid text-sm leading-relaxed">
+                  This site watches GitHub for every pull request and issue an NST student opens, checks what actually got merged, and ranks everyone across all four campuses. Nothing to report by hand: your account was just added to the roster, so your work starts counting from the next refresh.
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  <Link href="/contributors" className="inline-flex items-center gap-1.5 bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[550] px-4 py-2.5 rounded-xl transition-all shadow-brand-btn">
+                    See the leaderboard →
+                  </Link>
+                  <Link href={`/contributors/${viewer.login}`} className="inline-flex items-center gap-1.5 border border-line hover:border-line-strong text-ink text-sm font-[550] px-4 py-2.5 rounded-xl transition-all">
+                    Your profile
+                  </Link>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h2 className="text-ink text-sm font-[650]">Want to spend your summer on one of these?</h2>
+                <p className="text-ink-mid text-sm leading-relaxed">
+                  Paid, remote, with a mentor from a real project. Students from NST have been selected for several of them. Applications close fast, and the ones who get in usually have merged PRs in the organisation months earlier, so this is the time to start.
+                </p>
+                <ul className="divide-y divide-line border border-line rounded-2xl overflow-hidden">
+                  {PROGRAMMES.map((p) => (
+                    <li key={p.name}>
+                      <Link href={p.href} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-panel transition-colors">
+                        <span className="min-w-0">
+                          <span className="block text-ink text-sm font-[550]">{p.name}</span>
+                          <span className="block text-ink-soft text-xs mt-0.5">{p.note}</span>
+                        </span>
+                        <span className="text-ink-faint text-sm shrink-0">→</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-ink-soft text-xs">
+                  <Link href="/programs" className="text-violet-600 hover:text-violet-500 underline">All programmes</Link>
+                  {' · '}
+                  <Link href="/organizations" className="text-violet-600 hover:text-violet-500 underline">Organisations that take students</Link>
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
+                <p className="text-ink-soft text-xs">Registered {when(existing.createdAt)}{existing.updatedAt !== existing.createdAt ? ` · updated ${when(existing.updatedAt)}` : ''}</p>
+                <button type="button" onClick={() => setPhase('form')} className="text-ink-soft hover:text-ink-mid text-xs font-[550] underline">
+                  Update my details
+                </button>
+              </div>
             </div>
           )}
 
@@ -174,8 +225,9 @@ export function InterestForm() {
                 <input id="interest-name" type="text" required minLength={2} maxLength={80} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} placeholder="As on your college ID" />
               </div>
               <div className="space-y-2">
-                <label htmlFor="interest-email" className={labelClass}>Email</label>
-                <input id="interest-email" type="email" required maxLength={120} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={fieldClass} placeholder="Your college email, if you have one" />
+                <label htmlFor="interest-email" className={labelClass}>College email</label>
+                <input id="interest-email" type="email" required maxLength={120} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={fieldClass} placeholder="you@your-college-domain" />
+                <p className="text-ink-soft text-xs">Your college address, so session invites and programme updates reach you.</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
