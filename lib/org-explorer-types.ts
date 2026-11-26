@@ -49,6 +49,10 @@ export interface OrgCard {
   years?: number[];
   /** Key into the GSoC dataset (/api/gsoc-orgs) for technologies, topics, category and history. */
   gsocSlug?: string;
+  /** The dataset record that holds each year, when the login has several
+   *  (Apache: one official slug for 2016–21, another for 2022–26). The
+   *  official site and its project lists are keyed by that year's slug. */
+  gsocSlugByYear?: Record<string, string>;
   /** GSoC projects per year across every dataset record of this organisation
    *  (an umbrella like Apache has several), for the flip back and the sheet. */
   gsocSlots?: Record<string, number>;

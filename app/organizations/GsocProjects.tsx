@@ -11,7 +11,7 @@ type State = { status: 'loading' } | { status: 'ok'; projects: GsocProject[]; so
 /** `members`: for an umbrella, the lower-case logins of its member projects; a
  *  project's code owner is shown only when it is one of them, since the other
  *  owners are the contributors' own forks. */
-export function GsocProjects({ slug, years, onIdeasList, members }: { slug: string; years: ReadonlyArray<number>; onIdeasList?: (url: string) => void; members?: ReadonlySet<string> }) {
+export function GsocProjects({ slug, slugByYear, years, onIdeasList, members }: { slug: string; slugByYear?: Record<string, string>; years: ReadonlyArray<number>; onIdeasList?: (url: string) => void; members?: ReadonlySet<string> }) {
   const member = (owner: string | undefined) => !!owner && !!members && members.has(owner.toLowerCase());
   const sorted = [...years].sort((a, b) => b - a);
   const [year, setYear] = useState<number>(sorted[0]);
@@ -27,7 +27,7 @@ export function GsocProjects({ slug, years, onIdeasList, members }: { slug: stri
     requested.current.add(year);
     // Loading state for this year, then the answer; both come from the fetch, not from render.
     queueMicrotask(() => { if (alive.current) setState((s) => (s[year] ? s : { ...s, [year]: { status: 'loading' } })); });
-    fetch(`/api/gsoc-projects?slug=${encodeURIComponent(slug)}&year=${year}`)
+    fetch(`/api/gsoc-projects?slug=${encodeURIComponent(slugByYear?.[String(year)] ?? slug)}&year=${year}`)
       .then(async (r) => {
         const body = (await r.json()) as { ok: boolean; projects?: GsocProject[]; source?: 'official' | 'archive'; ideasListUrl?: string; reason?: string };
         if (alive.current) setState((s) => ({ ...s, [year]: body.ok && body.projects ? { status: 'ok', projects: body.projects, source: body.source ?? 'official', ideasListUrl: body.ideasListUrl } : { status: 'error', reason: body.reason ?? 'unavailable' } }));
@@ -44,7 +44,7 @@ export function GsocProjects({ slug, years, onIdeasList, members }: { slug: stri
     <section>
       <div className="flex items-center justify-between gap-2 mb-2">
         <h3 className="text-ink font-[650] text-sm">GSoC projects</h3>
-        <a href={gsocOfficialOrgUrl(slug, year)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-brand-600 hover:underline underline-offset-2">On the official site ↗</a>
+        <a href={gsocOfficialOrgUrl(slugByYear?.[String(year)] ?? slug, year)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-brand-600 hover:underline underline-offset-2">On the official site ↗</a>
       </div>
       <div className="flex flex-wrap gap-1.5 mb-3" role="tablist" aria-label="Year">
         {sorted.map((y) => (
