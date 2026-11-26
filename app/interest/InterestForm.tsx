@@ -36,15 +36,6 @@ const selectStyle = {
 const fieldClass = 'w-full bg-ground border border-line rounded-2xl px-4 py-3.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100 focus:bg-panel transition-all';
 const labelClass = 'block text-xs font-[550] text-ink-soft uppercase tracking-wider';
 
-/** The summer programmes named on the registered screen. */
-const PROGRAMMES = [
-  { name: 'GSoC', href: '/programs#gsoc', event: 'go:gsoc' },
-  { name: 'LFX Mentorship', href: '/programs#lfx', event: 'go:lfx' },
-  { name: 'Summer of Bitcoin', href: '/organizations?program=sob', event: 'go:sob' },
-  { name: 'European Summer of Code', href: '/organizations?program=esoc', event: 'go:esoc' },
-  { name: 'Outreachy', href: '/programs#outreachy', event: 'go:outreachy' },
-];
-
 const when = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function InterestForm() {
@@ -142,7 +133,7 @@ export function InterestForm() {
           {phase === 'anonymous' && (
             <div className="space-y-5">
               <p className="text-ink-mid text-sm leading-relaxed">
-                Interested in open source: contributing, GSoC, LFX, or just learning how it works? Register here so we can reach you with sessions, mentors and programme deadlines.
+                Interested in open source and want to get into summer programmes like GSoC, LFX Mentorship or Summer of Bitcoin? Register here. This only collects your details so we can reach you about sessions, mentors and deadlines.
               </p>
               <ul className="text-ink-soft text-sm space-y-1.5">
                 <li>· Your GitHub account identifies you, so there is nothing to type twice.</li>
@@ -177,24 +168,10 @@ export function InterestForm() {
             <div className="space-y-5">
               <div className="bg-success-0 border border-success-100 rounded-2xl p-4 text-success-600 text-sm leading-snug">
                 <p className="font-[650]">Thank you, {existing.name.split(' ')[0]}. You&apos;re registered.</p>
-                <p className="mt-1">We&apos;ll write to <span className="font-[600]">{existing.email}</span>{existing.channel ? <> and ping you on <span className="font-[600]">{channelLabel(existing.channel)}</span></> : null}.</p>
+                <p className="mt-1">
+                  Nothing more to do. We&apos;ll ping you on <span className="font-[600]">{existing.channel ? channelLabel(existing.channel) : 'your chosen channel'}</span> when there is something for you: sessions, mentors, programme deadlines.
+                </p>
               </div>
-
-              <p className="text-ink-mid text-sm leading-relaxed">
-                This tracker counts every pull request and issue NST students open on GitHub, and your account now counts too.{' '}
-                <Link href="/contributors" onClick={() => track('go:leaderboard')} className="text-violet-600 hover:text-violet-500 underline font-[550] whitespace-nowrap">See the leaderboard →</Link>
-              </p>
-
-              <p className="text-ink-mid text-sm leading-relaxed">
-                Want to spend your summer on open source? Upcoming programmes:{' '}
-                {PROGRAMMES.map((p, i) => (
-                  <span key={p.name}>
-                    {i > 0 && ', '}
-                    <Link href={p.href} onClick={() => track(p.event)} className="text-violet-600 hover:text-violet-500 underline font-[550]">{p.name}</Link>
-                  </span>
-                ))}
-                {' '}and <Link href="/programs" onClick={() => track('go:more')} className="text-violet-600 hover:text-violet-500 underline font-[550]">more</Link>.
-              </p>
 
               <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
                 <p className="text-ink-soft text-xs">Registered {when(existing.createdAt)}{existing.updatedAt !== existing.createdAt ? ` · updated ${when(existing.updatedAt)}` : ''}</p>
