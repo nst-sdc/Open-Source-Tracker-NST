@@ -6,7 +6,7 @@ import { checkRateLimit, getClientIp, rateLimitedResponse } from '@/lib/rate-lim
 export async function GET(request: Request) {
   // Eligibility checks hit the GitHub API per call — brake scanners before
   // they can burn the shared Search quota (LLM10 / issue #45).
-  const limited = await checkRateLimit(`rl:join-check:${getClientIp(request)}`, 30, 60);
+  const limited = await checkRateLimit(`rl:join-check:${getClientIp(request)}`, 120, 60) // a campus is one address;
   if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
 
   try {
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   // Queue writes are the spam vector — tight limit, legitimate users submit once.
-  const limited = await checkRateLimit(`rl:join-submit:${getClientIp(request)}`, 5, 60);
+  const limited = await checkRateLimit(`rl:join-submit:${getClientIp(request)}`, 60, 60) // a campus is one address;
   if (!limited.allowed) {
     return rateLimitedResponse(limited.retryAfter, 'Too many join requests. Please try again later.');
   }

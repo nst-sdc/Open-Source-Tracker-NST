@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   // Scrolling to the bottom of the full list is ~45 calls; a browser never
   // needs more than a couple per second.
-  const limited = await checkRateLimit(`rl:leaderboard:${getClientIp(request)}`, 240, 60);
+  const limited = await checkRateLimit(`rl:leaderboard:${getClientIp(request)}`, 1200, 60) // a campus is one address;
   if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
 
   const params = Object.fromEntries(url.searchParams.entries());

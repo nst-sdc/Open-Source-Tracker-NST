@@ -33,9 +33,16 @@ export const VIEWER_CACHE_TTL_SECONDS = 10 * 60;
 export const INVALID_CACHE_TTL_SECONDS = 60;
 
 /** Cache-miss validations allowed per IP per hour. Skipped for 'unknown'. */
-const AUTH_CHECK_PER_IP_HOURLY = 60;
+// Sized for a campus: every student on one NAT address shares this bucket,
+// and an active student re-validates once per VIEWER_CACHE_TTL_SECONDS, so
+// a thousand students on one address need ~6,000 checks an hour. Token
+// rotation from one address is still capped, just not at lecture-hall size.
+const AUTH_CHECK_PER_IP_HOURLY = 6000;
 /** Global backstop on cache-miss validations per day. */
-const AUTH_CHECK_DAILY_DEFAULT = 5000;
+// 3,000 active students at six re-validations an hour over a school day
+// is well over 100,000; the old 5,000 would have locked everyone out by
+// the first break. Override with AUTH_CHECK_DAILY_BUDGET.
+const AUTH_CHECK_DAILY_DEFAULT = 200_000;
 
 export interface Viewer {
   /** GitHub's immutable numeric account id. Rate limits key on this, never
