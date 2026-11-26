@@ -1,0 +1,52 @@
+name: Load test
+
+# Rehearses a cohort using the site: `rate` student visits per minute,
+# ramped up over `ramp`, held for `hold`, ramped down over `down`. 100/min
+# for 10+40+10 min is about 6,000 visits in an hour. Aborts itself if more
+# than 5% of requests fail. Run against the live site only on purpose.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Site to test
+        default: https://os.nstsdc.org
+        required: true
+      rate:
+        description: Student visits per minute at the plateau
+        default: '100'
+        required: true
+      ramp:
+        default: 10m
+        required: true
+      hold:
+        default: 40m
+        required: true
+      down:
+        default: 10m
+        required: true
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run k6
+        run: |
+          docker run --rm -v "$PWD/loadtest:/t" -w /t \
+            -e BASE_URL="${{ inputs.base_url }}" -e RATE="${{ inputs.rate }}" \
+            -e RAMP="${{ inputs.ramp }}" -e HOLD="${{ inputs.hold }}" -e DOWN="${{ inputs.down }}" \
+            grafana/k6:0.54.0 run journey.js | tee k6.log
+      - name: Summary
+        if: always()
+        run: |
+          echo '## Load test' >> "$GITHUB_STEP_SUMMARY"
+          echo "Target: ${{ inputs.base_url }} · ${{ inputs.rate }} visits/min · ramp ${{ inputs.ramp }}, hold ${{ inputs.hold }}, down ${{ inputs.down }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"; tail -n 60 k6.log >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-summary
+          path: |
+            loadtest/summary.json
+            k6.log

@@ -50,3 +50,6 @@ data/kv/
 k8s/01-secret.yaml
 # Rust agent sidecar
 agent-rs/target/
+
+# k6 load-test output
+loadtest/summary.json
