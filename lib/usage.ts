@@ -32,10 +32,12 @@ const TIME_ZONE = 'Asia/Kolkata';
  *  fields a day's page hash can ever have. */
 const SECTIONS = new Set([
   'achievers', 'check-work', 'contributors', 'documentation', 'get-started', 'issues',
-  'interest', 'join', 'kairi', 'login', 'organizations', 'programs', 'repo-activity',
+  'forms', 'interest', 'join', 'kairi', 'login', 'organizations', 'programs', 'repo-activity',
 ]);
 /** Sections whose second segment is a GitHub login; collapsed to one row. */
 const PROFILE_SECTIONS = new Set(['achievers', 'check-work', 'contributors']);
+/** Sections whose second segment is a form slug; kept, one row per form. */
+const FORM_SECTIONS = new Set(['forms']);
 
 const BOT_UA = /bot|crawl|spider|slurp|headless|lighthouse|pingdom|uptime|monitor|preview|scrape|curl|wget|python-requests|node-fetch|axios|go-http/i;
 
@@ -69,6 +71,7 @@ export function normalizePath(raw: unknown): string | null {
   if (!SECTIONS.has(section)) return null;
   if (segments.length === 1) return `/${section}`;
   if (segments.length === 2 && PROFILE_SECTIONS.has(section)) return `/${section}/[username]`;
+  if (segments.length === 2 && FORM_SECTIONS.has(section) && /^[a-z0-9-]{1,64}$/.test(segments[1])) return `/${section}/${segments[1]}`;
   return null;
 }
 
@@ -182,61 +185,67 @@ export async function recordPageview(view: Pageview): Promise<boolean> {
   return (await run(commands)).ok;
 }
 
-// ─── Interest form funnel ────────────────────────────────────────────────────
+// ─── Form funnel ─────────────────────────────────────────────────────────────
 //
-// What happens on /interest, as counts per Indian day under
-// usage:interest:<day> (hash event -> count) and usage:io:<day> (HLL of the
-// browsers that opened the form). Same rule as the rest of this module:
-// numbers, never people. The event names are a closed list so the hash can
-// never grow past it.
+// What happens on a form page (/interest, /forms/<slug>), as counts per
+// Indian day under usage:form:<slug>:<day> (hash event -> count) and
+// usage:fo:<slug>:<day> (HLL of the browsers that opened it). The interest
+// form keeps the keys it had before forms were generic. Same rule as the
+// rest of this module: numbers, never people. The event names are a closed
+// list so the hash can never grow past it.
 
-export const INTEREST_EVENTS = [
+export const FORM_EVENTS = [
   'open', // the form page was shown
   'signin', // "Sign in with GitHub" was clicked
-  'form', // the signed-in form was shown (not yet registered)
-  'done', // the registered view was shown (already registered)
-  'registered', // a registration was created (server-side, exact)
-  'updated', // a registration was updated (server-side, exact)
-  'go:leaderboard', 'go:profile', 'go:gsoc', 'go:lfx', 'go:sob', 'go:esoc', 'go:outreachy', 'go:more', 'go:join',
+  'form', // the signed-in form was shown (not yet submitted)
+  'done', // the thank-you view was shown (already submitted)
+  'registered', // a response was created (server-side, exact)
+  'updated', // a response was updated (server-side, exact)
+  'go:leaderboard', 'go:join',
 ] as const;
-export type InterestEvent = (typeof INTEREST_EVENTS)[number];
-const INTEREST_EVENT_SET: ReadonlySet<string> = new Set(INTEREST_EVENTS);
+export type FormEvent = (typeof FORM_EVENTS)[number];
+const FORM_EVENT_SET: ReadonlySet<string> = new Set(FORM_EVENTS);
 
-export function isInterestEvent(raw: unknown): raw is InterestEvent {
-  return typeof raw === 'string' && INTEREST_EVENT_SET.has(raw);
+export function isFormEvent(raw: unknown): raw is FormEvent {
+  return typeof raw === 'string' && FORM_EVENT_SET.has(raw);
 }
 
+const formKeys = (slug: string, day: string) =>
+  slug === 'interest'
+    ? { counts: `usage:interest:${day}`, openers: `usage:io:${day}` }
+    : { counts: `usage:form:${slug}:${day}`, openers: `usage:fo:${slug}:${day}` };
+
 /** Counts one funnel event; `visitor` (from visitorKey) only matters for 'open'. */
-export async function recordInterestEvent(event: InterestEvent, visitor?: string | null, now: Date = new Date()): Promise<boolean> {
-  const day = usageDay(now);
+export async function recordFormEvent(slug: string, event: FormEvent, visitor?: string | null, now: Date = new Date()): Promise<boolean> {
+  const k = formKeys(slug, usageDay(now));
   const commands: string[][] = [
-    ['HINCRBY', `usage:interest:${day}`, event, '1'],
-    ['EXPIRE', `usage:interest:${day}`, TTL],
+    ['HINCRBY', k.counts, event, '1'],
+    ['EXPIRE', k.counts, TTL],
   ];
-  if (event === 'open' && visitor) commands.push(['PFADD', `usage:io:${day}`, visitor], ['EXPIRE', `usage:io:${day}`, TTL]);
+  if (event === 'open' && visitor) commands.push(['PFADD', k.openers, visitor], ['EXPIRE', k.openers, TTL]);
   return (await run(commands)).ok;
 }
 
-export interface InterestUsage {
+export interface FormUsage {
   days: Array<{ day: string; open: number; form: number; registered: number }>;
   /** Event -> count over the whole range. Every event is present, 0 when unseen. */
-  totals: Record<InterestEvent, number>;
+  totals: Record<FormEvent, number>;
   /** Distinct browsers that opened the form over the range. */
   openers: number;
 }
 
-/** The last `days` days of the interest funnel, or null when the store did not answer. */
-export async function readInterestUsage(days: number, now: Date = new Date()): Promise<InterestUsage | null> {
+/** The last `days` days of a form's funnel, or null when the store did not answer. */
+export async function readFormUsage(slug: string, days: number, now: Date = new Date()): Promise<FormUsage | null> {
   const span = Math.min(USAGE_MAX_RANGE_DAYS, Math.max(1, Math.floor(days) || 30));
   const list = usageDays(span, now);
-  const commands = list.map((d) => ['HGETALL', `usage:interest:${d}`]);
-  commands.push(['PFCOUNT', ...list.map((d) => `usage:io:${d}`)]);
+  const commands = list.map((d) => ['HGETALL', formKeys(slug, d).counts]);
+  commands.push(['PFCOUNT', ...list.map((d) => formKeys(slug, d).openers)]);
   const { ok, results } = await run(commands);
   if (!ok) return null;
-  const totals = Object.fromEntries(INTEREST_EVENTS.map((e) => [e, 0])) as Record<InterestEvent, number>;
+  const totals = Object.fromEntries(FORM_EVENTS.map((e) => [e, 0])) as Record<FormEvent, number>;
   const rows = list.map((day, i) => {
     const h = hashOf(results[i]);
-    for (const [event, n] of Object.entries(h)) if (isInterestEvent(event)) totals[event] += n;
+    for (const [event, n] of Object.entries(h)) if (isFormEvent(event)) totals[event] += n;
     return { day, open: h.open ?? 0, form: h.form ?? 0, registered: h.registered ?? 0 };
   });
   return { days: rows, totals, openers: Number(results[list.length]) || 0 };
