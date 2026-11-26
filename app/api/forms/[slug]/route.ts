@@ -48,8 +48,10 @@ export async function GET(request: Request, { params }: Params) {
 
 export async function POST(request: Request, { params }: Params) {
   const { slug } = await params;
-  const limited = await checkRateLimit(`rl:form-submit:${getClientIp(request)}`, 5, 60);
-  if (!limited.allowed) return rateLimitedResponse(limited.retryAfter, 'Too many submissions. Please try again in a minute.');
+  // A whole campus sits behind one NAT address, so the per-IP ceiling is
+  // wide and only stops floods; the real limit is per signed-in account.
+  const perIp = await checkRateLimit(`rl:form-submit:${getClientIp(request)}`, 300, 60);
+  if (!perIp.allowed) return rateLimitedResponse(perIp.retryAfter, 'Too many submissions from your network. Please try again in a minute.');
 
   const def = await getForm(slug);
   if (!def) return NextResponse.json({ error: 'No such form.' }, { status: 404 });
@@ -57,6 +59,8 @@ export async function POST(request: Request, { params }: Params) {
 
   const session = await getViewer(request);
   if (session.status !== 'authenticated') return sessionError(session.status);
+  const perUser = await checkRateLimit(`rl:form-submit:user:${session.viewer.id}`, 10, 60);
+  if (!perUser.allowed) return rateLimitedResponse(perUser.retryAfter, 'Too many submissions. Please try again in a minute.');
 
   let body: unknown;
   try {

@@ -19,7 +19,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     if (!SLUG.test(slug)) return DONE();
     const userAgent = request.headers.get('user-agent') ?? '';
     if (isBot(userAgent) || !isSameOrigin(request)) return DONE();
-    const limited = await checkRateLimit(`rl:form-event:${getClientIp(request)}`, 60, 60);
+    // Per address, and a campus is one address: wide enough for a lecture hall opening the form at once.
+    const limited = await checkRateLimit(`rl:form-event:${getClientIp(request)}`, 1200, 60);
     if (!limited.allowed) return DONE();
     const raw = await request.text();
     if (raw.length > 500) return DONE();

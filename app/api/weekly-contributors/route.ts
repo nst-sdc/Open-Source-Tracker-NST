@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   // A stampede on a stale cache triggers a full multi-student GitHub refresh.
-  const limited = await checkRateLimit(`rl:weekly:${getClientIp(request)}`, 20, 60);
+  const limited = await checkRateLimit(`rl:weekly:${getClientIp(request)}`, 300, 60) // a campus is one address;
   if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
 
   try {

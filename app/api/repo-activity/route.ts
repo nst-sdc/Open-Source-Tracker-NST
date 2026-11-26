@@ -47,7 +47,7 @@ function getFilterDate(period: string): Date {
 
 export async function GET(request: Request) {
   // Uncached hits fan out to several GitHub REST calls per repo.
-  const limited = await checkRateLimit(`rl:repo-activity:${getClientIp(request)}`, 30, 60);
+  const limited = await checkRateLimit(`rl:repo-activity:${getClientIp(request)}`, 120, 60) // a campus is one address;
   if (!limited.allowed) return rateLimitedResponse(limited.retryAfter);
 
   const { searchParams } = new URL(request.url);
