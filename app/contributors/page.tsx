@@ -462,16 +462,15 @@ export default async function ContributorsPage({
         />
       </Suspense>
 
-      {/* Community activity by month, for the campus/year in view. Org mode
-          has its own numbers in the filter bar, so the chart steps aside. */}
-      {!isOrgSearch && (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-          <CommunityChart
-            ranges={chartRanges(timeline, { campus, year })}
-            scopeLabel={[campus, year].filter(Boolean).join(" · ") || undefined}
-          />
-        </div>
-      )}
+      {/* Activity by month: the whole community for the campus/year in view,
+          or, in org mode, this organisation alone (who is active there, and
+          how many), built from the same profiles the org view opens. */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
+        <CommunityChart
+          ranges={chartRanges(isOrgSearch && board.orgTimeline ? board.orgTimeline : timeline, { campus, year })}
+          scopeLabel={[isOrgSearch && board.org ? board.org.name : null, campus, year].filter(Boolean).join(" · ") || undefined}
+        />
+      </div>
       {/* Ranked table + other members */}
       {/* Keyed by the filters: the grid keeps the pages it has loaded in
           client state, so a filter change must give it a fresh instance or it
