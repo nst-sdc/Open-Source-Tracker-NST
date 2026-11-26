@@ -38,6 +38,10 @@ export async function POST(request: Request) {
   let measuredPRs = 0;
   let rateLimited = false;
   const touched: string[] = [];
+  // Students with pending PRs the measurer could not value at all: a gone or
+  // renamed repository, a PR too large to list. They are reported, not retried.
+  const stuck: string[] = [];
+  let zerosInARow = 0;
 
   for (; i < students.length; i++) {
     if (Date.now() - started > BUDGET_MS || measuredStudents >= limit) break;
@@ -52,11 +56,15 @@ export async function POST(request: Request) {
     for (const pr of pending) if (pr.contribution && pr.contribution.v !== PR_VALUE_VERSION) delete pr.contribution;
     const n = await measurePRContributions(prs, repoCache, undefined, { max: 300 });
     if (n === 0) {
-      // Nothing measured although something was pending: almost always the
-      // rate limit. Stop here; the caller retries this cursor later.
-      rateLimited = true;
-      break;
+      // Nothing measured although something was pending. One such student is
+      // their own problem (the backfill once sat on one for a day, reporting a
+      // rate limit); several in a row is the rate limit, so stop and let the
+      // caller retry this cursor later.
+      stuck.push(login);
+      if (++zerosInARow >= 3) { rateLimited = true; break; }
+      continue;
     }
+    zerosInARow = 0;
     measuredPRs += n;
     measuredStudents++;
     touched.push(login);
@@ -72,6 +80,7 @@ export async function POST(request: Request) {
     measuredStudents,
     measuredPRs,
     touched,
+    stuck,
     rateLimited,
     done,
     elapsedMs: Date.now() - started,
