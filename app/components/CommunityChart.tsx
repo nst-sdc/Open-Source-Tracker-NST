@@ -5,21 +5,31 @@ import { useId, useMemo, useState } from 'react';
 import type { MonthBucket, ChartRanges } from '@/lib/community-timeline';
 
 /**
- * The community's activity by month: four thin lines (merged, opened, and
- * closed-without-merge pull requests on the left axis; issues opened on the
- * right axis, because issue volume runs several times PR volume and would
- * flatten the rest), a soft area under merged, and a hover crosshair with a
- * card that reads out every series for the month under the pointer. Legend
- * entries toggle their series. `compact` is the home-page version.
+ * The community's activity by month: merged PRs and the number of students
+ * who had a merge are always drawn, on the left axis, which is scaled to
+ * them. Opened and closed-without-merge pull requests and issues opened
+ * appear while the pointer rests on the merged line; they share the right
+ * axis, because their volume runs several times merged volume and would
+ * flatten the two headline lines. Both axes carry a title so the reader
+ * knows what each scale counts. A soft area
+ * under merged, and a hover crosshair with a card that reads out every
+ * series for the month under the pointer. Legend entries toggle their
+ * series. `compact` is the home-page version.
  */
-type SeriesKey = 'merged' | 'opened' | 'closed' | 'issues';
+type SeriesKey = 'merged' | 'contributors' | 'opened' | 'closed' | 'issues';
 
 const SERIES: Array<{ key: SeriesKey; label: string; color: string; axis: 'left' | 'right'; width: number }> = [
   { key: 'merged', label: 'Merged PRs', color: 'var(--color-success-500)', axis: 'left', width: 2.25 },
-  { key: 'opened', label: 'PRs opened', color: 'var(--color-brand-500)', axis: 'left', width: 1.5 },
-  { key: 'closed', label: 'Closed unmerged', color: 'var(--color-warning-600)', axis: 'left', width: 1.5 },
+  { key: 'contributors', label: 'Students with a merge', color: 'var(--color-gold-600)', axis: 'left', width: 1.75 },
+  { key: 'opened', label: 'PRs opened', color: 'var(--color-brand-500)', axis: 'right', width: 1.5 },
+  { key: 'closed', label: 'Closed unmerged', color: 'var(--color-warning-600)', axis: 'right', width: 1.5 },
   { key: 'issues', label: 'Issues opened', color: 'var(--color-violet-500)', axis: 'right', width: 1.5 },
 ];
+
+/** Series drawn at full strength at all times; the rest wait for the pointer. */
+const ALWAYS: ReadonlySet<SeriesKey> = new Set(['merged', 'contributors']);
+/** Series drawn as straight segments between the months (data, not a trend). */
+const STRAIGHT: ReadonlySet<SeriesKey> = new Set(['merged', 'contributors']);
 
 const monthLabel = (m: string, long = false) =>
   new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', ...(long ? { year: 'numeric' } : {}), timeZone: 'UTC' });
@@ -90,11 +100,20 @@ export function CommunityChart({
   const [hidden, setHidden] = useState<Set<SeriesKey>>(() => new Set());
   const visible = SERIES.filter((s) => !hidden.has(s.key));
 
+  // Contributors is a count of distinct students per month; the same student
+  // shows up in several months, so its legend figure is the busiest month,
+  // not a sum.
   const totals = useMemo(
     () =>
       series.reduce(
-        (a, b) => ({ opened: a.opened + b.opened, merged: a.merged + b.merged, closed: a.closed + b.closed, issues: a.issues + b.issues }),
-        { opened: 0, merged: 0, closed: 0, issues: 0 },
+        (a, b) => ({
+          opened: a.opened + b.opened,
+          merged: a.merged + b.merged,
+          closed: a.closed + b.closed,
+          issues: a.issues + b.issues,
+          contributors: Math.max(a.contributors, b.contributors),
+        }),
+        { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0 },
       ),
     [series],
   );
@@ -105,10 +124,12 @@ export function CommunityChart({
   // ── Geometry ──────────────────────────────────────────────────────────────
   const width = 720;
   const height = compact ? 88 : 240;
-  const padLeft = compact ? 0 : 40;
-  const padRight = compact ? 0 : 44;
+  // The full chart leaves room on each side for the tick labels and, outside
+  // them, a rotated axis title.
+  const padLeft = compact ? 0 : 60;
+  const padRight = compact ? 0 : 64;
   const padTop = compact ? 6 : 12;
-  const padBottom = compact ? 2 : 40;
+  const padBottom = compact ? 2 : 28;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
   const baseline = padTop + plotH;
@@ -121,19 +142,19 @@ export function CommunityChart({
   // The full chart lifts its floor a little too (half of the lowest visible
   // left-axis value), enough to open up the month-to-month movement while
   // keeping the axis honest; the ticks label the real values.
-  const leftVisibleMin = Math.min(
-    ...series.flatMap((b) => [hidden.has('merged') ? Infinity : b.merged, hidden.has('opened') ? Infinity : b.opened, hidden.has('closed') ? Infinity : b.closed]),
-  );
+  const leftKeys = SERIES.filter((s) => s.axis === 'left' && !hidden.has(s.key)).map((s) => s.key);
+  const leftVisibleMin = Math.min(...series.flatMap((b) => leftKeys.map((k) => b[k])));
   const leftMin = compact
     ? Math.max(0, Math.floor(Math.min(...mergedVals) * 0.85))
     : Number.isFinite(leftVisibleMin) ? Math.max(0, Math.floor(leftVisibleMin * 0.5)) : 0;
   const leftMax = compact
     ? Math.max(leftMin + 1, Math.ceil(Math.max(...mergedVals) * 1.05))
-    : niceCeil(Math.max(0, ...series.flatMap((b) => [hidden.has('merged') ? 0 : b.merged, hidden.has('opened') ? 0 : b.opened, hidden.has('closed') ? 0 : b.closed])));
-  const rightMax = niceCeil(Math.max(0, ...series.map((b) => (hidden.has('issues') ? 0 : b.issues))));
+    : niceCeil(Math.max(0, ...series.flatMap((b) => leftKeys.map((k) => b[k]))));
+  const rightKeys = SERIES.filter((s) => s.axis === 'right' && !hidden.has(s.key)).map((s) => s.key);
+  const rightMax = niceCeil(Math.max(0, ...series.flatMap((b) => rightKeys.map((k) => b[k]))));
   const yLeft = (v: number) => baseline - ((v - leftMin) / (leftMax - leftMin)) * plotH;
   const yRight = (v: number) => baseline - (v / rightMax) * plotH;
-  const yFor = (key: SeriesKey, v: number) => (key === 'issues' ? yRight(v) : yLeft(v));
+  const yFor = (key: SeriesKey, v: number) => (SERIES.find((s) => s.key === key)?.axis === 'right' ? yRight(v) : yLeft(v));
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
   if (totals.opened === 0 && totals.merged === 0 && totals.issues === 0) {
@@ -153,7 +174,7 @@ export function CommunityChart({
   const pointsFor = (key: SeriesKey) => series.map((b, i) => [xFor(i), yFor(key, b[key])] as [number, number]);
   const paths = (compact ? visible.filter((s) => s.key === 'merged') : visible).map((s) => ({
     ...s,
-    d: s.key === 'merged' ? straightPath(pointsFor('merged')) : smoothPath(pointsFor(s.key)),
+    d: STRAIGHT.has(s.key) ? straightPath(pointsFor(s.key)) : smoothPath(pointsFor(s.key)),
   }));
   const mergedArea = !hidden.has('merged')
     ? `${straightPath(pointsFor('merged'))} L${xFor(n - 1).toFixed(1)},${baseline} L${xFor(0).toFixed(1)},${baseline} Z`
@@ -184,7 +205,7 @@ export function CommunityChart({
       viewBox={`0 0 ${width} ${height}`}
       className="h-auto w-full overflow-visible touch-none select-none"
       role="img"
-      aria-label={`Community activity by month${scopeLabel ? ` for ${scopeLabel}` : ''}: ${totals.merged} pull requests merged, ${totals.opened} opened, ${totals.closed} closed without merging and ${totals.issues} issues opened across ${series.length} months.`}
+      aria-label={`Community activity by month${scopeLabel ? ` for ${scopeLabel}` : ''}: ${totals.merged} pull requests merged, ${totals.opened} opened, ${totals.closed} closed without merging and ${totals.issues} issues opened across ${series.length} months; up to ${totals.contributors} students with a merge in one month.`}
       onPointerMove={onMove}
       onPointerLeave={() => { setHover(null); setOnLine(false); }}
     >
@@ -200,11 +221,25 @@ export function CommunityChart({
           <g key={t}>
             <line x1={padLeft} y1={baseline - t * plotH} x2={width - padRight} y2={baseline - t * plotH} stroke={t === 0 ? 'var(--color-line-strong)' : 'var(--color-line)'} strokeWidth="1" strokeDasharray={t === 0 ? undefined : '2 4'} />
             <text x={padLeft - 8} y={baseline - t * plotH + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(leftMin + t * (leftMax - leftMin))}</text>
-            {!hidden.has('issues') && (
-              <text x={width - padRight + 8} y={baseline - t * plotH + 3.5} textAnchor="start" fontSize="10" fill="var(--color-violet-500)" className="tabular-nums" opacity="0.8">{Math.round(t * rightMax)}</text>
+            {rightKeys.length > 0 && (
+              <text x={width - padRight + 8} y={baseline - t * plotH + 3.5} textAnchor="start" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(t * rightMax)}</text>
             )}
           </g>
         ))}
+
+      {/* Axis titles, so the two scales are never a guess */}
+      {!compact && (
+        <>
+          <text transform={`translate(11 ${padTop + plotH / 2}) rotate(-90)`} textAnchor="middle" fontSize="10" fontWeight={550} fill="var(--color-ink-soft)">
+            Merged PRs · students, per month
+          </text>
+          {rightKeys.length > 0 && (
+            <text transform={`translate(${width - 9} ${padTop + plotH / 2}) rotate(90)`} textAnchor="middle" fontSize="10" fontWeight={550} fill="var(--color-ink-soft)">
+              Opened · closed PRs · issues, per month
+            </text>
+          )}
+        </>
+      )}
 
       {/* Slight vertical grid, one line per month */}
       {!compact && series.map((b, i) => (
@@ -218,10 +253,10 @@ export function CommunityChart({
 
       {mergedArea && <path d={mergedArea} fill={`url(#${gradId})`} />}
 
-      {/* Merged is the headline and always drawn in full; the other series
-          are invisible until the pointer rests on the merged line itself,
-          then appear at a quarter opacity so merged still leads. The
-          legend keeps their totals visible at all times. */}
+      {/* Merged and students-with-a-merge are always drawn in full; the
+          other series are invisible until the pointer rests on the merged
+          line itself, then appear at a quarter opacity so merged still
+          leads. The legend keeps their totals visible at all times. */}
       {paths.map((p) => (
         <path
           key={p.key}
@@ -232,29 +267,23 @@ export function CommunityChart({
           strokeLinejoin="round"
           strokeLinecap="round"
           strokeDasharray={p.key === 'issues' ? '5 4' : undefined}
-          opacity={p.key === 'merged' ? 1 : onLine ? 0.25 : 0}
+          opacity={ALWAYS.has(p.key) ? 1 : onLine ? 0.25 : 0}
           style={{ transition: 'opacity 180ms ease' }}
         />
       ))}
 
+      {!compact && !hidden.has('contributors') && series.map((b, i) => (
+        <circle key={`s${b.month}`} cx={xFor(i)} cy={yLeft(b.contributors)} r={2.5} fill="var(--color-gold-600)" />
+      ))}
       {!hidden.has('merged') && series.map((b, i) => (
         <circle key={`m${b.month}`} cx={xFor(i)} cy={yLeft(b.merged)} r={compact ? 2 : 3.5} fill="var(--color-ground)" stroke="var(--color-success-500)" strokeWidth={compact ? 1.5 : 2} />
       ))}
 
-      {!compact && (
-        <>
-          {series.map((b, i) => (
-            <text key={b.month} x={xFor(i)} y={baseline + 16} textAnchor="middle" fontSize="10.5" fill={hovered && hover === i ? 'var(--color-ink)' : 'var(--color-ink-soft)'} fontWeight={hovered && hover === i ? 650 : 450}>
-              {monthLabel(b.month)}
-            </text>
-          ))}
-          {series.map((b, i) => (
-            <text key={`c${b.month}`} x={xFor(i)} y={baseline + 30} textAnchor="middle" fontSize="9.5" fill="var(--color-ink-faint)" className="tabular-nums">
-              {b.contributors || '·'}
-            </text>
-          ))}
-        </>
-      )}
+      {!compact && series.map((b, i) => (
+        <text key={b.month} x={xFor(i)} y={baseline + 16} textAnchor="middle" fontSize="10.5" fill={hovered && hover === i ? 'var(--color-ink)' : 'var(--color-ink-soft)'} fontWeight={hovered && hover === i ? 650 : 450}>
+          {monthLabel(b.month)}
+        </text>
+      ))}
 
       {/* Crosshair + points for the hovered month */}
       {hovered && hover !== null && (
@@ -307,10 +336,6 @@ export function CommunityChart({
           <span className="tabular-nums font-[600] text-ink">{hovered[s.key].toLocaleString('en-IN')}</span>
         </div>
       ))}
-      <div className="flex items-center justify-between gap-4 leading-6 border-t border-line mt-1 pt-1 text-ink-mid">
-        <span>Students with a merge</span>
-        <span className="tabular-nums font-[600] text-ink">{hovered.contributors.toLocaleString('en-IN')}</span>
-      </div>
     </div>
   );
 
@@ -324,6 +349,9 @@ export function CommunityChart({
             <div className="mt-1 text-[22px] leading-none font-[650] tabular-nums text-success-600">
               {(hovered ?? last)?.merged.toLocaleString('en-IN') ?? 0}
               <span className="ml-2 text-[12px] font-[550] text-ink-soft">{hovered ? monthLabel(hovered.month, true) : 'this month so far'}</span>
+            </div>
+            <div className="mt-1 text-[12px] text-ink-soft tabular-nums">
+              by {(hovered ?? last)?.contributors.toLocaleString('en-IN') ?? 0} students
             </div>
           </div>
           <div className="text-right text-[12px] text-ink-soft">
@@ -382,11 +410,13 @@ export function CommunityChart({
             >
               <span className="w-3 h-[3px] rounded" style={{ backgroundColor: s.color, opacity: off ? 0.4 : 1 }} />
               {s.label}
-              <span className="tabular-nums text-ink-soft">{totals[s.key].toLocaleString('en-IN')}</span>
+              <span className="tabular-nums text-ink-soft">
+                {s.key === 'contributors' ? `up to ${totals.contributors.toLocaleString('en-IN')} / month` : totals[s.key].toLocaleString('en-IN')}
+              </span>
             </button>
           );
         })}
-        <span className="text-[11px] text-ink-faint ml-auto">hover the merged line to reveal opened, closed and issues · issues on the right axis · numbers under the months: students with a merge</span>
+        <span className="text-[11px] text-ink-faint ml-auto">left axis: merged PRs and students · right axis: opened, closed and issues, shown while you hover the merged line</span>
       </div>
       <div className="relative">
         {svg}
