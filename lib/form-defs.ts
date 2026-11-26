@@ -77,7 +77,7 @@ export const DEFAULT_FORMS: FormDef[] = [
       'You can come back and update it any time.',
     ],
     thanks: "Thank you, {first}. You're registered.",
-    thanksNote: 'Nothing more to do. We’ll ping you on {channel} when there is something for you: sessions, mentors, programme deadlines.',
+    thanksNote: 'We will reach out to you via mail.',
     fields: [
       { key: 'name', label: 'Full name', type: 'text', required: true, placeholder: 'As on your college ID' },
       { key: 'email', label: 'College email', type: 'email', required: true, placeholder: 'you@your-college-domain', help: 'Your college address, so session invites and programme updates reach you.' },
