@@ -25,6 +25,7 @@ import { getStudentsKV } from './kv-students';
 import { getFlaggedPRIdSet } from './flagged';
 import { readSummaryCache, writeSummaryCache, pruneToRoster } from './summary-cache';
 import { readProfileCache } from './profile-cache';
+import { foldStudent, lastMonths, orgFilters, MONTHS_KEPT, type CommunityTimeline } from './community-timeline';
 import { getRepoCache, prExcludedBy } from './repo-cache';
 import { aggregateMergedPRScore, isConcentrated, CONCENTRATED_DECAY, PER_REPO_DECAY } from './repo-score';
 import { resolveOrganization } from './org-cache';
@@ -98,6 +99,8 @@ export interface Leaderboard {
   totals: { students: number; studentsInFilter: number; contributors: number; totalPRs: number; totalMerged: number };
   cachedAt: string | null;
   org: { login: string; name: string; avatarUrl?: string } | null;
+  /** Org mode only: this organisation's activity by month, from the same profiles, for the chart. */
+  orgTimeline?: CommunityTimeline;
   /** For the local-checkout banner: how many students have a fetched profile. */
   bootstrap: { populated: number; total: number };
 }
@@ -262,6 +265,7 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
   let other: LeaderboardRow[] = [];
   let totalPRs = 0;
   let totalMerged = 0;
+  let orgTimeline: CommunityTimeline | undefined;
 
   if (isOrgSearch && matchedOrg) {
     const targetOrgLogin = matchedOrg.login.toLowerCase();
@@ -271,6 +275,15 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
     const orgContributors = contributorsForOrg(await readOrgIndex(), targetOrgLogin);
     const orgSummaries: StudentSummary[] = [];
     const now = Date.now();
+    // The organisation's own monthly series: every PR and issue of its
+    // contributors in its repositories, same exclusions as the ranking,
+    // all months (the period filter narrows the table, not the chart).
+    const orgMonths: CommunityTimeline['months'] = {};
+    const keepMonths = new Set(lastMonths(MONTHS_KEPT, now));
+    const orgTimelineFilters = orgFilters(targetOrgLogin, {
+      flaggedPRIds,
+      excludesPR: (repo, mergedAt) => prExcludedBy(repoCache[repo], mergedAt) !== null,
+    });
 
     await Promise.all(
       allSummaries
@@ -291,6 +304,13 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
               return true;
             });
             let issues = cached.issues || [];
+            foldStudent(
+              orgMonths,
+              { github: studentSummary.profile.login, year: studentSummary.year, campus: studentSummary.campus },
+              { prs: cached.prs, issues: issues.filter((is) => is.repository_url && repoFromUrl(is.repository_url).split('/')[0]?.toLowerCase() === targetOrgLogin) },
+              orgTimelineFilters,
+              keepMonths,
+            );
             if (dateQuery) {
               prs = applyDateWindow(prs, dateQuery);
               issues = applyDateWindow(issues, dateQuery);
@@ -336,6 +356,7 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
       return a.profile.login.localeCompare(b.profile.login);
     });
     active = orgSummaries.map((s, i) => toRow(s, i + 1));
+    orgTimeline = { builtAt: new Date(now).toISOString(), months: orgMonths, studentsCounted: orgSummaries.length };
     totalPRs = orgSummaries.reduce((n, s) => n + s.totalPRs, 0);
     totalMerged = orgSummaries.reduce((n, s) => n + s.mergedPRs, 0);
   } else {
@@ -358,6 +379,7 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
     totals: { students: students.length, studentsInFilter, contributors: active.length, totalPRs, totalMerged },
     cachedAt,
     org: isOrgSearch && matchedOrg ? { login: matchedOrg.login, name: matchedOrg.name || matchedOrg.login, avatarUrl: matchedOrg.avatarUrl } : null,
+    ...(orgTimeline ? { orgTimeline } : {}),
     bootstrap,
   };
 }

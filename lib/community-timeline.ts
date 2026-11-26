@@ -63,6 +63,19 @@ export interface TimelineFilters {
 
 export const monthOf = (iso: string): string => iso.slice(0, 7);
 
+/**
+ * Filters that keep only one organisation's repositories, on top of the
+ * leaderboard's own exclusions: for the per-organisation chart on the
+ * contributors page, built from the same profiles the org view opens.
+ */
+export function orgFilters(orgLogin: string, base: TimelineFilters = {}): TimelineFilters {
+  const org = orgLogin.toLowerCase();
+  return {
+    flaggedPRIds: base.flaggedPRIds,
+    excludesPR: (repo, mergedAt) => repo.split('/')[0]?.toLowerCase() !== org || (base.excludesPR?.(repo, mergedAt) ?? false),
+  };
+}
+
 export function segmentKey(s: Pick<Student, 'campus' | 'year'>): string {
   return `${s.campus ?? '-'}|${s.year ?? '-'}`;
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => true) }));
 vi.mock('./profile-cache', () => ({ readProfileCache: vi.fn(async () => null) }));
-import { foldStudent, lastMonths, seriesFor, segmentKey, buildCommunityTimeline, timelineIsStale, yearsAvailable, seriesForYear, chartRanges, type CommunityTimeline } from './community-timeline';
+import { foldStudent, lastMonths, seriesFor, segmentKey, buildCommunityTimeline, timelineIsStale, yearsAvailable, seriesForYear, chartRanges, orgFilters, type CommunityTimeline } from './community-timeline';
 
 const NOW = Date.UTC(2026, 10, 18); // 2026-11-18
 const pr = (repo: string, n: number, created: string, merged?: string, closed?: string) =>
@@ -133,5 +133,22 @@ describe('year ranges', () => {
     const r = chartRanges(t, {}, NOW);
     expect(r.recent).toHaveLength(12);
     expect(r.years.map((y) => y.year)).toEqual([2026, 2025]);
+  });
+});
+
+describe('orgFilters', () => {
+  it('keeps one organisation\'s repositories and still applies the base exclusions', () => {
+    const months: CommunityTimeline['months'] = {};
+    const keep = new Set(lastMonths(12, NOW));
+    const f = orgFilters('Apache', { excludesPR: (repo) => repo === 'apache/spam' });
+    foldStudent(months, { github: 'asha', campus: 'ADYPU', year: '2nd year' }, {
+      prs: [
+        pr('apache/kafka', 1, '2026-10-05T00:00:00Z', '2026-10-20T00:00:00Z'),
+        pr('apache/spam', 2, '2026-10-06T00:00:00Z', '2026-10-07T00:00:00Z'),
+        pr('numpy/numpy', 3, '2026-10-08T00:00:00Z', '2026-10-09T00:00:00Z'),
+      ],
+      issues: [],
+    }, f, keep);
+    expect(months['2026-10']['ADYPU|2nd year']).toMatchObject({ opened: 1, merged: 1, contributors: 1, active: 1 });
   });
 });
