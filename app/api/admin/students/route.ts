@@ -10,19 +10,21 @@ export async function GET() {
   return Response.json(students);
 }
 
-/** POST /api/admin/students — add a student { github: "username", year, campus } */
+/** POST /api/admin/students — add a student { github: "username", year, campus, name, email } */
 export async function POST(request: Request) {
   if (!(await checkAdminAuth())) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await request.json().catch(() => ({}));
-  const { github, year, campus } = body as {
+  const { github, year, campus, name, email } = body as {
     github?: string;
     year?: '1st year' | '2nd year' | '3rd year' | '4th year';
     campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU';
+    name?: string;
+    email?: string;
   };
   if (!github?.trim()) return Response.json({ error: 'Missing github username' }, { status: 400 });
   let result: { ok: boolean; message?: string };
   try {
-    result = await addStudent(github.trim(), year, campus);
+    result = await addStudent(github.trim(), year, campus, { name, email });
   } catch (err) {
     if (err instanceof RosterUnavailableError) return Response.json({ error: err.message }, { status: 503 });
     throw err;
@@ -37,19 +39,21 @@ export async function POST(request: Request) {
   return Response.json({ ok: true });
 }
 
-/** PUT /api/admin/students — edit a student's year/campus */
+/** PUT /api/admin/students — edit a student's year/campus (and name/email when given) */
 export async function PUT(request: Request) {
   if (!(await checkAdminAuth())) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await request.json().catch(() => ({}));
-  const { github, year, campus } = body as {
+  const { github, year, campus, name, email } = body as {
     github?: string;
     year?: '1st year' | '2nd year' | '3rd year' | '4th year';
     campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU';
+    name?: string;
+    email?: string;
   };
   if (!github?.trim()) return Response.json({ error: 'Missing github username' }, { status: 400 });
   let result: { ok: boolean; message?: string };
   try {
-    result = await updateStudentDetails(github.trim(), year, campus);
+    result = await updateStudentDetails(github.trim(), year, campus, { name, email });
   } catch (err) {
     if (err instanceof RosterUnavailableError) return Response.json({ error: err.message }, { status: 503 });
     throw err;

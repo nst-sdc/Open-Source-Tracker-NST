@@ -22,6 +22,10 @@ export interface Student {
   github: string;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
   campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU';
+  /** The student's name as the college knows it, so the admin page shows who is who. */
+  name?: string;
+  /** College email; from an admin import or the interest form. */
+  email?: string;
   /** GitHub's numeric user id. Stable across renames, so it is how a 404ed
    *  login is resolved to its new name. Learned on the first successful fetch. */
   githubId?: number;
@@ -187,17 +191,38 @@ export function _resetRosterMemory(): void {
   lastGoodRoster = null;
 }
 
+/** Name and email, as an admin or the interest form supplies them; blanks are ignored. */
+export interface StudentContact {
+  name?: string;
+  email?: string;
+}
+
+const cleanName = (v: unknown) => (typeof v === 'string' ? v.trim().replace(/\s+/g, ' ').slice(0, 80) : '');
+const cleanEmail = (v: unknown) => (typeof v === 'string' ? v.trim().toLowerCase().slice(0, 120) : '');
+
+function applyContact(s: Student, c?: StudentContact): boolean {
+  let changed = false;
+  const name = cleanName(c?.name);
+  const email = cleanEmail(c?.email);
+  if (name && name !== s.name) { s.name = name; changed = true; }
+  if (email && email !== s.email) { s.email = email; changed = true; }
+  return changed;
+}
+
 export async function addStudent(
   github: string,
   year?: '1st year' | '2nd year' | '3rd year' | '4th year',
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU'
+  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU',
+  contact?: StudentContact,
 ): Promise<{ ok: boolean; message?: string }> {
   const lower = github.toLowerCase().trim();
   if (!lower) return { ok: false, message: 'GitHub username cannot be empty' };
   const list = await readRosterForWrite();
   if (list.some((s) => s.github.toLowerCase() === lower))
     return { ok: false, message: `${github} is already in the list` };
-  list.push({ github: github.trim(), year, campus });
+  const s: Student = { github: github.trim(), year, campus };
+  applyContact(s, contact);
+  list.push(s);
   await kvSet(KV_KEY, list);
   return { ok: true };
 }
@@ -205,7 +230,8 @@ export async function addStudent(
 export async function updateStudentDetails(
   github: string,
   year?: '1st year' | '2nd year' | '3rd year' | '4th year',
-  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU'
+  campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU',
+  contact?: StudentContact,
 ): Promise<{ ok: boolean; message?: string }> {
   const list = await readRosterForWrite();
   const lower = github.toLowerCase().trim();
@@ -213,8 +239,54 @@ export async function updateStudentDetails(
   if (index === -1) return { ok: false, message: 'Student not found' };
   list[index].year = year;
   list[index].campus = campus;
+  applyContact(list[index], contact);
   await kvSet(KV_KEY, list);
   return { ok: true };
+}
+
+export interface ImportRow {
+  github: string;
+  name?: string;
+  email?: string;
+  year?: Student['year'];
+  campus?: Student['campus'];
+}
+
+/**
+ * Pure: folds an imported list (a campus's year list, say) into the
+ * roster. Unknown logins are added; known ones get the name, email, year
+ * and campus the row carries, where the row has them. Never removes.
+ */
+export function mergeImport(list: Student[], rows: ImportRow[]): { list: Student[]; added: string[]; updated: string[]; unchanged: string[]; skipped: string[] } {
+  const out = list.map((s) => ({ ...s }));
+  const added: string[] = []; const updated: string[] = []; const unchanged: string[] = []; const skipped: string[] = [];
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const github = (r.github ?? '').trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//i, '').replace(/\/.*$/, '');
+    if (!/^[A-Za-z0-9-]{1,39}$/.test(github) || seen.has(github.toLowerCase())) { skipped.push(r.github ?? ''); continue; }
+    seen.add(github.toLowerCase());
+    const i = out.findIndex((s) => s.github.toLowerCase() === github.toLowerCase() || (s.previousLogins ?? []).some((p) => p.toLowerCase() === github.toLowerCase()));
+    if (i === -1) {
+      const s: Student = { github, year: r.year, campus: r.campus };
+      applyContact(s, r);
+      out.push(s); added.push(github);
+      continue;
+    }
+    const s = out[i];
+    let changed = applyContact(s, r);
+    if (r.year && r.year !== s.year) { s.year = r.year; changed = true; }
+    if (r.campus && r.campus !== s.campus) { s.campus = r.campus; changed = true; }
+    (changed ? updated : unchanged).push(s.github);
+  }
+  return { list: out, added, updated, unchanged, skipped };
+}
+
+/** One read-modify-write for a whole imported list. */
+export async function importStudents(rows: ImportRow[]): Promise<Omit<ReturnType<typeof mergeImport>, 'list'>> {
+  const current = await readRosterForWrite();
+  const { list, ...result } = mergeImport(current, rows);
+  if (result.added.length || result.updated.length) await kvSet(KV_KEY, list);
+  return result;
 }
 
 /** Admin-only. Nothing automated calls this any more; see the header. */

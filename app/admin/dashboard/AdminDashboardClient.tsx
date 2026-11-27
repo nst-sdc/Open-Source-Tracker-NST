@@ -895,6 +895,8 @@ interface Student {
   github: string;
   year?: '1st year' | '2nd year' | '3rd year' | '4th year';
   campus?: 'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU';
+  name?: string;
+  email?: string;
   githubId?: number;
   unresolvedSince?: string;
   previousLogins?: string[];
@@ -906,7 +908,14 @@ function StudentsTab() {
   const [newGithub, setNewGithub] = useState('');
   const [newYear, setNewYear] = useState<'1st year' | '2nd year' | '3rd year' | '4th year' | ''>('');
   const [newCampus, setNewCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU' | ''>('');
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [adding, setAdding] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importYear, setImportYear] = useState<'1st year' | '2nd year' | '3rd year' | '4th year' | ''>('');
+  const [importCampus, setImportCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU' | ''>('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -914,6 +923,8 @@ function StudentsTab() {
   const [editingGithub, setEditingGithub] = useState<string | null>(null);
   const [editYear, setEditYear] = useState<'1st year' | '2nd year' | '3rd year' | '4th year' | ''>('');
   const [editCampus, setEditCampus] = useState<'Rishihood' | 'ADYPU' | 'SVYASA' | 'SMRU' | ''>('');
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Search & Filter state
@@ -944,7 +955,9 @@ function StudentsTab() {
       body: JSON.stringify({
         github: newGithub.trim(),
         year: newYear || undefined,
-        campus: newCampus || undefined
+        campus: newCampus || undefined,
+        name: newName.trim() || undefined,
+        email: newEmail.trim() || undefined
       }),
     });
     const data = await res.json();
@@ -963,6 +976,50 @@ function StudentsTab() {
     setEditingGithub(student.github);
     setEditYear(student.year || '');
     setEditCampus(student.campus || '');
+    setEditName(student.name || '');
+    setEditEmail(student.email || '');
+  }
+
+  /** Reads a pasted list: CSV or TSV with a header row naming the login column (GitHub username / GitHub / login), and optional Student/Name and Email columns. */
+  function parseImport(text: string): Array<{ github: string; name?: string; email?: string }> {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return [];
+    const split = (line: string) => {
+      const sep = line.includes('\t') ? '\t' : ',';
+      const out: string[] = []; let cur = ''; let q = false;
+      for (const ch of line) {
+        if (ch === '"') { q = !q; continue; }
+        if (ch === sep && !q) { out.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      out.push(cur);
+      return out.map((c) => c.trim());
+    };
+    const header = split(lines[0]).map((h) => h.toLowerCase());
+    const col = (...names: string[]) => header.findIndex((h) => names.some((n) => h === n || h.includes(n)));
+    const gi = col('github username', 'github login', 'login', 'github');
+    const hasHeader = gi >= 0;
+    const ni = hasHeader ? col('student', 'name') : -1;
+    const ei = hasHeader ? col('email', 'mail') : -1;
+    const rows = hasHeader ? lines.slice(1) : lines;
+    return rows.map(split).map((c) => {
+      const raw = hasHeader ? (c[gi] ?? '') : (c.find((v) => /github\.com\//i.test(v)) ?? c[0] ?? '');
+      const github = raw.replace(/^https?:\/\/github\.com\//i, '').replace(/^@/, '').replace(/\/.*$/, '').trim();
+      return { github, name: ni >= 0 ? c[ni] : undefined, email: ei >= 0 ? c[ei] : undefined };
+    }).filter((r) => r.github);
+  }
+
+  async function runImport() {
+    const rows = parseImport(importText);
+    if (rows.length === 0) { setImportResult('Nothing to import: paste a list with a GitHub username column.'); return; }
+    setImporting(true); setImportResult('');
+    const res = await fetch('/api/admin/students/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows, year: importYear || undefined, campus: importCampus || undefined }) });
+    const data = await res.json().catch(() => ({}));
+    setImporting(false);
+    if (!res.ok) { setImportResult(data.error ?? 'Import failed.'); return; }
+    setImportResult(`${data.added.length} added, ${data.updated.length} updated, ${data.unchanged.length} unchanged${data.skipped.length ? `, ${data.skipped.length} skipped (not a GitHub login or listed twice)` : ''}.`);
+    setImportText('');
+    await load();
   }
 
   async function executeUpdate(github: string) {
@@ -974,7 +1031,9 @@ function StudentsTab() {
       body: JSON.stringify({
         github,
         year: editYear || undefined,
-        campus: editCampus || undefined
+        campus: editCampus || undefined,
+        name: editName.trim() || undefined,
+        email: editEmail.trim() || undefined
       }),
     });
     setSaving(false);
@@ -999,7 +1058,8 @@ function StudentsTab() {
 
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      const matchesSearch = s.github.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch = !q || s.github.toLowerCase().includes(q) || (s.name ?? '').toLowerCase().includes(q) || (s.email ?? '').toLowerCase().includes(q);
       const matchesYear = !filterYear || s.year === filterYear;
       const matchesCampus = !filterCampus || s.campus === filterCampus;
       return matchesSearch && matchesYear && matchesCampus;
@@ -1010,12 +1070,34 @@ function StudentsTab() {
     <div>
       <div className="mb-6">
         <h2 className="text-ink font-[550]">Tracked Students</h2>
-        <p className="text-ink-soft text-sm mt-0.5">Add or remove GitHub usernames and assign year/campus labels.</p>
+        <p className="text-ink-soft text-sm mt-0.5">Add or remove GitHub usernames, assign year/campus, and keep name and college email so you know who is who. Search matches login, name and email.</p>
       </div>
+
+      <details className="mb-6 bg-ground border border-line rounded-xl p-4">
+        <summary className="cursor-pointer text-ink text-sm font-[550]">Import a list (paste a sheet export)</summary>
+        <p className="text-ink-soft text-xs mt-2">CSV or TSV with a header row. Needs a GitHub username column; Student/Name and Email columns are picked up when present. Known logins get their name, email, year and campus updated; new ones are added; nobody is removed.</p>
+        <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={6} placeholder={'#,Student,Email,GitHub username\n1,Asha Rao,asha@nst.rishihood.edu.in,asha-rao'} className="mt-3 w-full bg-panel border border-line rounded-lg px-3 py-2 text-xs font-mono text-ink placeholder:text-ink-soft focus:outline-none focus:border-line-strong" />
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <select value={importYear} onChange={(e) => setImportYear(e.target.value as typeof importYear)} className="bg-panel border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs">
+            <option value="">Year for all rows (optional)</option>
+            <option value="1st year">1st Year</option><option value="2nd year">2nd Year</option><option value="3rd year">3rd Year</option><option value="4th year">4th Year</option>
+          </select>
+          <select value={importCampus} onChange={(e) => setImportCampus(e.target.value as typeof importCampus)} className="bg-panel border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs">
+            <option value="">Campus for all rows (optional)</option>
+            <option value="Rishihood">Rishihood</option><option value="ADYPU">ADYPU</option><option value="SVYASA">SVYASA</option><option value="SMRU">SMRU</option>
+          </select>
+          <button type="button" onClick={runImport} disabled={importing || !importText.trim()} className="text-xs px-3 py-1.5 rounded-lg bg-brand-solid hover:bg-brand-solid-hover disabled:opacity-50 text-white font-[550]">{importing ? 'Importing…' : `Import ${parseImport(importText).length || ''} rows`}</button>
+          {importResult && <span className="text-xs text-ink-mid">{importResult}</span>}
+        </div>
+      </details>
 
       <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-3 mb-6">
         <input type="text" value={newGithub} onChange={(e) => setNewGithub(e.target.value)}
           placeholder="GitHub username" id="new-student-input"
+          className="flex-1 bg-ground border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
+        <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name (optional)"
+          className="flex-1 bg-ground border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
+        <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="College email (optional)"
           className="flex-1 bg-ground border border-line rounded-xl px-4 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
         
         <select value={newYear} onChange={(e) => setNewYear(e.target.value as typeof newYear)}
@@ -1128,7 +1210,8 @@ function StudentsTab() {
                     <img src={`https://avatars.githubusercontent.com/${s.github}?s=32`} alt={s.github} className="w-8 h-8 rounded-full ring-1 ring-line" />
                     <div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-ink text-sm font-[500]">@{s.github}</p>
+                        {s.name && <p className="text-ink text-sm font-[600]">{s.name}</p>}
+                        <p className={`text-sm ${s.name ? 'text-ink-soft font-[450]' : 'text-ink font-[500]'}`}>@{s.github}</p>
                         {s.year && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-0 text-violet-600 border border-violet-100 font-[550]">
                             {s.year}
@@ -1153,7 +1236,10 @@ function StudentsTab() {
                           </span>
                         )}
                       </div>
-                      <a href={`https://github.com/${s.github}`} target="_blank" rel="noopener noreferrer" className="text-ink-soft text-xs hover:text-violet-600 transition-colors">github.com/{s.github}</a>
+                      <div className="flex flex-wrap gap-x-3 text-xs">
+                        <a href={`https://github.com/${s.github}`} target="_blank" rel="noopener noreferrer" className="text-ink-soft hover:text-violet-600 transition-colors">github.com/{s.github}</a>
+                        {s.email && <a href={`mailto:${s.email}`} className="text-ink-soft hover:text-violet-600 transition-colors">{s.email}</a>}
+                      </div>
                     </div>
                   </div>
                   {isConfirming ? (
@@ -1205,6 +1291,14 @@ function StudentsTab() {
                         <option value="SVYASA">SVYASA</option>
                         <option value="SMRU">SMRU</option>
                       </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-[550] text-ink-soft uppercase tracking-wider">Name</span>
+                      <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" className="bg-ground border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs focus:outline-none focus:border-violet-100 w-44" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-[550] text-ink-soft uppercase tracking-wider">College email</span>
+                      <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="email" className="bg-ground border border-line rounded-lg px-2.5 py-1.5 text-ink text-xs focus:outline-none focus:border-violet-100 w-60" />
                     </div>
                     <div className="flex items-end gap-1.5 h-full pt-5">
                       <button type="button" onClick={() => executeUpdate(s.github)} disabled={saving}
