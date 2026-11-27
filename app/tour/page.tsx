@@ -28,7 +28,7 @@ const FEATURES: Array<{ href: string; title: string; image: string; desc: string
   {
     href: '/contributors', title: 'Leaderboard', image: 'leaderboard',
     desc: 'Every NST student ranked by real merged pull requests, with a rating that weighs the size and substance of each one. Switch the period, filter by campus or year, or search a name.',
-    tips: ['Try a search: kushagar, yatharth, himanshu verma, rakshit, arshil', 'Only pull requests to real projects count; spam and self-merges are filtered out'],
+    tips: ['Try a search: kushagar, yatharth, himanshu verma, rakshit, arshil, ayan alam', 'Only pull requests to real projects count; spam and self-merges are filtered out'],
   },
   {
     href: '/contributors?org=apache', title: 'Search an organisation', image: 'org',
