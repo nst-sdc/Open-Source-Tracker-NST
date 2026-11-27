@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { KAIRI_NAME, KAIRI_PATH } from '@/lib/kairi';
-import { TOUR_STEPS, tourHref } from '@/lib/tour-steps';
+import { tourHref } from '@/lib/tour-steps';
 
 export const metadata: Metadata = {
   title: 'Tour — Opensource Tracker NST',
@@ -108,14 +108,14 @@ export default function TourPage() {
           <span className="inline-flex items-center rounded-full bg-brand-0 border border-brand-100 px-3 py-1 text-[11.5px] font-[650] uppercase tracking-wider text-brand-600">Tour</span>
           <h1 className="mt-4 text-4xl md:text-5xl font-[650] tracking-tight text-ink">Hi, I\u2019m Kairi. Let me show you around.</h1>
           <p className="mt-4 text-ink-mid text-lg leading-relaxed">
-            I\u2019m the guide built into this tracker. Ten minutes with me and you will know where everything is: how the leaderboard ranks you, your own page, how to check your work, and how to find the people and projects worth your time before you commit to one.
+            I\u2019m the guide built into this tracker. Press play and I will walk you through how students here go from a first pull request to a summer inside a real project: where to look before you commit to a repository, how to find the people who can help you, and how your own page grows along the way.
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div data-tour="tour-start" className="mt-6 flex flex-wrap items-center gap-3">
             <Link href={tourHref(0)} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[600] shadow-brand-btn">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-              Take the guided tour
+              Play the tour
             </Link>
-            <span className="text-ink-soft text-sm">{TOUR_STEPS.length} stops on the live site, about five minutes, with narration you can mute.</span>
+            <span className="text-ink-soft text-sm">About four minutes. It plays through the live site on its own, with me narrating; mute or pause any time.</span>
           </div>
         </div>
 

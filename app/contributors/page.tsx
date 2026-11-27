@@ -378,7 +378,7 @@ export default async function ContributorsPage({
                 Find an issue
               </Link>
               <Link
-                href="/check-work"
+                data-tour="check-work-cta" href="/check-work"
                 className="flex items-center h-[38px] px-4 rounded-[9px] bg-ground border border-line-strong hover:bg-panel text-ink text-[13.5px] font-[550] transition-colors"
               >
                 Check my work
