@@ -1,17 +1,22 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { KAIRI_NAME, KAIRI_PATH } from '@/lib/kairi';
 
 export const metadata: Metadata = {
   title: 'Tour — Opensource Tracker NST',
-  description: 'A walkthrough of everything on the NST open source tracker: the leaderboard, your profile, checking your work, programmes, organisations and more.',
+  description: 'Kairi walks you through the NST open source tracker: the leaderboard, your profile, checking your work, finding people in a repository, programmes, organisations and more.',
 };
 
 /**
- * A guided tour of the student-facing site: a video at the top when one is
- * configured (TOUR_VIDEO_URL, a YouTube watch or share link), then one card
- * per feature with a screenshot and a link. Screenshots live in public/tour.
+ * A guided tour of the student-facing site, in Kairi's voice: a video at
+ * the top, then one card per feature with a screenshot and a link. The
+ * video comes from, in order: TOUR_VIDEO_URL (a direct .mp4/.webm link, or
+ * a YouTube link), or a file dropped at public/tour/walkthrough.mp4 and
+ * served by the app. With neither, a "coming soon" card. Screenshots live
+ * in public/tour.
  */
 const FEATURES: Array<{ href: string; title: string; image: string; desc: string; tips: string[]; soon?: boolean }> = [
   {
@@ -80,37 +85,48 @@ const FEATURES: Array<{ href: string; title: string; image: string; desc: string
 const HEIGHTS: Record<string, number> = { 'check-work': 600, leaderboard: 330 };
 const DEFAULT_HEIGHT = 790;
 
-function videoEmbed(url: string | undefined): string | null {
-  if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{6,})/);
-  return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : null;
+type Video = { kind: 'file'; src: string } | { kind: 'youtube'; src: string } | null;
+
+function pickVideo(url: string | undefined): Video {
+  if (url) {
+    if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) return { kind: 'file', src: url };
+    const m = url.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{6,})/);
+    if (m) return { kind: 'youtube', src: `https://www.youtube-nocookie.com/embed/${m[1]}` };
+  }
+  // A file dropped into the repo (or the image) is served by the app itself.
+  if (existsSync(join(process.cwd(), 'public', 'tour', 'walkthrough.mp4'))) return { kind: 'file', src: '/tour/walkthrough.mp4' };
+  return null;
 }
 
 export default function TourPage() {
-  const embed = videoEmbed(process.env.TOUR_VIDEO_URL);
+  const video = pickVideo(process.env.TOUR_VIDEO_URL);
   return (
     <main className="min-h-screen bg-panel">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-16">
         <div className="max-w-3xl">
           <span className="inline-flex items-center rounded-full bg-brand-0 border border-brand-100 px-3 py-1 text-[11.5px] font-[650] uppercase tracking-wider text-brand-600">Tour</span>
-          <h1 className="mt-4 text-4xl md:text-5xl font-[650] tracking-tight text-ink">Everything on the tracker, in one walk through</h1>
+          <h1 className="mt-4 text-4xl md:text-5xl font-[650] tracking-tight text-ink">Hi, I\u2019m Kairi. Let me show you around.</h1>
           <p className="mt-4 text-ink-mid text-lg leading-relaxed">
-            Ten minutes to know where everything is: the leaderboard and how it ranks, your own page, how to check your work, and the pages that help you pick a project and get into a programme.
+            I\u2019m the guide built into this tracker. Ten minutes with me and you will know where everything is: how the leaderboard ranks you, your own page, how to check your work, and how to find the people and projects worth your time before you commit to one.
           </p>
         </div>
 
         <div className="mt-8 rounded-2xl border border-line bg-ground shadow-card overflow-hidden">
-          {embed ? (
+          {video?.kind === 'file' ? (
+            <video src={video.src} controls playsInline preload="metadata" poster="/tour/home.jpg" className="aspect-video w-full bg-black">
+              Your browser cannot play this video. <a href={video.src}>Download it</a> instead.
+            </video>
+          ) : video?.kind === 'youtube' ? (
             <div className="aspect-video">
-              <iframe src={embed} title="Tracker walkthrough video" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              <iframe src={video.src} title="Tracker walkthrough video" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
             </div>
           ) : (
             <div className="aspect-video flex flex-col items-center justify-center text-center px-6">
               <div className="w-14 h-14 rounded-full bg-brand-0 border border-brand-100 flex items-center justify-center">
                 <svg className="w-6 h-6 text-brand-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
               </div>
-              <p className="mt-4 text-ink font-[600]">Video walkthrough coming soon</p>
-              <p className="mt-1 text-ink-soft text-sm max-w-md">Until then, the cards below cover every page with a screenshot and what it is for.</p>
+              <p className="mt-4 text-ink font-[600]">My video walkthrough is coming soon</p>
+              <p className="mt-1 text-ink-soft text-sm max-w-md">Until then, I\u2019ll take you through every page below, with a screenshot and what it is for.</p>
             </div>
           )}
         </div>
@@ -145,8 +161,8 @@ export default function TourPage() {
 
         <div className="mt-16 rounded-2xl border border-line bg-ground shadow-card p-6 md:p-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-[650] tracking-tight text-ink">Ready to start</h2>
-            <p className="mt-1 text-ink-mid text-sm">Join the tracker, or start with the guide.</p>
+            <h2 className="text-xl font-[650] tracking-tight text-ink">That\u2019s the tour</h2>
+            <p className="mt-1 text-ink-mid text-sm">Join the tracker so your work counts, or start with my guide.</p>
           </div>
           <div className="flex gap-2.5">
             <Link href="/join" className="px-4 py-2.5 rounded-xl bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[550] shadow-brand-btn">Join the tracker</Link>

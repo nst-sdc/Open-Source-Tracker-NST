@@ -274,4 +274,4 @@ The log ends with "roster now has N students". The next refresh tick rebuilds th
 
 ## Tour video
 
-`/tour` embeds the walkthrough video from `TOUR_VIDEO_URL` (a YouTube watch, share or embed link) set in `k8s/02-deployment.yaml`; leave it empty for a "coming soon" card. Screenshots on that page are the JPEGs under `public/tour/`; replace them when pages change.
+`/tour` plays the walkthrough video from, in order: `TOUR_VIDEO_URL` in `k8s/02-deployment.yaml` (a direct `.mp4`/`.webm` link, or a YouTube link), or a file committed at `public/tour/walkthrough.mp4` and served by the app itself (keep it under ~50 MB; it ships inside the image). With neither, the page shows a "coming soon" card. Screenshots on that page are the JPEGs under `public/tour/`; replace them when pages change.
