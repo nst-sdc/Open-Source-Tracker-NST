@@ -375,6 +375,44 @@ export default async function AchieversPage() {
               <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform">→</span>
             </div>
           </a>
+
+          {/* Card 3: Cable Atlas */}
+          <a
+            href="https://cable-atlas.nstsdc.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex flex-col justify-between p-6 rounded-2xl bg-ground border border-line hover:bg-panel hover:border-brand-100 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+          >
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div>
+                  <h3 className="font-[650] text-ink text-base group-hover:text-ink transition-colors">Cable Atlas</h3>
+                  <span className="text-[10px] text-ink-soft font-mono uppercase tracking-wider">Interactive 3D Map</span>
+                </div>
+              </div>
+              <p className="text-ink-mid text-xs leading-relaxed mb-4">
+                Every undersea internet cable on an interactive 3D globe: 702 submarine cables, live satellites, city-to-city routing and a guided tour, from real TeleGeography data, 1989 to 2029.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {['JavaScript', 'WebGL', '3D globe', 'TeleGeography data'].map((t) => (
+                  <span key={t} className="text-[10px] px-2.5 py-0.5 rounded bg-panel border border-line text-ink-soft font-mono">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="pt-4 border-t border-line flex items-center justify-between text-xs text-ink-soft">
+              <span className="flex items-center gap-2">
+                <img
+                  src="https://avatars.githubusercontent.com/u/144413200?v=4"
+                  alt="saiudayagiri"
+                  className="w-5 h-5 rounded-full border border-line"
+                />
+                Built by <strong className="text-ink-mid">Sai Udayagiri (@saiudayagiri)</strong>
+              </span>
+              <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform">→</span>
+            </div>
+          </a>
         </div>
       </div>
     </main>

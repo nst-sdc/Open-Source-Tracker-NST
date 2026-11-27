@@ -491,6 +491,26 @@ export default async function GetStartedPage() {
                 View on GitHub →
               </span>
             </a>
+            <a
+              href="https://cable-atlas.nstsdc.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-2xl border border-line bg-ground p-5 card-hover"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-base font-[650] text-ink group-hover:text-brand-600 transition-colors">
+                  Cable Atlas
+                </h3>
+                <span className="text-[11px] text-ink-soft">@saiudayagiri</span>
+              </div>
+              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-mid">
+                Every undersea internet cable on an interactive 3D globe, with live satellites,
+                city-to-city routing and a guided tour, from real TeleGeography data.
+              </p>
+              <span className="mt-4 inline-block text-[13px] font-medium text-brand-600">
+                Open the globe →
+              </span>
+            </a>
           </div>
         </section>
 
