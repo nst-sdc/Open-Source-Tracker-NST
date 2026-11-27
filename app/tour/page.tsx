@@ -13,7 +13,7 @@ export const metadata: Metadata = {
  * configured (TOUR_VIDEO_URL, a YouTube watch or share link), then one card
  * per feature with a screenshot and a link. Screenshots live in public/tour.
  */
-const FEATURES: Array<{ href: string; title: string; image: string; desc: string; tips: string[] }> = [
+const FEATURES: Array<{ href: string; title: string; image: string; desc: string; tips: string[]; soon?: boolean }> = [
   {
     href: '/', title: 'Home', image: 'home',
     desc: 'The front page: this week’s top contributors, how many students are shipping, merged pull requests per month, and students selected for programmes.',
@@ -22,7 +22,7 @@ const FEATURES: Array<{ href: string; title: string; image: string; desc: string
   {
     href: '/contributors', title: 'Leaderboard', image: 'leaderboard',
     desc: 'Every NST student ranked by real merged pull requests, with a rating that weighs the size and substance of each one. Switch the period, filter by campus or year, or search a name.',
-    tips: ['Only pull requests to real projects count; spam and self-merges are filtered out', 'Rank, rating, merged, open and issues per student'],
+    tips: ['Try a search: kushagra, yatharth, himanshu verma, rakshit, arshil', 'Only pull requests to real projects count; spam and self-merges are filtered out'],
   },
   {
     href: '/contributors?org=apache', title: 'Search an organisation', image: 'org',
@@ -32,10 +32,10 @@ const FEATURES: Array<{ href: string; title: string; image: string; desc: string
   {
     href: '/contributors', title: 'Your profile', image: 'profile',
     desc: 'Each student has a page: a contribution chart, merged and open pull requests, issues, organisations you have contributed to, badges and the socials you add.',
-    tips: ['Open yours from the leaderboard or /contributors/your-github-login', 'Add your socials once you are signed in'],
+    tips: ['Open yours from the leaderboard or /contributors/your-github-login', 'Shown here: Himanshu Verma, second year, Rishihood'],
   },
   {
-    href: '/check-work', title: 'Check my work', image: 'profile',
+    href: '/check-work', title: 'Check my work', image: 'check-work',
     desc: 'Sign in with GitHub and see exactly which of your pull requests count, which are flagged and why, so there are no surprises on the leaderboard.',
     tips: ['Read-only access to your public GitHub profile', 'If something looks wrong, this page tells you what to fix'],
   },
@@ -70,16 +70,15 @@ const FEATURES: Array<{ href: string; title: string; image: string; desc: string
     tips: ['Read the rules section before your first pull request', 'Links to the beginner-friendly organisations'],
   },
   {
-    href: KAIRI_PATH, title: KAIRI_NAME, image: 'kairi',
+    href: KAIRI_PATH, title: KAIRI_NAME, image: 'kairi', soon: true,
     desc: 'An assistant that knows this tracker and your own pull requests. Ask why something is flagged, how the rating works, or where to start, and it answers with links to the docs.',
-    tips: ['Sign in with GitHub to use it', 'It can be wrong; check anything important against the docs it links'],
-  },
-  {
-    href: '/interest', title: 'Interest form and joining', image: 'interest',
-    desc: 'Register your interest in open source with a GitHub sign-in and five fields, and you are on the tracker. Already contributing? Join the tracker directly.',
-    tips: ['Takes a minute', 'We reach out via mail about sessions and deadlines'],
+    tips: ['Opens to students soon', 'It can be wrong; check anything important against the docs it links'],
   },
 ];
+
+/** Screenshot heights at 1280 wide; most are the top 790px of a page. */
+const HEIGHTS: Record<string, number> = { 'check-work': 600, leaderboard: 520 };
+const DEFAULT_HEIGHT = 790;
 
 function videoEmbed(url: string | undefined): string | null {
   if (!url) return null;
@@ -121,16 +120,25 @@ export default function TourPage() {
             <section key={f.title} className={`grid gap-6 md:gap-10 items-center md:grid-cols-2 ${i % 2 ? 'md:[&>div:first-child]:order-2' : ''}`}>
               <div>
                 <div className="text-[11.5px] font-[650] uppercase tracking-wider text-ink-soft">{String(i + 1).padStart(2, '0')}</div>
-                <h2 className="mt-1 text-2xl font-[650] tracking-tight text-ink">{f.title}</h2>
+                <h2 className="mt-1 text-2xl font-[650] tracking-tight text-ink">
+                  {f.title}
+                  {f.soon && <span className="ml-2 align-middle inline-flex items-center rounded-full border border-gold-400 bg-gold-0 px-2 py-0.5 text-[11px] font-[650] uppercase tracking-wider text-gold-700">Coming soon</span>}
+                </h2>
                 <p className="mt-3 text-ink-mid leading-relaxed">{f.desc}</p>
                 <ul className="mt-3 space-y-1.5 text-sm text-ink-soft">
                   {f.tips.map((t) => <li key={t}>· {t}</li>)}
                 </ul>
-                <Link href={f.href} className="mt-4 inline-flex items-center gap-1.5 text-sm font-[600] text-brand-600 hover:text-brand-500">Open →</Link>
+                {!f.soon && <Link href={f.href} className="mt-4 inline-flex items-center gap-1.5 text-sm font-[600] text-brand-600 hover:text-brand-500">Open →</Link>}
               </div>
-              <Link href={f.href} className="block rounded-2xl border border-line bg-ground shadow-card overflow-hidden hover:border-line-strong transition-colors">
-                <Image src={`/tour/${f.image}.jpg`} alt={`${f.title} page`} width={1280} height={900} className="w-full h-auto" sizes="(min-width: 768px) 50vw, 100vw" />
-              </Link>
+              {f.soon ? (
+                <div className="block rounded-2xl border border-line bg-ground shadow-card overflow-hidden opacity-80">
+                  <Image src={`/tour/${f.image}.jpg`} alt={`${f.title} page`} width={1280} height={HEIGHTS[f.image] ?? DEFAULT_HEIGHT} className="w-full h-auto" sizes="(min-width: 768px) 50vw, 100vw" />
+                </div>
+              ) : (
+                <Link href={f.href} className="block rounded-2xl border border-line bg-ground shadow-card overflow-hidden hover:border-line-strong transition-colors">
+                  <Image src={`/tour/${f.image}.jpg`} alt={`${f.title} page`} width={1280} height={HEIGHTS[f.image] ?? DEFAULT_HEIGHT} className="w-full h-auto" sizes="(min-width: 768px) 50vw, 100vw" />
+                </Link>
+              )}
             </section>
           ))}
         </div>
@@ -138,10 +146,10 @@ export default function TourPage() {
         <div className="mt-16 rounded-2xl border border-line bg-ground shadow-card p-6 md:p-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-[650] tracking-tight text-ink">Ready to start</h2>
-            <p className="mt-1 text-ink-mid text-sm">Register your interest, or jump straight to the guide.</p>
+            <p className="mt-1 text-ink-mid text-sm">Join the tracker, or start with the guide.</p>
           </div>
           <div className="flex gap-2.5">
-            <Link href="/interest" className="px-4 py-2.5 rounded-xl bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[550] shadow-brand-btn">Register interest</Link>
+            <Link href="/join" className="px-4 py-2.5 rounded-xl bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[550] shadow-brand-btn">Join the tracker</Link>
             <Link href="/get-started" className="px-4 py-2.5 rounded-xl border border-line hover:border-line-strong text-ink text-sm font-[550]">Get started</Link>
           </div>
         </div>
