@@ -56,6 +56,7 @@ export default function ClosedPrsTab() {
       if (!res.ok) { setScan({ running: false, cursor, total, fetched, note: d.error ?? 'scan failed' }); return; }
       cursor = d.nextCursor; total = d.total; fetched += d.fetched;
       setScan({ running: true, cursor, total, fetched, note: d.rateLimited ? 'GitHub rate limit reached; waiting a minute' : `student ${cursor} of ${total}` });
+      if (d.fetched > 0) setReload((x) => x + 1); // each batch is stored as it lands; show it
       if (d.done) break;
       if (d.rateLimited) await new Promise((r) => setTimeout(r, 65_000));
     }
