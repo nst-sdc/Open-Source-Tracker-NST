@@ -179,14 +179,18 @@ export async function ensureOnRoster(
 ): Promise<'added' | 'already' | 'updated' | 'unavailable' | 'deferred'> {
   const { year, campus } = rosterDetails(answers);
   try {
+    // Name and college email from the form go on the roster too, so the
+    // admin page shows who is who; blanks are ignored by the roster.
+    const contact = { name: answers.name, email: answers.email };
     const result = await lock(ROSTER_LOCK, ROSTER_LOCK_TTL_MS, async () => {
       const existing = findStudent(await deps.getStudentsKV(), login);
       if (!existing) {
-        const res = await deps.addStudent(login, year, campus);
+        const res = await deps.addStudent(login, year, campus, contact);
         return res.ok ? 'added' : 'already';
       }
-      if ((existing.year || !year) && (existing.campus || !campus)) return 'already';
-      const res = await deps.updateStudentDetails(login, (existing.year ?? year) as RosterYear | undefined, (existing.campus ?? campus) as RosterCampus | undefined);
+      const needsContact = (!existing.name && contact.name) || (!existing.email && contact.email);
+      if ((existing.year || !year) && (existing.campus || !campus) && !needsContact) return 'already';
+      const res = await deps.updateStudentDetails(login, (existing.year ?? year) as RosterYear | undefined, (existing.campus ?? campus) as RosterCampus | undefined, contact);
       return res.ok ? 'updated' : 'already';
     });
     return result ?? 'deferred';

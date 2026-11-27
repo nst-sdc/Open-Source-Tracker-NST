@@ -4,6 +4,7 @@ const mod = await import('./kv-students');
 const kv = await import('./kv');
 const { applyUpdates, findStudent } = mod;
 import type { Student } from './kv-students';
+import { mergeImport } from './kv-students';
 
 const roster = (): Student[] => [
   { github: 'Alice', year: '2nd year', campus: 'Rishihood' },
@@ -100,5 +101,31 @@ describe('roster reads and writes against a flaky store', () => {
     await expect(mod.applyRosterUpdates([{ type: 'unresolved', github: 'someone' }])).rejects.toBeInstanceOf(mod.RosterUnavailableError);
     expect(kvSet).not.toHaveBeenCalled();
     kvRead.mockReset();
+  });
+});
+
+describe('mergeImport', () => {
+  it('adds unknown logins, fills known ones, follows renames, normalises, and never removes', () => {
+    const roster = [
+      { github: 'Asha', year: '1st year' as const },
+      { github: 'ravi-new', previousLogins: ['ravi'], campus: 'ADYPU' as const },
+      { github: 'untouched', name: 'Keep Me' },
+    ];
+    const r = mergeImport(roster, [
+      { github: 'asha', name: '  Asha   Rao ', email: 'ASHA@nst.rishihood.edu.in', year: '4th year', campus: 'Rishihood' },
+      { github: 'https://github.com/ravi', email: 'ravi@x.edu', year: '4th year', campus: 'Rishihood' },
+      { github: '@newbie', name: 'New Bie', email: 'n@x.edu', year: '4th year', campus: 'Rishihood' },
+      { github: 'not a login!', name: 'X' },
+      { github: 'asha', name: 'dup' },
+    ]);
+    expect(r.added).toEqual(['newbie']);
+    expect(r.updated.sort()).toEqual(['Asha', 'ravi-new']);
+    expect(r.unchanged).toEqual([]);
+    expect(r.skipped).toEqual(['not a login!', 'asha']);
+    expect(r.list).toHaveLength(4);
+    expect(r.list[0]).toEqual({ github: 'Asha', year: '4th year', campus: 'Rishihood', name: 'Asha Rao', email: 'asha@nst.rishihood.edu.in' });
+    expect(r.list[1]).toMatchObject({ github: 'ravi-new', email: 'ravi@x.edu', year: '4th year', campus: 'Rishihood' });
+    expect(r.list[2]).toEqual({ github: 'untouched', name: 'Keep Me' });
+    expect(mergeImport(r.list, [{ github: 'asha', name: 'Asha Rao' }]).unchanged).toEqual(['Asha']);
   });
 });
