@@ -106,9 +106,9 @@ export default function TourPage() {
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-16">
         <div className="max-w-3xl">
           <span className="inline-flex items-center rounded-full bg-brand-0 border border-brand-100 px-3 py-1 text-[11.5px] font-[650] uppercase tracking-wider text-brand-600">Tour</span>
-          <h1 className="mt-4 text-4xl md:text-5xl font-[650] tracking-tight text-ink">Hi, I\u2019m Kairi. Let me show you around.</h1>
+          <h1 className="mt-4 text-4xl md:text-5xl font-[650] tracking-tight text-ink">Hi, I’m Kairi. Let me show you around.</h1>
           <p className="mt-4 text-ink-mid text-lg leading-relaxed">
-            I\u2019m the guide built into this tracker. Press play and I will walk you through how students here go from a first pull request to a summer inside a real project: where to look before you commit to a repository, how to find the people who can help you, and how your own page grows along the way.
+            I’m the guide built into this tracker. Press play and I will walk you through how students here go from a first pull request to a summer inside a real project: where to look before you commit to a repository, how to find the people who can help you, and how your own page grows along the way.
           </p>
           <div data-tour="tour-start" className="mt-6 flex flex-wrap items-center gap-3">
             <Link href={tourHref(0)} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[600] shadow-brand-btn">
@@ -134,7 +134,7 @@ export default function TourPage() {
                 <svg className="w-6 h-6 text-brand-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
               </div>
               <p className="mt-4 text-ink font-[600]">My video walkthrough is coming soon</p>
-              <p className="mt-1 text-ink-soft text-sm max-w-md">Until then, I\u2019ll take you through every page below, with a screenshot and what it is for.</p>
+              <p className="mt-1 text-ink-soft text-sm max-w-md">Until then, I’ll take you through every page below, with a screenshot and what it is for.</p>
             </div>
           )}
         </div>
@@ -169,7 +169,7 @@ export default function TourPage() {
 
         <div className="mt-16 rounded-2xl border border-line bg-ground shadow-card p-6 md:p-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-[650] tracking-tight text-ink">That\u2019s the tour</h2>
+            <h2 className="text-xl font-[650] tracking-tight text-ink">That’s the tour</h2>
             <p className="mt-1 text-ink-mid text-sm">Join the tracker so your work counts, or start with my guide.</p>
           </div>
           <div className="flex gap-2.5">
