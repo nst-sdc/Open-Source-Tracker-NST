@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import { getDonts } from '@/lib/kv-closed-prs';
+
+// The maintainers' quotes come from the store and change when an admin curates them.
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Get Started — Opensource Tracker NST',
@@ -289,7 +293,8 @@ const JUMP_LINKS = [
   { href: '#rules', label: 'Rules' },
 ];
 
-export default function GetStartedPage() {
+export default async function GetStartedPage() {
+  const donts = await getDonts();
   return (
     <main className="min-h-screen bg-panel">
       <header className="border-b border-line bg-ground">
@@ -573,6 +578,30 @@ export default function GetStartedPage() {
               </div>
             ))}
           </div>
+
+          {donts.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-base font-[650] text-ink">In maintainers&apos; own words</h3>
+              <p className="mt-1 text-[13px] text-ink-mid">
+                Real comments left on pull requests from NST students that were closed without merging. Names removed; nothing else changed.
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {donts.map((d) => (
+                  <figure key={d.id} className="rounded-2xl border border-line bg-ground p-4 shadow-card">
+                    <div className="flex items-center gap-2.5">
+                      <span aria-hidden="true" className="h-7 w-7 rounded-full bg-panel border border-line flex items-center justify-center text-[11px] text-ink-faint">M</span>
+                      <div className="text-[12px] leading-tight">
+                        <div className="font-[600] text-ink">Maintainer</div>
+                        <div className="text-ink-soft">{d.repo}{d.when ? ` · ${d.when}` : ''}</div>
+                      </div>
+                    </div>
+                    <blockquote className="mt-3 rounded-xl bg-panel border border-line px-3.5 py-3 text-[13px] leading-relaxed text-ink-mid whitespace-pre-line">{d.quote}</blockquote>
+                    <figcaption className="mt-2.5 text-[12px] font-[600] text-error-600">{d.lesson}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* CTA */}

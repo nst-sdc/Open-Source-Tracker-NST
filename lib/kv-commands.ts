@@ -51,6 +51,8 @@ function runLocal(store: LocalStore, [op, key, ...args]: string[], nowMs: number
     }
     case 'HLEN':
       return Object.keys((store[key] ?? {}) as LocalHash).length;
+    case 'HKEYS':
+      return Object.keys((store[key] ?? {}) as LocalHash);
     case 'HGETALL':
       return Object.entries((store[key] ?? {}) as LocalHash).flatMap(([k, v]) => [k, String(v)]);
     case 'PFADD': {
