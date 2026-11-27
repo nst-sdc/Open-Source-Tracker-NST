@@ -1,0 +1,33 @@
+name: Roster import
+
+# Imports the campus roster workbook (one tab per campus and batch) into the
+# tracker from a GitHub runner, so it does not depend on anyone's network.
+# Needs the repository secret ADMIN_PASSWORD (the site's admin password).
+on:
+  workflow_dispatch:
+    inputs:
+      sheet:
+        description: Google Sheets id of the roster workbook
+        default: 1kEbCrGpSpkUN7PcFVZ_uxZ-l9YX1YXsjKC5o9xGgdm4
+        required: true
+      base_url:
+        description: Site to import into
+        default: https://os.nstsdc.org
+        required: true
+      dry_run:
+        description: Only parse and report, send nothing
+        type: boolean
+        default: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          python3 scripts/roster-import.py --base "${{ inputs.base_url }}" --sheet "${{ inputs.sheet }}" ${{ inputs.dry_run && '--dry-run' || '' }} | tee import.log
+          { echo '## Roster import'; echo '```'; cat import.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
