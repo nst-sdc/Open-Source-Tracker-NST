@@ -22,7 +22,7 @@ const FEATURES: Array<{ href: string; title: string; image: string; desc: string
   {
     href: '/contributors', title: 'Leaderboard', image: 'leaderboard',
     desc: 'Every NST student ranked by real merged pull requests, with a rating that weighs the size and substance of each one. Switch the period, filter by campus or year, or search a name.',
-    tips: ['Try a search: kushagra, yatharth, himanshu verma, rakshit, arshil', 'Only pull requests to real projects count; spam and self-merges are filtered out'],
+    tips: ['Try a search: kushagar, yatharth, himanshu verma, rakshit, arshil', 'Only pull requests to real projects count; spam and self-merges are filtered out'],
   },
   {
     href: '/contributors?org=apache', title: 'Search an organisation', image: 'org',
@@ -77,7 +77,7 @@ const FEATURES: Array<{ href: string; title: string; image: string; desc: string
 ];
 
 /** Screenshot heights at 1280 wide; most are the top 790px of a page. */
-const HEIGHTS: Record<string, number> = { 'check-work': 600, leaderboard: 520 };
+const HEIGHTS: Record<string, number> = { 'check-work': 600, leaderboard: 330 };
 const DEFAULT_HEIGHT = 790;
 
 function videoEmbed(url: string | undefined): string | null {
