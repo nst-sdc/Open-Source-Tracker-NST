@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import UsageTab from './UsageTab';
 import FormsTab from './FormsTab';
+import ClosedPrsTab from './ClosedPrsTab';
 import type { FlaggedPR, FlagReason } from '@/lib/flagged';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -437,7 +438,7 @@ interface Props {
   students: string[];
 }
 
-type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'vouchedOrgs' | 'gateRules' | 'usage' | 'forms';
+type DashboardTab = 'queue' | 'browse' | 'flagged' | 'students' | 'events' | 'achievers' | 'requests' | 'ownRepos' | 'vouchedOrgs' | 'gateRules' | 'usage' | 'forms' | 'closedPrs';
 
 export default function AdminDashboardClient({ flaggedPRs: initialFlagged, reviewedPRIds: initialReviewed, students }: Props) {
   const router = useRouter();
@@ -623,6 +624,7 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
             { id: 'gateRules', label: 'Gate rules', badge: null },
             { id: 'usage', label: 'Usage', badge: null },
             { id: 'forms', label: 'Forms', badge: null },
+            { id: 'closedPrs', label: 'Closed PRs', badge: null },
           ] as const).map(({ id, label, badge }) => (
             <button key={id} id={`tab-${id}`} onClick={() => setTab(id as DashboardTab)}
               className={`relative px-4 py-2 rounded-lg text-sm font-[500] transition-all ${
@@ -875,6 +877,8 @@ export default function AdminDashboardClient({ flaggedPRs: initialFlagged, revie
         {tab === 'usage' && <UsageTab />}
 
         {tab === 'forms' && <FormsTab />}
+
+        {tab === 'closedPrs' && <ClosedPrsTab />}
       </div>
 
       {/* Flag modal */}
