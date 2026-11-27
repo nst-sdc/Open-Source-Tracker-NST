@@ -344,7 +344,7 @@ export default async function ProgramsPage() {
       <div className="max-w-4xl mx-auto px-4 pb-24 space-y-12">
 
         {/* Quick comparison cards */}
-        <section>
+        <section data-tour="programs-compare">
           <h2 className="text-ink-soft text-xs font-[500] uppercase tracking-widest mb-4">
             Quick Comparison
           </h2>

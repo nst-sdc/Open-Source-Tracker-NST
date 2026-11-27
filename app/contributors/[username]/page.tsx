@@ -365,7 +365,7 @@ export default async function ContributorPage({
             <Image src={profile.avatar_url} alt={profile.login} width={96} height={96} unoptimized
               className="w-24 h-24 rounded-full border-[3px] border-line object-cover shrink-0" />
 
-            <div className="flex-1 text-center sm:text-left min-w-0">
+            <div data-tour="profile-header" className="flex-1 text-center sm:text-left min-w-0">
               <div className="flex items-center gap-2.5 justify-center sm:justify-start flex-wrap">
                 <h1 className="text-[26px] font-[650] tracking-[-0.01em] text-ink">{profile.name ?? profile.login}</h1>
                 {counts.mergedPRs > 0 && counts.mergedPRs <= 5 && (
@@ -468,7 +468,7 @@ export default async function ContributorPage({
                 </a>
               </div>
 
-              <SocialsCard username={profile.login} initial={socials} />
+              <div data-tour="socials"><SocialsCard username={profile.login} initial={socials} /></div>
 
               {/* Actions: Share + Refresh */}
               <div className="mt-5 flex flex-wrap items-center gap-3 justify-center sm:justify-start">
@@ -578,7 +578,7 @@ export default async function ContributorPage({
       )}
 
       {/* Contribution history */}
-      <div className="max-w-4xl mx-auto px-4 md:px-6 mt-4">
+      <div data-tour="contribution-chart" className="max-w-4xl mx-auto px-4 md:px-6 mt-4">
         <ContributionChart prs={filteredPRs} period={period} from={from} to={to} nowMs={nowMs} />
       </div>
 

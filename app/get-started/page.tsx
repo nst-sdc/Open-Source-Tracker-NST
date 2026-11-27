@@ -558,7 +558,7 @@ export default async function GetStartedPage() {
         </section>
 
         {/* Rules */}
-        <section id="rules" className="scroll-mt-[76px]">
+        <section id="rules" data-tour="rules" className="scroll-mt-[76px]">
           <SectionHeading
             title="Rules worth taking seriously"
             intro="Open source runs on the goodwill of volunteers, and your GitHub username follows you for the rest of your career. Breaking these gets people blocked from repositories and rejected from paid programmes."

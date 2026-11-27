@@ -465,7 +465,7 @@ export default async function ContributorsPage({
       {/* Activity by month: the whole community for the campus/year in view,
           or, in org mode, this organisation alone (who is active there, and
           how many), built from the same profiles the org view opens. */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
+      <div data-tour="community-chart" className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
         <CommunityChart
           ranges={chartRanges(isOrgSearch && board.orgTimeline ? board.orgTimeline : timeline, { campus, year })}
           scopeLabel={[isOrgSearch && board.org ? board.org.name : null, campus, year].filter(Boolean).join(" · ") || undefined}
@@ -475,6 +475,7 @@ export default async function ContributorsPage({
       {/* Keyed by the filters: the grid keeps the pages it has loaded in
           client state, so a filter change must give it a fresh instance or it
           would keep showing the previous filter's rows. */}
+      <div data-tour="leaderboard-table">
       <ContributorGrid
         key={JSON.stringify(query)}
         recognitions={recognitions}
@@ -496,6 +497,7 @@ export default async function ContributorsPage({
             : undefined
         }
       />
+      </div>
     </main>
   );
 }

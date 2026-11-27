@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Mona_Sans } from "next/font/google";
 import { Nav } from "./components/Nav";
 import { DeadlinePostcard } from "./components/DeadlinePostcard";
+import GuidedTour from './components/GuidedTour';
+import { Suspense } from 'react';
 import AssistantWidget from "./components/AssistantWidget";
 import SmoothScroll from "./components/SmoothScroll";
 import UsageBeacon from "./components/UsageBeacon";
@@ -47,6 +49,7 @@ export default function RootLayout({
           {children}
         </SmoothScroll>
         <DeadlinePostcard />
+        <Suspense fallback={null}><GuidedTour /></Suspense>
         <AssistantWidget />
         <UsageBeacon />
       </body>

@@ -304,7 +304,7 @@ export default function RepoActivityPage() {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 mb-10 max-w-2xl mx-auto">
+        <form data-tour="repo-input" onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 mb-10 max-w-2xl mx-auto">
           <input
             type="text"
             required

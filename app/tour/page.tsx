@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { KAIRI_NAME, KAIRI_PATH } from '@/lib/kairi';
+import { TOUR_STEPS, tourHref } from '@/lib/tour-steps';
 
 export const metadata: Metadata = {
   title: 'Tour — Opensource Tracker NST',
@@ -109,6 +110,13 @@ export default function TourPage() {
           <p className="mt-4 text-ink-mid text-lg leading-relaxed">
             I\u2019m the guide built into this tracker. Ten minutes with me and you will know where everything is: how the leaderboard ranks you, your own page, how to check your work, and how to find the people and projects worth your time before you commit to one.
           </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link href={tourHref(0)} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-brand-solid hover:bg-brand-solid-hover text-white text-sm font-[600] shadow-brand-btn">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+              Take the guided tour
+            </Link>
+            <span className="text-ink-soft text-sm">{TOUR_STEPS.length} stops on the live site, about five minutes, with narration you can mute.</span>
+          </div>
         </div>
 
         <div className="mt-8 rounded-2xl border border-line bg-ground shadow-card overflow-hidden">

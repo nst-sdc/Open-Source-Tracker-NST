@@ -140,7 +140,7 @@ export default async function Home() {
 
         {/* Leaderboard preview card */}
         {topContributors.length > 0 && (
-          <div className="w-full lg:w-[380px] shrink-0 bg-ground border border-line rounded-2xl shadow-card px-5 pt-4 pb-2">
+          <div data-tour="home-top" className="w-full lg:w-[380px] shrink-0 bg-ground border border-line rounded-2xl shadow-card px-5 pt-4 pb-2">
             <div className="flex items-center justify-between pb-1.5">
               <h2 className="text-[15px] font-[650] text-ink"> {"This Week's Top Contributors"}</h2>
               <span className="inline-flex items-center gap-1.5 text-[10.5px] font-[650] tracking-[0.05em] text-success-600 bg-success-0 rounded-full px-2.5 py-1">
@@ -191,7 +191,7 @@ export default async function Home() {
 
       {/* Stats */}
       {totalPRs > 0 && (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div data-tour="home-stats" className="max-w-6xl mx-auto px-4 md:px-6 pt-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
               value: totalStudents, label: 'Students tracked', tile: 'bg-brand-0 text-brand-600',
@@ -229,7 +229,7 @@ export default async function Home() {
 
       {/* Momentum: merged PRs per month for the whole community */}
       {timeline && (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-4">
+        <div data-tour="home-chart" className="max-w-6xl mx-auto px-4 md:px-6 pt-4">
           <CommunityChart series={seriesFor(timeline, {}, 12)} compact />
         </div>
       )}

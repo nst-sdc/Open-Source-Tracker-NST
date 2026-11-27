@@ -168,7 +168,7 @@ export function OrgExplorer({ data }: { data: OrgExplorerData }) {
 
       <div className={`grid gap-6 ${showFacets ? 'lg:grid-cols-[260px_minmax(0,1fr)]' : ''}`}>
         {showFacets && (
-          <aside className="hidden lg:block">
+          <aside data-tour="org-filters" className="hidden lg:block">
             <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 -mr-2 bg-ground border border-line rounded-2xl p-4">
               <FacetPanel facets={facets} filters={filters} loading={loading} measured={measured} program={filters.program} onToggle={toggle} onClear={() => update(EMPTY_FACETS)} />
             </div>
