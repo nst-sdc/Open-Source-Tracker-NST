@@ -32,7 +32,7 @@ const TIME_ZONE = 'Asia/Kolkata';
  *  fields a day's page hash can ever have. */
 const SECTIONS = new Set([
   'achievers', 'check-work', 'contributors', 'documentation', 'get-started', 'issues',
-  'forms', 'interest', 'join', 'kairi', 'login', 'organizations', 'programs', 'repo-activity',
+  'forms', 'interest', 'join', 'kairi', 'login', 'organizations', 'programs', 'repo-activity', 'tour',
 ]);
 /** Sections whose second segment is a GitHub login; collapsed to one row. */
 const PROFILE_SECTIONS = new Set(['achievers', 'check-work', 'contributors']);

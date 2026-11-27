@@ -15,6 +15,7 @@ const LINKS = [
   { href: '/programs',     label: 'Programs'     },
   { href: '/organizations', label: 'Orgs'        },
   { href: '/achievers',    label: 'Hall of Fame' },
+  { href: '/tour',         label: 'Tour'         },
   { href: '/get-started',  label: 'Get Started'  },
   // "Check My Work" shortened to "My Work": the desktop row is already at
   // capacity (see the breakpoint comment below) and Kairi makes nine links.

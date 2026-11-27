@@ -70,6 +70,10 @@ spec:
             # lib/github.ts's TICK_DEADLINE_MS comment for that history.
             - name: TICK_DEADLINE_MS
               value: "150000"
+            # The walkthrough video on /tour: a YouTube watch or share link.
+            # Empty shows a "coming soon" card instead of the player.
+            - name: TOUR_VIDEO_URL
+              value: ""
           readinessProbe:
             httpGet:
               path: /api/health

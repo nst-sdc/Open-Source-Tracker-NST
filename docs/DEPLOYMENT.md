@@ -271,3 +271,7 @@ sudo kubectl -n opensource-tracker logs -f job/restore-roster
 ```
 
 The log ends with "roster now has N students". The next refresh tick rebuilds the summary cache; the Students tile on `/contributors` and the home page reads the roster directly, so it updates at once. To preview without writing, edit `DRY_RUN` to `"1"` in the Job first. Outside the cluster the same script runs against any Upstash-compatible store with `KV_REST_API_URL=... KV_REST_API_TOKEN=... GITHUB_TOKEN=... node scripts/restore-roster.mjs`; it has nothing to do on a checkout using the disk fallback, where the roster is seeded from `data/students.json`.
+
+## Tour video
+
+`/tour` embeds the walkthrough video from `TOUR_VIDEO_URL` (a YouTube watch, share or embed link) set in `k8s/02-deployment.yaml`; leave it empty for a "coming soon" card. Screenshots on that page are the JPEGs under `public/tour/`; replace them when pages change.
