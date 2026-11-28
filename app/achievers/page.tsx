@@ -285,6 +285,12 @@ export default async function AchieversPage() {
             Conferences you can apply to, and who funds travel
           </Link>
         </p>
+        <p className="text-center text-sm text-ink-soft mt-2">
+          Want to go next? The openSUSE.Asia Summit call for speakers and registration open on{' '}
+          <a href="https://events.opensuse.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-ink">events.opensuse.org</a>
+          , and accepted speakers can apply to the{' '}
+          <a href="https://en.opensuse.org/openSUSE:Travel_Support_Program" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-ink">Travel Support Program</a>.
+        </p>
       </div>
 
       {/* Featured Student Maintainers */}

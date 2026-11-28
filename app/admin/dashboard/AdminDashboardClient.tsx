@@ -1910,16 +1910,74 @@ function EventsTab() {
 
 // ─── Achievers Tab ────────────────────────────────────────────────────────────
 
-interface AchieverEntry { github: string; name?: string; programs: Array<{ name: string; year?: number; org?: string; url?: string }>; }
+interface AchieverEntry { github: string; name?: string; headline?: string; programs: Array<{ name: string; year?: number; org?: string; url?: string; kind?: 'program' | 'conference' }>; }
+type AchieverKind = 'program' | 'conference';
+const KIND_OPTIONS: Array<{ value: AchieverKind; label: string }> = [{ value: 'program', label: 'Open source program' }, { value: 'conference', label: 'Conference / event' }];
 
 const PROGRAM_OPTIONS = ['GSoC', 'LFX', 'Outreachy', 'Summer of Bitcoin', 'ESoC', 'MLH', 'Hacktoberfest'];
+
+/** Paste a JSON list of achievers (the shape of data/achievers.json) and add
+ *  each through the same endpoint as the form: one entry at a time, merging
+ *  into anyone already listed, with a line per outcome. For adding a cohort
+ *  (five students who went to the same conference, say) in one go. */
+function AchieversImport({ onDone }: { onDone: () => void }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [lines, setLines] = useState<string[]>([]);
+
+  async function run() {
+    let entries: AchieverEntry[];
+    try {
+      const parsed = JSON.parse(text);
+      entries = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      setLines(['That is not valid JSON. Paste a list like data/achievers.json.']);
+      return;
+    }
+    setBusy(true); setLines([]);
+    const out: string[] = [];
+    for (const e of entries) {
+      if (!e?.github || !Array.isArray(e.programs) || e.programs.length === 0) { out.push('skipped: an entry without a github login or programs'); continue; }
+      try {
+        const res = await fetch('/api/admin/achievers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(e) });
+        const data = await res.json().catch(() => ({}));
+        out.push(res.ok ? `${e.github}: ${data.merged ? 'merged into existing entry' : 'added'}` : `${e.github}: ${data.error ?? `HTTP ${res.status}`}`);
+      } catch (err) {
+        out.push(`${e.github}: ${err instanceof Error ? err.message : 'network error'}`);
+      }
+      setLines([...out]);
+    }
+    setBusy(false);
+    onDone();
+  }
+
+  return (
+    <details className="bg-ground border border-line rounded-2xl p-5 mb-6">
+      <summary className="cursor-pointer text-ink-soft text-xs font-[550] uppercase tracking-wider">Import a list (JSON)</summary>
+      <p className="text-ink-soft text-sm mt-2">A JSON array in the shape of <code className="text-ink-mid">data/achievers.json</code>: github, name, headline and programs, each program with name, year, org, url and kind (<code className="text-ink-mid">program</code> or <code className="text-ink-mid">conference</code>). Everyone must already be on the roster.</p>
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} spellCheck={false} placeholder='[{"github": "octocat", "name": "Mona", "programs": [{"name": "openSUSE.Asia Summit", "year": 2026, "org": "Yogyakarta, Indonesia", "kind": "conference"}]}]'
+        className="mt-3 w-full bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-xs font-mono focus:outline-none focus:border-violet-100" />
+      <div className="mt-3 flex items-center gap-3">
+        <button type="button" onClick={run} disabled={busy || !text.trim()}
+          className="bg-gold-400 disabled:opacity-40 text-ink-on-accent font-[550] px-4 py-2 rounded-xl text-sm transition-all">
+          {busy ? 'Adding…' : 'Add all'}
+        </button>
+      </div>
+      {lines.length > 0 && (
+        <ul className="mt-3 space-y-1 text-[12.5px] text-ink-mid font-mono">
+          {lines.map((l, i) => <li key={i}>{l}</li>)}
+        </ul>
+      )}
+    </details>
+  );
+}
 
 function AchieversTab() {
   const [achievers, setAchievers] = useState<AchieverEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [form, setForm] = useState({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+  const [form, setForm] = useState({ github: '', name: '', kind: 'program' as AchieverKind, programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
   const [adding, setAdding] = useState(false);
   // Programs staged for the person being added. Someone can crack more than one
   // (two GSoCs and an LFX, say), so the add form collects a list the same way
@@ -1929,7 +1987,8 @@ function AchieversTab() {
   function stageProgram() {
     if (!form.programName) return;
     const p = {
-      name: form.programName,
+      name: form.programName.trim(),
+      ...(form.kind === 'conference' ? { kind: 'conference' as const } : {}),
       ...(form.year ? { year: parseInt(form.year) } : {}),
       ...(form.org.trim() ? { org: form.org.trim() } : {}),
       ...(form.url.trim() ? { url: form.url.trim() } : {}),
@@ -1962,7 +2021,8 @@ function AchieversTab() {
     if (staged.length === 0) {
       if (!form.programName) return;
       staged.push({
-        name: form.programName,
+        name: form.programName.trim(),
+        ...(form.kind === 'conference' ? { kind: 'conference' as const } : {}),
         ...(form.year ? { year: parseInt(form.year) } : {}),
         ...(form.org.trim() ? { org: form.org.trim() } : {}),
         ...(form.url.trim() ? { url: form.url.trim() } : {}),
@@ -1985,7 +2045,7 @@ function AchieversTab() {
         setSuccess(d.merged
           ? `Added ${count} to @${form.github.trim()}.`
           : `@${form.github.trim()} added to Hall of Fame!`);
-        setForm({ github: '', name: '', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+        setForm({ github: '', name: '', kind: 'program', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
         setPendingPrograms([]);
         await load();
       } else {
@@ -2012,7 +2072,7 @@ function AchieversTab() {
   const [editingGithub, setEditingGithub] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editPrograms, setEditPrograms] = useState<AchieverEntry['programs']>([]);
-  const [newProgram, setNewProgram] = useState({ programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+  const [newProgram, setNewProgram] = useState({ kind: 'program' as AchieverKind, programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
   const [saving, setSaving] = useState(false);
 
   function startEdit(a: AchieverEntry) {
@@ -2020,7 +2080,7 @@ function AchieversTab() {
     setEditingGithub(a.github);
     setEditName(a.name ?? '');
     setEditPrograms([...a.programs]);
-    setNewProgram({ programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+    setNewProgram({ kind: 'program', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
   }
 
   function cancelEdit() {
@@ -2028,13 +2088,15 @@ function AchieversTab() {
   }
 
   function addProgramToEdit() {
+    if (!newProgram.programName.trim()) return;
     setEditPrograms(ps => [...ps, {
-      name: newProgram.programName,
+      name: newProgram.programName.trim(),
+      ...(newProgram.kind === 'conference' ? { kind: 'conference' as const } : {}),
       ...(newProgram.year ? { year: parseInt(newProgram.year) } : {}),
       ...(newProgram.org.trim() ? { org: newProgram.org.trim() } : {}),
       ...(newProgram.url.trim() ? { url: newProgram.url.trim() } : {}),
     }]);
-    setNewProgram({ programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
+    setNewProgram({ kind: 'program', programName: 'GSoC', year: new Date().getFullYear().toString(), org: '', url: '' });
   }
 
   function removeProgramFromEdit(idx: number) {
@@ -2067,13 +2129,22 @@ function AchieversTab() {
             className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
           <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name (optional)"
             className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
-          <select value={form.programName} onChange={(e) => setForm(f => ({ ...f, programName: e.target.value }))}
-            className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink-mid text-sm focus:outline-none focus:border-violet-100">
-            {PROGRAM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+          <select value={form.kind} onChange={(e) => { const kind = e.target.value as AchieverKind; setForm(f => ({ ...f, kind, programName: kind === 'conference' ? '' : 'GSoC', org: '' })); }}
+            className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink-mid text-sm focus:outline-none focus:border-violet-100" aria-label="Kind">
+            {KIND_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
           </select>
+          {form.kind === 'conference' ? (
+            <input value={form.programName} onChange={(e) => setForm(f => ({ ...f, programName: e.target.value }))} placeholder="Conference name (e.g. openSUSE.Asia Summit) *" required
+              className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
+          ) : (
+            <select value={form.programName} onChange={(e) => setForm(f => ({ ...f, programName: e.target.value }))}
+              className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink-mid text-sm focus:outline-none focus:border-violet-100">
+              {PROGRAM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          )}
           <input value={form.year} onChange={(e) => setForm(f => ({ ...f, year: e.target.value }))} placeholder="Year" type="number" min="2010" max="2035"
             className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
-          <input value={form.org} onChange={(e) => setForm(f => ({ ...f, org: e.target.value }))} placeholder="Organization (optional)"
+          <input value={form.org} onChange={(e) => setForm(f => ({ ...f, org: e.target.value }))} placeholder={form.kind === 'conference' ? 'City, country (optional)' : 'Organization (optional)'}
             className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
           <input value={form.url} onChange={(e) => setForm(f => ({ ...f, url: e.target.value }))} placeholder="Project URL (optional)"
             className="bg-ground border border-line rounded-xl px-3 py-2.5 text-ink placeholder:text-ink-soft text-sm focus:outline-none focus:border-violet-100" />
@@ -2083,7 +2154,7 @@ function AchieversTab() {
             {pendingPrograms.map((p, idx) => (
               <span key={`${p.name}-${p.year}-${idx}`}
                 className="inline-flex items-center gap-1.5 bg-panel border border-line rounded-lg px-2 py-1 text-[12px] text-ink-mid">
-                {p.name}{p.year ? ` ${p.year}` : ''}{p.org ? ` · ${p.org}` : ''}
+                {p.name}{p.year ? ` ${p.year}` : ''}{p.org ? ` · ${p.org}` : ''}{p.kind === 'conference' ? ' (conference)' : ''}
                 <button type="button" aria-label={`Remove ${p.name}`}
                   onClick={() => setPendingPrograms(prev => prev.filter((_, i) => i !== idx))}
                   className="text-ink-soft hover:text-error-500 leading-none">×</button>
@@ -2103,6 +2174,8 @@ function AchieversTab() {
           </button>
         </div>
       </form>
+
+      <AchieversImport onDone={load} />
 
       {error && <p className="text-error-600 text-sm mb-4 bg-error-0 border border-error-100 rounded-xl px-4 py-2.5">{error}</p>}
       {success && <p className="text-success-600 text-sm mb-4 bg-success-0 border border-success-100 rounded-xl px-4 py-2.5">{success}</p>}
@@ -2130,10 +2203,19 @@ function AchieversTab() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <select value={newProgram.kind} onChange={(e) => { const kind = e.target.value as AchieverKind; setNewProgram(f => ({ ...f, kind, programName: kind === 'conference' ? '' : 'GSoC' })); }} aria-label="Kind"
+                    className="bg-ground border border-line rounded-lg px-2.5 py-2 text-ink-mid text-xs focus:outline-none focus:border-violet-100">
+                    {KIND_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
+                  </select>
+                  {newProgram.kind === 'conference' ? (
+                    <input value={newProgram.programName} onChange={(e) => setNewProgram(f => ({ ...f, programName: e.target.value }))} placeholder="Conference name"
+                      className="bg-ground border border-line rounded-lg px-2.5 py-2 text-ink placeholder:text-ink-soft text-xs focus:outline-none focus:border-violet-100" />
+                  ) : (
                   <select value={newProgram.programName} onChange={(e) => setNewProgram(f => ({ ...f, programName: e.target.value }))}
                     className="bg-ground border border-line rounded-lg px-2.5 py-2 text-ink-mid text-xs focus:outline-none focus:border-violet-100">
                     {PROGRAM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
+                  )}
                   <input value={newProgram.year} onChange={(e) => setNewProgram(f => ({ ...f, year: e.target.value }))} placeholder="Year" type="number" min="2010" max="2035"
                     className="bg-ground border border-line rounded-lg px-2.5 py-2 text-ink text-xs focus:outline-none focus:border-violet-100" />
                   <input value={newProgram.org} onChange={(e) => setNewProgram(f => ({ ...f, org: e.target.value }))} placeholder="Org"

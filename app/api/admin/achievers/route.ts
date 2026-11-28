@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const { github, name, headline, bookingUrl, programs } = body as {
     github?: string; name?: string; headline?: string; bookingUrl?: string;
-    programs?: Array<{ name: string; year?: number; org?: string; url?: string }>;
+    programs?: Array<{ name: string; year?: number; org?: string; url?: string; kind?: 'program' | 'conference' }>;
   };
   if (!github?.trim()) return Response.json({ error: 'Missing github username' }, { status: 400 });
   if (!programs?.length) return Response.json({ error: 'At least one program is required' }, { status: 400 });

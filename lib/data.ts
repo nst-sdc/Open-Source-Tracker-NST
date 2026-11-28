@@ -68,6 +68,7 @@ const PROGRAM_MAP: Record<string, ProgramMeta> = {
   'LFX':                { label: 'Linux Foundation Mentorship',  color: 'text-violet-400',  bg: 'bg-violet-500/10',  border: 'border-violet-500/30',  dot: 'bg-violet-400'  },
   'MLH':                { label: 'Major League Hacking',         color: 'text-rose-400',    bg: 'bg-rose-500/10',    border: 'border-rose-500/30',    dot: 'bg-rose-400'    },
   'Hacktoberfest':      { label: 'Hacktoberfest',                color: 'text-pink-400',    bg: 'bg-pink-500/10',    border: 'border-pink-500/30',    dot: 'bg-pink-400'    },
+  'openSUSE.Asia Summit': { label: 'openSUSE.Asia Summit',       color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-400' },
 };
 
 export function getProgramMeta(name: string): ProgramMeta {
