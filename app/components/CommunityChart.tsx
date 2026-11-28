@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useId, useMemo, useState } from 'react';
 import type { MonthBucket, ChartRanges } from '@/lib/community-timeline';
+import { averagesOf } from '@/lib/timeline-averages';
+import { impactOutOf10, prValueOutOf10, outOf10 } from '@/lib/display-scale';
 import { PROutcomeCapsule } from './PROutcomeCapsule';
 
 /**
@@ -82,8 +84,10 @@ export function CommunityChart({
 }) {
   const gradId = useId().replace(/:/g, '');
   const [range, setRange] = useState<'recent' | number>('recent');
-  const series: MonthBucket[] =
-    ranges ? (range === 'recent' ? ranges.recent : (ranges.years.find((y) => y.year === range)?.series ?? ranges.recent)) : (seriesProp ?? []);
+  const series: MonthBucket[] = useMemo(
+    () => (ranges ? (range === 'recent' ? ranges.recent : (ranges.years.find((y) => y.year === range)?.series ?? ranges.recent)) : (seriesProp ?? [])),
+    [ranges, range, seriesProp],
+  );
   const [hover, setHover] = useState<number | null>(null);
   // True while the pointer is on the merged line itself (not just inside the
   // chart); that is what reveals the supporting series.
@@ -99,6 +103,9 @@ export function CommunityChart({
       ),
     [series],
   );
+  // Project impact and effort per merged PR over the months in view, out of
+  // 10 like the badges on a profile (lib/display-scale).
+  const quality = useMemo(() => averagesOf(series), [series]);
   const last = series[series.length - 1];
   const prev = series[series.length - 2];
   const span = series.length ? `${monthLabel(series[0].month, true)} – ${monthLabel(last.month, true)}` : '';
@@ -316,6 +323,18 @@ export function CommunityChart({
         <span>Students active</span>
         <span className="tabular-nums font-[600] text-ink">{(hovered.active ?? 0).toLocaleString('en-IN')}</span>
       </div>
+      {(hovered.avgImpact !== null || hovered.avgEffort !== null) && (
+        <div className="border-t border-line mt-1 pt-1">
+          <div className="flex items-center justify-between gap-4 leading-6 text-ink-mid" title="Average project impact of the PRs merged this month: the repo multiplier M, out of 10">
+            <span>Avg impact <span className="text-ink-faint">/10</span></span>
+            <span className="tabular-nums font-[600] text-ink">{hovered.avgImpact === null ? '—' : outOf10(impactOutOf10(hovered.avgImpact))}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 leading-6 text-ink-mid" title="Average effort of the measured PRs merged this month: the change itself, out of 10; a typical twenty-line code change is a 5">
+            <span>Avg effort <span className="text-ink-faint">/10</span></span>
+            <span className="tabular-nums font-[600] text-ink">{hovered.avgEffort === null ? '—' : outOf10(prValueOutOf10(hovered.avgEffort))}</span>
+          </div>
+        </div>
+      )}
       {(hovered.openedMerged ?? 0) + (hovered.openedClosed ?? 0) + (hovered.openedStillOpen ?? 0) > 0 && (
         <div className="border-t border-line mt-1 pt-1.5">
           <div className="text-[11px] text-ink-soft">PRs opened this month</div>
@@ -397,6 +416,16 @@ export function CommunityChart({
             </button>
           );
         })}
+        {quality.impact !== null && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[11.5px] text-ink-mid" title={`Average project impact per merged PR over ${span}: the repo multiplier M, out of 10`}>
+            Impact <span className="tabular-nums font-[600] text-ink">{outOf10(impactOutOf10(quality.impact))}</span><span className="text-ink-faint">/10 avg</span>
+          </span>
+        )}
+        {quality.effort !== null && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[11.5px] text-ink-mid" title={`Average effort per measured merged PR over ${span}: what the change itself did, out of 10; a typical twenty-line code change is a 5`}>
+            Effort <span className="tabular-nums font-[600] text-ink">{outOf10(prValueOutOf10(quality.effort))}</span><span className="text-ink-faint">/10 avg</span>
+          </span>
+        )}
         <span className="text-[11px] text-ink-faint ml-auto">hover the merged line to reveal opened, closed and issues · issues on the right axis · numbers under the months: students with a merge</span>
       </div>
       <div className="relative">

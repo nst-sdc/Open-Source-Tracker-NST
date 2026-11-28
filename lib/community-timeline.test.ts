@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 vi.mock('./kv', () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => true) }));
 vi.mock('./profile-cache', () => ({ readProfileCache: vi.fn(async () => null) }));
-import { foldStudent, lastMonths, seriesFor, segmentKey, buildCommunityTimeline, timelineIsStale, yearsAvailable, seriesForYear, chartRanges, orgFilters, type CommunityTimeline } from './community-timeline';
+import { foldStudent, lastMonths, seriesFor, segmentKey, buildCommunityTimeline, timelineIsStale, yearsAvailable, seriesForYear, chartRanges, orgFilters, averagesFor, averagesOf, type CommunityTimeline } from './community-timeline';
 
 const NOW = Date.UTC(2026, 10, 18); // 2026-11-18
 const pr = (repo: string, n: number, created: string, merged?: string, closed?: string) =>
@@ -37,9 +37,37 @@ describe('foldStudent', () => {
       keep,
     );
     const seg = segmentKey(alice);
-    expect(months['2026-09'][seg]).toEqual({ opened: 2, merged: 0, closed: 0, issues: 0, contributors: 0, active: 1, openedMerged: 1, openedClosed: 1, openedStillOpen: 0 });
-    expect(months['2026-10'][seg]).toEqual({ opened: 1, merged: 2, closed: 1, issues: 1, contributors: 1, active: 1, openedMerged: 1, openedClosed: 0, openedStillOpen: 0 });
+    expect(months['2026-09'][seg]).toEqual({ opened: 2, merged: 0, closed: 0, issues: 0, contributors: 0, active: 1, openedMerged: 1, openedClosed: 1, openedStillOpen: 0, impactSum: 0, effortSum: 0, effortMeasured: 0 });
+    expect(months['2026-10'][seg]).toEqual({ opened: 1, merged: 2, closed: 1, issues: 1, contributors: 1, active: 1, openedMerged: 1, openedClosed: 0, openedStillOpen: 0, impactSum: 0, effortSum: 0, effortMeasured: 0 });
     expect(months['2024-01']).toBeUndefined();
+  });
+
+  it('sums project impact for every merged PR when given a resolver, and effort only for measured ones', () => {
+    const months: CommunityTimeline['months'] = {};
+    const keep = new Set(lastMonths(12, NOW));
+    const cara = { github: 'cara', campus: 'Rishihood' as const, year: '1st year' as const };
+    const measured = (p: object, value: number) => ({ ...p, contribution: { value } }) as never;
+    foldStudent(
+      months,
+      cara,
+      {
+        prs: [
+          measured(pr('apache/kafka', 1, '2026-09-10T00:00:00Z', '2026-10-02T00:00:00Z'), 1.6),
+          pr('small/repo', 2, '2026-10-05T00:00:00Z', '2026-10-20T00:00:00Z'), // merged, never measured
+          measured(pr('apache/spark', 3, '2026-10-08T00:00:00Z'), 2.0), // still open: nothing summed
+          measured(pr('apache/beam', 4, '2026-09-20T00:00:00Z', undefined, '2026-10-03T00:00:00Z'), 0.5), // closed: nothing summed
+        ],
+        issues: [],
+      },
+      { multiplierFor: (repo) => (repo.startsWith('apache/') ? 3 : 0.5) },
+      keep,
+    );
+    const seg = segmentKey(cara);
+    expect(months['2026-10'][seg]).toMatchObject({ merged: 2, impactSum: 3.5, effortSum: 1.6, effortMeasured: 1 });
+    // No resolver: impact stays 0 (unknown), effort is still summed.
+    const bare: CommunityTimeline['months'] = {};
+    foldStudent(bare, cara, { prs: [measured(pr('apache/kafka', 1, '2026-09-10T00:00:00Z', '2026-10-02T00:00:00Z'), 1.2)], issues: [] }, {}, keep);
+    expect(bare['2026-10'][seg]).toMatchObject({ merged: 1, impactSum: 0, effortSum: 1.2, effortMeasured: 1 });
   });
 
   it('counts a student as active in a month with only an issue, or only a closed PR, but as a contributor only with a merge', () => {
@@ -82,6 +110,36 @@ describe('seriesFor', () => {
     expect(seriesFor(t, { campus: 'ADYPU' }, 2, NOW).map((b) => b.merged)).toEqual([2, 1]);
     expect(seriesFor(t, { campus: 'ADYPU', year: '3rd year' }, 2, NOW).map((b) => b.merged)).toEqual([0, 0]);
     expect(seriesFor(null, {}, 2, NOW).every((b) => b.opened === 0)).toBe(true);
+    // Records built before the quality sums existed carry no averages.
+    expect(all.map((b) => [b.avgImpact, b.avgEffort])).toEqual([[null, null], [null, null], [null, null]]);
+  });
+});
+
+describe('impact and effort averages', () => {
+  const t: CommunityTimeline = {
+    builtAt: new Date(NOW).toISOString(),
+    studentsCounted: 2,
+    months: {
+      '2026-10': {
+        'ADYPU|2nd year': { opened: 3, merged: 2, closed: 0, issues: 0, contributors: 1, active: 1, impactSum: 2.0, effortSum: 1.5, effortMeasured: 1 },
+        'Rishihood|3rd year': { opened: 1, merged: 2, closed: 0, issues: 0, contributors: 1, active: 1, impactSum: 6.0, effortSum: 3.0, effortMeasured: 2 },
+      },
+      '2026-11': { 'ADYPU|2nd year': { opened: 1, merged: 1, closed: 0, issues: 0, contributors: 1, active: 1, impactSum: 1.0 } },
+    },
+  };
+  it('divides sums by counts per month, not a mean of means, and leaves unmeasured months null', () => {
+    const s = seriesFor(t, {}, 2, NOW);
+    expect(s[0].avgImpact).toBeCloseTo(8 / 4);
+    expect(s[0].avgEffort).toBeCloseTo(4.5 / 3);
+    expect(s[1].avgImpact).toBeCloseTo(1);
+    expect(s[1].avgEffort).toBeNull();
+  });
+  it('averages a whole timeline, honouring the campus/year filter', () => {
+    expect(averagesFor(t)).toMatchObject({ merged: 5, measured: 3 });
+    expect(averagesFor(t).impact).toBeCloseTo(9 / 5);
+    expect(averagesFor(t, { campus: 'Rishihood' }).impact).toBeCloseTo(3);
+    expect(averagesFor(t, { campus: 'SVYASA' })).toEqual({ impact: null, effort: null, merged: 0, measured: 0 });
+    expect(averagesOf(seriesFor(t, {}, 2, NOW)).impact).toBeCloseTo(9 / 5);
   });
 });
 

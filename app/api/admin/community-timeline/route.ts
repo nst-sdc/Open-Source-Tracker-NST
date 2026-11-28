@@ -3,6 +3,7 @@ import { checkAdminAuth } from '@/lib/admin-auth';
 import { getStudentsKV } from '@/lib/kv-students';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { getRepoCache, prExcludedBy } from '@/lib/repo-cache';
+import { makeRepoMultiplierResolver } from '@/lib/github';
 import { getOwnRepoExceptions, buildOwnRepoExceptionMap, EMPTY_REPO_SET } from '@/lib/kv-own-repo-exceptions';
 import { buildCommunityTimeline, readCommunityTimeline, writeCommunityTimeline, seriesFor } from '@/lib/community-timeline';
 
@@ -24,11 +25,14 @@ export async function POST() {
     getRepoCache(),
     getOwnRepoExceptions().then(buildOwnRepoExceptionMap),
   ]);
+  const now = Date.now();
   const t = await buildCommunityTimeline(students, (student) => {
     const own = ownRepoExceptionMap.get(student.github.toLowerCase()) ?? EMPTY_REPO_SET;
     return {
       flaggedPRIds,
       excludesPR: (repo, mergedAt) => !own.has(repo.toLowerCase()) && prExcludedBy(repoCache[repo], mergedAt) !== null,
+      // Same resolver as the leaderboard, so the chart's impact average matches the badges.
+      multiplierFor: makeRepoMultiplierResolver(repoCache, student.github, own, now),
     };
   });
   if (!(await writeCommunityTimeline(t))) return NextResponse.json({ error: 'The store did not accept the timeline.' }, { status: 503 });

@@ -1,6 +1,7 @@
 import { buildLeaderboard, parseLeaderboardQuery, PAGE_SIZE, type LeaderboardRow } from "@/lib/leaderboard";
 import { getRecognitions } from "@/lib/recognitions";
-import { readCommunityTimeline, chartRanges } from "@/lib/community-timeline";
+import { readCommunityTimeline, chartRanges, averagesFor } from "@/lib/community-timeline";
+import { impactOutOf10, prValueOutOf10, outOf10 } from "@/lib/display-scale";
 import { CommunityChart } from "../components/CommunityChart";
 import { FilterBar } from "./FilterBar";
 import { ContributorGrid } from "./ContributorGrid";
@@ -257,6 +258,10 @@ export default async function ContributorsPage({
 
   const refreshedAgo = cachedAt ? getMinutesAgo(cachedAt) : null;
 
+  // Average project impact and effort per merged PR for the campus/year in
+  // view, all time, from the same timeline the chart draws.
+  const quality = averagesFor(timeline, { campus, year });
+
   return (
     <main className="min-h-screen bg-panel pb-20">
       {/* Contest hero */}
@@ -391,7 +396,7 @@ export default async function ContributorsPage({
       {/* Summary strip (only shown in normal view) */}
       {!isOrgSearch && (
         <div className="max-w-6xl mx-auto px-4 md:px-6 mt-6">
-          <div className="bg-ground border border-line rounded-2xl shadow-card grid grid-cols-2 md:grid-cols-4">
+          <div className={`bg-ground border border-line rounded-2xl shadow-card grid grid-cols-2 ${quality.impact !== null ? "md:grid-cols-3 lg:grid-cols-6" : "md:grid-cols-4"}`}>
             {[
               {
                 label: "Students",
@@ -417,15 +422,22 @@ export default async function ContributorsPage({
                 value: totals.totalMerged,
                 num: "text-success-600",
               },
+              ...(quality.impact !== null
+                ? [{ label: "Avg impact · of 10", value: quality.impact, text: outOf10(impactOutOf10(quality.impact)), num: "text-ink", title: "Average project impact per merged PR: how significant the projects are, from the repo multiplier" }]
+                : []),
+              ...(quality.effort !== null
+                ? [{ label: "Avg effort · of 10", value: quality.effort, text: outOf10(prValueOutOf10(quality.effort)), num: "text-ink", title: "Average effort per measured merged PR: what the change itself did; a typical twenty-line code change is a 5" }]
+                : []),
             ].map((s, i) => (
               <div
                 key={s.label}
-                className={`px-5 py-4 ${i > 0 ? "border-l border-line" : ""} ${i >= 2 ? "max-md:border-t max-md:border-line" : ""} ${i === 2 ? "max-md:border-l-0" : ""}`}
+                title={"title" in s ? s.title : undefined}
+                className={`px-5 py-4 ${i > 0 ? "border-l border-line" : ""} ${i >= 2 ? "max-md:border-t max-md:border-line" : ""} ${i % 2 === 0 ? "max-md:border-l-0" : ""} ${quality.impact !== null ? `${i >= 3 ? "md:max-lg:border-t md:max-lg:border-line" : ""} ${i % 3 === 0 ? "md:max-lg:border-l-0" : ""}` : ""}`}
               >
                 <div
                   className={`text-[22px] leading-none font-[650] tabular-nums ${s.num}`}
                 >
-                  {s.value.toLocaleString("en-IN")}
+                  {"text" in s ? s.text : s.value.toLocaleString("en-IN")}
                 </div>
                 <div className="text-[12px] text-ink-soft mt-1">{s.label}</div>
                 {"sub" in s && s.sub && (

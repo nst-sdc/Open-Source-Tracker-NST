@@ -186,7 +186,10 @@ export default function DocumentationPage() {
               files and lines it touched (tests, new code and breadth raise it; docs-only and image/config-only
               changes sit low; comment lines, blank lines and reformatting are never counted as code). A typical twenty-line code change is a 5; points are{' '}
               <Code>10·M<sup>0.75</sup>·E</Code>, so an Effort of 10 doubles a PR and a 2 cuts it to 40%. E counts on the
-              leaderboard as soon as a PR has been measured; an unmeasured PR reads as neutral until it is.
+              leaderboard as soon as a PR has been measured; an unmeasured PR reads as neutral until it is. The community
+              chart averages both over the PRs merged each month (hover a month, or read the two pills above the
+              chart for the range in view), and the stats on the home and contributors pages show the same averages
+              over every merged PR in view.
             </P>
             <Callout tone="warn">
               <strong>Why it changed:</strong> the previous formula (<Code>1 + log₁₀(stars + 3·forks + 1)</Code>)

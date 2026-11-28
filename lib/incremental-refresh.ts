@@ -7,7 +7,7 @@
  * in-process when the app runs locally, so a fresh checkout fills itself in
  * without anyone running a script or reloading.
  */
-import { updateStaleProfiles, buildDateQuery, getSummaryFromCache } from '@/lib/github';
+import { updateStaleProfiles, buildDateQuery, getSummaryFromCache, makeRepoMultiplierResolver } from '@/lib/github';
 import { getFlaggedPRIdSet } from '@/lib/flagged';
 import { writeSummaryCache, readSummaryCache, pruneToRoster, INVALIDATED_AT } from '@/lib/summary-cache';
 import { readProfileCache } from '@/lib/profile-cache';
@@ -118,6 +118,12 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
       excludesPR: (repo, mergedAt) => !own.has(repo.toLowerCase()) && prExcludedBy(repoCache[repo], mergedAt) !== null,
     };
   };
+  // The community timeline also sums each merged PR's project impact, with
+  // the leaderboard's own multiplier resolver so the two never disagree.
+  const timelineFiltersFor = (student: Student) => ({
+    ...indexFiltersFor(student),
+    multiplierFor: makeRepoMultiplierResolver(repoCache, student.github, ownRepoExceptionMap.get(student.github.toLowerCase()) ?? EMPTY_REPO_SET, Date.now()),
+  });
   const { ok: indexReadOk, index: orgIndex } = await readOrgIndexForWrite();
   if (!indexReadOk) {
     // Folding this tick's students into an empty "index" and writing it back
@@ -160,7 +166,7 @@ export async function performIncrementalRefresh(): Promise<IncrementalRefreshRes
     // few hours with the same exclusion rule as the leaderboard.
     try {
       if (timelineIsStale(await readCommunityTimeline())) {
-        const t = await buildCommunityTimeline(students, indexFiltersFor);
+        const t = await buildCommunityTimeline(students, timelineFiltersFor);
         await writeCommunityTimeline(t);
         console.log(`[Incremental Refresh] community timeline rebuilt from ${t.studentsCounted} profiles`);
       }
