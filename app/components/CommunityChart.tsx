@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { MonthBucket, ChartRanges } from '@/lib/community-timeline';
 import { averagesOf } from '@/lib/timeline-averages';
 import { impactOutOf10, prValueOutOf10, outOf10 } from '@/lib/display-scale';
@@ -15,14 +15,23 @@ import { PROutcomeCapsule } from './PROutcomeCapsule';
  * card that reads out every series for the month under the pointer. Legend
  * entries toggle their series. `compact` is the home-page version.
  */
-type SeriesKey = 'merged' | 'opened' | 'closed' | 'issues';
+type SeriesKey = 'merged' | 'opened' | 'closed' | 'issues' | 'impact' | 'effort';
 
-const SERIES: Array<{ key: SeriesKey; label: string; color: string; axis: 'left' | 'right'; width: number }> = [
+/** `scale` series are averages out of 10 (lib/display-scale), drawn on their
+ *  own 0–10 scale over the full plot height; the right axis relabels to it
+ *  while one of them is soloed from the hover card. */
+const SERIES: Array<{ key: SeriesKey; label: string; color: string; axis: 'left' | 'right' | 'scale'; width: number }> = [
   { key: 'merged', label: 'Merged PRs', color: 'var(--color-success-500)', axis: 'left', width: 2.25 },
   { key: 'opened', label: 'PRs opened', color: 'var(--color-brand-500)', axis: 'left', width: 1.5 },
   { key: 'closed', label: 'Closed unmerged', color: 'var(--color-warning-600)', axis: 'left', width: 1.5 },
   { key: 'issues', label: 'Issues opened', color: 'var(--color-violet-500)', axis: 'right', width: 1.5 },
+  { key: 'impact', label: 'Avg impact', color: 'var(--color-gold-600)', axis: 'scale', width: 1.5 },
+  { key: 'effort', label: 'Avg effort', color: 'var(--color-error-500)', axis: 'scale', width: 1.5 },
 ];
+const isScale = (key: SeriesKey) => key === 'impact' || key === 'effort';
+/** A month's value for a series: counts as stored, averages out of 10, null when a month has no average. */
+const valueOf = (key: SeriesKey, b: MonthBucket): number | null =>
+  key === 'impact' ? (b.avgImpact === null ? null : impactOutOf10(b.avgImpact)) : key === 'effort' ? (b.avgEffort === null ? null : prValueOutOf10(b.avgEffort)) : b[key];
 
 const monthLabel = (m: string, long = false) =>
   new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', ...(long ? { year: 'numeric' } : {}), timeZone: 'UTC' });
@@ -94,6 +103,27 @@ export function CommunityChart({
   const [onLine, setOnLine] = useState(false);
   const [hidden, setHidden] = useState<Set<SeriesKey>>(() => new Set());
   const visible = SERIES.filter((s) => !hidden.has(s.key));
+  // One series singled out by resting the pointer on its row in the hover
+  // card: drawn alone, in full, while the others fade. Not on the compact
+  // chart, which only ever draws merged.
+  const [soloRaw, setSolo] = useState<SeriesKey | null>(null);
+  const solo = compact ? null : soloRaw;
+  // Leaving the merged line does not close the card at once: the pointer
+  // gets a moment to cross into it, where the rows are interactive.
+  const offTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelOff = () => {
+    if (offTimer.current) clearTimeout(offTimer.current);
+    offTimer.current = null;
+  };
+  const scheduleOff = () => {
+    cancelOff();
+    offTimer.current = setTimeout(() => {
+      setOnLine(false);
+      setHover(null);
+      setSolo(null);
+    }, 220);
+  };
+  useEffect(() => cancelOff, []);
 
   const totals = useMemo(
     () =>
@@ -106,6 +136,12 @@ export function CommunityChart({
   // Project impact and effort per merged PR over the months in view, out of
   // 10 like the badges on a profile (lib/display-scale).
   const quality = useMemo(() => averagesOf(series), [series]);
+  // What the legend shows next to a series: a count's total, an average's
+  // figure over the range in view.
+  const legendValue = (key: SeriesKey) =>
+    key === 'impact' ? (quality.impact === null ? '—' : `${outOf10(impactOutOf10(quality.impact))}/10`)
+    : key === 'effort' ? (quality.effort === null ? '—' : `${outOf10(prValueOutOf10(quality.effort))}/10`)
+    : totals[key].toLocaleString('en-IN');
   const last = series[series.length - 1];
   const prev = series[series.length - 2];
   const span = series.length ? `${monthLabel(series[0].month, true)} – ${monthLabel(last.month, true)}` : '';
@@ -141,7 +177,9 @@ export function CommunityChart({
   const rightMax = niceCeil(Math.max(0, ...series.map((b) => (hidden.has('issues') ? 0 : b.issues))));
   const yLeft = (v: number) => baseline - ((v - leftMin) / (leftMax - leftMin)) * plotH;
   const yRight = (v: number) => baseline - (v / rightMax) * plotH;
-  const yFor = (key: SeriesKey, v: number) => (key === 'issues' ? yRight(v) : yLeft(v));
+  const yScale = (v: number) => baseline - (v / 10) * plotH;
+  const yFor = (key: SeriesKey, v: number) => (key === 'issues' ? yRight(v) : isScale(key) ? yScale(v) : yLeft(v));
+  const scaleSolo = solo && isScale(solo) ? SERIES.find((s) => s.key === solo) : undefined;
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
   if (totals.opened === 0 && totals.merged === 0 && totals.issues === 0) {
@@ -158,11 +196,27 @@ export function CommunityChart({
   // value is a visible dot and the line reads as data, not a trend; the
   // supporting series are smoothed so they sit back visually.
   const straightPath = (pts: Array<[number, number]>) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-  const pointsFor = (key: SeriesKey) => series.map((b, i) => [xFor(i), yFor(key, b[key])] as [number, number]);
+  const pointsFor = (key: SeriesKey) => series.map((b, i) => [xFor(i), yFor(key, valueOf(key, b) ?? 0)] as [number, number]);
+  // An average series breaks where a month has no average, instead of
+  // drawing a false zero.
+  const segmentsFor = (key: SeriesKey): Array<Array<[number, number]>> => {
+    const out: Array<Array<[number, number]>> = [];
+    let run: Array<[number, number]> = [];
+    series.forEach((b, i) => {
+      const v = valueOf(key, b);
+      if (v === null) {
+        if (run.length) out.push(run);
+        run = [];
+      } else run.push([xFor(i), yFor(key, v)]);
+    });
+    if (run.length) out.push(run);
+    return out;
+  };
   const paths = (compact ? visible.filter((s) => s.key === 'merged') : visible).map((s) => ({
     ...s,
-    d: s.key === 'merged' ? straightPath(pointsFor('merged')) : smoothPath(pointsFor(s.key)),
+    d: s.key === 'merged' ? straightPath(pointsFor('merged')) : segmentsFor(s.key).map(smoothPath).join(' '),
   }));
+  const lineOpacity = (key: SeriesKey) => (solo ? (key === solo ? 1 : 0) : key === 'merged' ? 1 : onLine ? 0.25 : 0);
   const mergedArea = !hidden.has('merged')
     ? `${straightPath(pointsFor('merged'))} L${xFor(n - 1).toFixed(1)},${baseline} L${xFor(0).toFixed(1)},${baseline} Z`
     : '';
@@ -194,7 +248,7 @@ export function CommunityChart({
       role="img"
       aria-label={`Community activity by month${scopeLabel ? ` for ${scopeLabel}` : ''}: ${totals.merged} pull requests merged, ${totals.opened} opened, ${totals.closed} closed without merging and ${totals.issues} issues opened across ${series.length} months.`}
       onPointerMove={onMove}
-      onPointerLeave={() => { setHover(null); setOnLine(false); }}
+      onPointerLeave={scheduleOff}
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -208,7 +262,9 @@ export function CommunityChart({
           <g key={t}>
             <line x1={padLeft} y1={baseline - t * plotH} x2={width - padRight} y2={baseline - t * plotH} stroke={t === 0 ? 'var(--color-line-strong)' : 'var(--color-line)'} strokeWidth="1" strokeDasharray={t === 0 ? undefined : '2 4'} />
             <text x={padLeft - 8} y={baseline - t * plotH + 3.5} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)" className="tabular-nums">{Math.round(leftMin + t * (leftMax - leftMin))}</text>
-            {!hidden.has('issues') && (
+            {scaleSolo ? (
+              <text x={width - padRight + 8} y={baseline - t * plotH + 3.5} textAnchor="start" fontSize="10" fill={scaleSolo.color} className="tabular-nums" opacity="0.9">{t * 10}</text>
+            ) : !hidden.has('issues') && (
               <text x={width - padRight + 8} y={baseline - t * plotH + 3.5} textAnchor="start" fontSize="10" fill="var(--color-violet-500)" className="tabular-nums" opacity="0.8">{Math.round(t * rightMax)}</text>
             )}
           </g>
@@ -224,7 +280,7 @@ export function CommunityChart({
         <rect x={(xFor(n - 2) + xFor(n - 1)) / 2} y={padTop} width={xFor(n - 1) - (xFor(n - 2) + xFor(n - 1)) / 2 + 2} height={plotH} fill="var(--color-panel)" opacity="0.7" />
       )}
 
-      {mergedArea && <path d={mergedArea} fill={`url(#${gradId})`} />}
+      {mergedArea && <path d={mergedArea} fill={`url(#${gradId})`} opacity={solo && solo !== 'merged' ? 0 : 1} style={{ transition: 'opacity 180ms ease' }} />}
 
       {/* Merged is the headline and always drawn in full; the other series
           are invisible until the pointer rests on the merged line itself,
@@ -236,17 +292,17 @@ export function CommunityChart({
           d={p.d}
           fill="none"
           stroke={p.color}
-          strokeWidth={p.key === 'merged' ? (compact ? 2 : 2.5) : p.width}
+          strokeWidth={p.key === 'merged' ? (compact ? 2 : 2.5) : solo === p.key ? 2.25 : p.width}
           strokeLinejoin="round"
           strokeLinecap="round"
-          strokeDasharray={p.key === 'issues' ? '5 4' : undefined}
-          opacity={p.key === 'merged' ? 1 : onLine ? 0.25 : 0}
+          strokeDasharray={p.key === 'issues' ? '5 4' : isScale(p.key) ? '2 3' : undefined}
+          opacity={lineOpacity(p.key)}
           style={{ transition: 'opacity 180ms ease' }}
         />
       ))}
 
       {!hidden.has('merged') && series.map((b, i) => (
-        <circle key={`m${b.month}`} cx={xFor(i)} cy={yLeft(b.merged)} r={compact ? 2 : 3.5} fill="var(--color-ground)" stroke="var(--color-success-500)" strokeWidth={compact ? 1.5 : 2} />
+        <circle key={`m${b.month}`} cx={xFor(i)} cy={yLeft(b.merged)} r={compact ? 2 : 3.5} fill="var(--color-ground)" stroke="var(--color-success-500)" strokeWidth={compact ? 1.5 : 2} opacity={solo && solo !== 'merged' ? 0 : 1} style={{ transition: 'opacity 180ms ease' }} />
       ))}
 
       {!compact && (
@@ -268,9 +324,13 @@ export function CommunityChart({
       {hovered && hover !== null && (
         <g>
           <line x1={xFor(hover)} y1={padTop} x2={xFor(hover)} y2={baseline} stroke="var(--color-ink-faint)" strokeWidth="1" strokeDasharray="3 3" />
-          {visible.map((s) => (
-            <circle key={s.key} cx={xFor(hover)} cy={yFor(s.key, hovered[s.key])} r={s.key === 'merged' ? (compact ? 3.5 : 5) : compact ? 3 : 4} fill="var(--color-ground)" stroke={s.color} strokeWidth={s.key === 'merged' ? 2.5 : 2} />
-          ))}
+          {visible
+            .filter((s) => (solo ? s.key === solo : compact ? s.key === 'merged' : true))
+            .map((s) => {
+              const v = valueOf(s.key, hovered);
+              if (v === null) return null;
+              return <circle key={s.key} cx={xFor(hover)} cy={yFor(s.key, v)} r={s.key === 'merged' ? (compact ? 3.5 : 5) : compact ? 3 : 4} fill="var(--color-ground)" stroke={s.color} strokeWidth={s.key === 'merged' ? 2.5 : 2} />;
+            })}
         </g>
       )}
 
@@ -290,31 +350,46 @@ export function CommunityChart({
           strokeLinejoin="round"
           strokeLinecap="round"
           style={{ pointerEvents: 'stroke', cursor: 'crosshair' }}
-          onPointerEnter={() => setOnLine(true)}
-          onPointerLeave={() => setOnLine(false)}
+          onPointerEnter={() => { cancelOff(); setOnLine(true); }}
+          onPointerLeave={scheduleOff}
         />
       )}
     </svg>
   );
 
+  // A row of the card: resting the pointer on it draws that series alone.
+  const row = (s: (typeof SERIES)[number]) => {
+    const v = valueOf(s.key, hovered as MonthBucket);
+    return (
+      <div
+        key={s.key}
+        className={`flex items-center justify-between gap-4 leading-6 -mx-1.5 px-1.5 rounded-md transition-colors ${hidden.has(s.key) ? 'opacity-40' : ''} ${solo === s.key ? 'bg-panel' : ''}`}
+        onPointerEnter={() => { if (!compact && !hidden.has(s.key)) setSolo(s.key); }}
+        onPointerLeave={() => setSolo((k) => (k === s.key ? null : k))}
+        title={isScale(s.key) ? `${s.label} per merged PR this month, out of 10` : undefined}
+      >
+        <span className="inline-flex items-center gap-1.5 text-ink-mid">
+          <span className="w-2.5 h-[3px] rounded" style={{ backgroundColor: s.color }} />
+          {s.label}
+          {isScale(s.key) && <span className="text-ink-faint">/10</span>}
+        </span>
+        <span className="tabular-nums font-[600] text-ink">{v === null ? '—' : isScale(s.key) ? outOf10(v) : v.toLocaleString('en-IN')}</span>
+      </div>
+    );
+  };
+
   const tooltip = hovered && (
     <div
-      className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-xl border border-line bg-ground/95 backdrop-blur px-3 py-2.5 shadow-pop text-[12px] min-w-[224px]"
+      className={`absolute top-0 z-10 -translate-x-1/2 rounded-xl border border-line bg-ground/95 backdrop-blur px-3 py-2.5 shadow-pop text-[12px] min-w-[224px] ${compact ? 'pointer-events-none' : 'pointer-events-auto'}`}
       style={{ left: `clamp(100px, ${tipLeftPct}%, calc(100% - 100px))` }}
+      onPointerEnter={cancelOff}
+      onPointerLeave={() => { setSolo(null); scheduleOff(); }}
     >
       <div className="font-[650] text-ink mb-1.5">
         {monthLabel(hovered.month, true)}
         {hovered.partial && <span className="ml-1.5 text-[10.5px] font-[550] text-ink-soft">so far</span>}
       </div>
-      {SERIES.map((s) => (
-        <div key={s.key} className={`flex items-center justify-between gap-4 leading-6 ${hidden.has(s.key) ? 'opacity-40' : ''}`}>
-          <span className="inline-flex items-center gap-1.5 text-ink-mid">
-            <span className="w-2.5 h-[3px] rounded" style={{ backgroundColor: s.color }} />
-            {s.label}
-          </span>
-          <span className="tabular-nums font-[600] text-ink">{hovered[s.key].toLocaleString('en-IN')}</span>
-        </div>
-      ))}
+      {SERIES.filter((s) => !isScale(s.key)).map(row)}
       <div className="flex items-center justify-between gap-4 leading-6 border-t border-line mt-1 pt-1 text-ink-mid">
         <span>Students with a merge</span>
         <span className="tabular-nums font-[600] text-ink">{hovered.contributors.toLocaleString('en-IN')}</span>
@@ -324,16 +399,7 @@ export function CommunityChart({
         <span className="tabular-nums font-[600] text-ink">{(hovered.active ?? 0).toLocaleString('en-IN')}</span>
       </div>
       {(hovered.avgImpact !== null || hovered.avgEffort !== null) && (
-        <div className="border-t border-line mt-1 pt-1">
-          <div className="flex items-center justify-between gap-4 leading-6 text-ink-mid" title="Average project impact of the PRs merged this month: the repo multiplier M, out of 10">
-            <span>Avg impact <span className="text-ink-faint">/10</span></span>
-            <span className="tabular-nums font-[600] text-ink">{hovered.avgImpact === null ? '—' : outOf10(impactOutOf10(hovered.avgImpact))}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4 leading-6 text-ink-mid" title="Average effort of the measured PRs merged this month: the change itself, out of 10; a typical twenty-line code change is a 5">
-            <span>Avg effort <span className="text-ink-faint">/10</span></span>
-            <span className="tabular-nums font-[600] text-ink">{hovered.avgEffort === null ? '—' : outOf10(prValueOutOf10(hovered.avgEffort))}</span>
-          </div>
-        </div>
+        <div className="border-t border-line mt-1 pt-1">{SERIES.filter((s) => isScale(s.key)).map(row)}</div>
       )}
       {(hovered.openedMerged ?? 0) + (hovered.openedClosed ?? 0) + (hovered.openedStillOpen ?? 0) > 0 && (
         <div className="border-t border-line mt-1 pt-1.5">
@@ -412,21 +478,11 @@ export function CommunityChart({
             >
               <span className="w-3 h-[3px] rounded" style={{ backgroundColor: s.color, opacity: off ? 0.4 : 1 }} />
               {s.label}
-              <span className="tabular-nums text-ink-soft">{totals[s.key].toLocaleString('en-IN')}</span>
+              <span className="tabular-nums text-ink-soft">{legendValue(s.key)}</span>
             </button>
           );
         })}
-        {quality.impact !== null && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[11.5px] text-ink-mid" title={`Average project impact per merged PR over ${span}: the repo multiplier M, out of 10`}>
-            Impact <span className="tabular-nums font-[600] text-ink">{outOf10(impactOutOf10(quality.impact))}</span><span className="text-ink-faint">/10 avg</span>
-          </span>
-        )}
-        {quality.effort !== null && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[11.5px] text-ink-mid" title={`Average effort per measured merged PR over ${span}: what the change itself did, out of 10; a typical twenty-line code change is a 5`}>
-            Effort <span className="tabular-nums font-[600] text-ink">{outOf10(prValueOutOf10(quality.effort))}</span><span className="text-ink-faint">/10 avg</span>
-          </span>
-        )}
-        <span className="text-[11px] text-ink-faint ml-auto">hover the merged line to reveal opened, closed and issues · issues on the right axis · numbers under the months: students with a merge</span>
+        <span className="text-[11px] text-ink-faint ml-auto">hover the merged line to reveal the other series, then a row of the card to see that one alone · issues on the right axis, impact and effort out of 10 · numbers under the months: students with a merge</span>
       </div>
       <div className="relative">
         {svg}
