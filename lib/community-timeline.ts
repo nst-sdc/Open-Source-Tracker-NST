@@ -15,6 +15,9 @@
 import { kvGet, kvSet } from './kv';
 import { readProfileCache, type ProfileCacheEntry } from './profile-cache';
 import type { Student } from './kv-students';
+import { averagesOf, type QualityAverages } from './timeline-averages';
+
+export { averagesOf, type QualityAverages, type QualitySums } from './timeline-averages';
 
 export const KV_KEY = 'community_timeline';
 export const REBUILD_EVERY_MS = 6 * 60 * 60 * 1000;
@@ -39,14 +42,29 @@ export interface Counts {
   openedMerged?: number;
   openedClosed?: number;
   openedStillOpen?: number;
+  /** Sum of the repo multiplier M (lib/repo-score.ts) over this month's
+   *  merged PRs, so impactSum / merged is the month's average project
+   *  impact. Only summed when the build had a multiplier resolver
+   *  (TimelineFilters.multiplierFor); older records lack it. */
+  impactSum?: number;
+  /** Sum of the effort term E (lib/pr-value.ts) over this month's merged PRs
+   *  that have been measured, and how many those were. */
+  effortSum?: number;
+  effortMeasured?: number;
 }
 
-export interface MonthBucket extends Counts {
+export interface MonthBucket extends Required<Counts> {
   /** 'YYYY-MM', UTC. */
   month: string;
   /** True for the month that is still running. */
   partial: boolean;
+  /** Mean M per merged PR this month, model units; null when not summed. */
+  avgImpact: number | null;
+  /** Mean E per measured merged PR this month, model units; null when none measured. */
+  avgEffort: number | null;
 }
+
+const EMPTY_COUNTS = (): Required<Counts> => ({ opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0, openedMerged: 0, openedClosed: 0, openedStillOpen: 0, impactSum: 0, effortSum: 0, effortMeasured: 0 });
 
 export interface CommunityTimeline {
   builtAt: string;
@@ -59,6 +77,9 @@ export interface TimelineFilters {
   flaggedPRIds?: Set<string>;
   /** The leaderboard's own rule; see lib/incremental-refresh.ts. */
   excludesPR?: (repoFullName: string, mergedAt: string | null | undefined) => boolean;
+  /** The repo multiplier M for a merged PR's repository (makeRepoMultiplierResolver
+   *  in lib/github.ts), per student. Without it no impact is summed. */
+  multiplierFor?: (repoFullName: string) => number;
 }
 
 export const monthOf = (iso: string): string => iso.slice(0, 7);
@@ -72,6 +93,7 @@ export function orgFilters(orgLogin: string, base: TimelineFilters = {}): Timeli
   const org = orgLogin.toLowerCase();
   return {
     flaggedPRIds: base.flaggedPRIds,
+    multiplierFor: base.multiplierFor,
     excludesPR: (repo, mergedAt) => repo.split('/')[0]?.toLowerCase() !== org || (base.excludesPR?.(repo, mergedAt) ?? false),
   };
 }
@@ -121,7 +143,7 @@ export function foldStudent(
   const bump = (month: string, field: keyof Counts, by = 1) => {
     if (!keepMonths.has(month)) return;
     const row = (months[month] ??= {});
-    const c = (row[seg] ??= { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0, openedMerged: 0, openedClosed: 0, openedStillOpen: 0 });
+    const c = (row[seg] ??= EMPTY_COUNTS());
     c[field] = (c[field] ?? 0) + by;
   };
   const mergedMonths = new Set<string>();
@@ -142,6 +164,12 @@ export function foldStudent(
     if (mergedAt) {
       const m = monthOf(mergedAt);
       bump(m, 'merged');
+      if (filters.multiplierFor) bump(m, 'impactSum', filters.multiplierFor(repo));
+      const effort = pr.contribution?.value;
+      if (typeof effort === 'number' && Number.isFinite(effort)) {
+        bump(m, 'effortSum', effort);
+        bump(m, 'effortMeasured');
+      }
       if (keepMonths.has(m)) mergedMonths.add(m);
       touch(m);
     } else if (pr.state === 'closed' && pr.closed_at) {
@@ -206,6 +234,29 @@ export function timelineIsStale(t: CommunityTimeline | null, nowMs = Date.now(),
   return !Number.isFinite(at) || nowMs - at > maxAgeMs;
 }
 
+/** One month's counts summed over the segments a campus/year filter keeps.
+ *  Fields that records built before them lack read as 0. Pure. */
+export function sumMonth(t: CommunityTimeline | null, month: string, filters: { campus?: string; year?: string } = {}): Required<Counts> {
+  const acc = EMPTY_COUNTS();
+  for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
+    if (!segmentMatches(seg, filters)) continue;
+    for (const k of Object.keys(acc) as Array<keyof Counts>) acc[k] += c[k] ?? 0;
+  }
+  return acc;
+}
+
+function bucket(month: string, partial: boolean, acc: Required<Counts>): MonthBucket {
+  const avg = averagesOf([acc]);
+  return { month, partial, ...acc, avgImpact: avg.impact, avgEffort: avg.effort };
+}
+
+/** Average project impact and effort per merged PR over every month the
+ *  timeline holds, for a campus/year filter: the figures the stats tiles
+ *  show. Pure. */
+export function averagesFor(t: CommunityTimeline | null, filters: { campus?: string; year?: string } = {}): QualityAverages {
+  return averagesOf(Object.keys(t?.months ?? {}).map((month) => sumMonth(t, month, filters)));
+}
+
 /** The series a chart draws: last `n` months, zero-filled, filtered by campus/year. Pure. */
 export function seriesFor(
   t: CommunityTimeline | null,
@@ -216,20 +267,7 @@ export function seriesFor(
   const keys = lastMonths(n, nowMs);
   const current = keys[keys.length - 1];
   return keys.map((month) => {
-    const acc: Required<Counts> = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0, openedMerged: 0, openedClosed: 0, openedStillOpen: 0 };
-    for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
-      if (!segmentMatches(seg, filters)) continue;
-      acc.opened += c.opened;
-      acc.merged += c.merged;
-      acc.closed += c.closed ?? 0; // records built before this field existed
-      acc.issues += c.issues;
-      acc.contributors += c.contributors;
-      acc.active += c.active ?? 0;
-      acc.openedMerged += c.openedMerged ?? 0;
-      acc.openedClosed += c.openedClosed ?? 0;
-      acc.openedStillOpen += c.openedStillOpen ?? 0;
-    }
-    return { month, partial: month === current, ...acc };
+    return bucket(month, month === current, sumMonth(t, month, filters));
   });
 }
 
@@ -256,20 +294,7 @@ export function seriesForYear(
   for (let m = 1; m <= 12; m++) {
     const month = `${year}-${String(m).padStart(2, '0')}`;
     if (month > current) break;
-    const acc: Required<Counts> = { opened: 0, merged: 0, closed: 0, issues: 0, contributors: 0, active: 0, openedMerged: 0, openedClosed: 0, openedStillOpen: 0 };
-    for (const [seg, c] of Object.entries(t?.months[month] ?? {})) {
-      if (!segmentMatches(seg, filters)) continue;
-      acc.opened += c.opened;
-      acc.merged += c.merged;
-      acc.closed += c.closed ?? 0;
-      acc.issues += c.issues;
-      acc.contributors += c.contributors;
-      acc.active += c.active ?? 0;
-      acc.openedMerged += c.openedMerged ?? 0;
-      acc.openedClosed += c.openedClosed ?? 0;
-      acc.openedStillOpen += c.openedStillOpen ?? 0;
-    }
-    out.push({ month, partial: month === current, ...acc });
+    out.push(bucket(month, month === current, sumMonth(t, month, filters)));
   }
   return out;
 }

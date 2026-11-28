@@ -280,10 +280,10 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
     // all months (the period filter narrows the table, not the chart).
     const orgMonths: CommunityTimeline['months'] = {};
     const keepMonths = new Set(lastMonths(MONTHS_KEPT, now));
-    const orgTimelineFilters = orgFilters(targetOrgLogin, {
+    const orgTimelineBase = {
       flaggedPRIds,
-      excludesPR: (repo, mergedAt) => prExcludedBy(repoCache[repo], mergedAt) !== null,
-    });
+      excludesPR: (repo: string, mergedAt: string | null | undefined) => prExcludedBy(repoCache[repo], mergedAt) !== null,
+    };
 
     await Promise.all(
       allSummaries
@@ -304,11 +304,13 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
               return true;
             });
             let issues = cached.issues || [];
+            // Same resolver and decay as the leaderboard, so the org view cannot drift.
+            const repoMultiplierFor = makeRepoMultiplierResolver(repoCache, studentSummary.profile.login, new Set(), now);
             foldStudent(
               orgMonths,
               { github: studentSummary.profile.login, year: studentSummary.year, campus: studentSummary.campus },
               { prs: cached.prs, issues: issues.filter((is) => is.repository_url && repoFromUrl(is.repository_url).split('/')[0]?.toLowerCase() === targetOrgLogin) },
-              orgTimelineFilters,
+              orgFilters(targetOrgLogin, { ...orgTimelineBase, multiplierFor: repoMultiplierFor }),
               keepMonths,
             );
             if (dateQuery) {
@@ -321,8 +323,6 @@ export async function buildLeaderboard(q: LeaderboardQuery): Promise<Leaderboard
             if (q.campus && studentSummary.campus !== q.campus) return;
 
             const orgIssues = issues.filter((is) => is.repository_url && repoFromUrl(is.repository_url).split('/')[0]?.toLowerCase() === targetOrgLogin);
-            // Same resolver and decay as the leaderboard, so the org view cannot drift.
-            const repoMultiplierFor = makeRepoMultiplierResolver(repoCache, studentSummary.profile.login, new Set(), now);
             const orgScore = aggregateMergedPRScore(
               mergedPRList,
               (pr) => (pr.repository_url ? repoFromUrl(pr.repository_url) : null),
