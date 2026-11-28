@@ -4,8 +4,7 @@ import { getEventsKV } from '@/lib/kv-events';
 import { UpcomingEvents } from './components/UpcomingEvents';
 import { readSummaryCache } from '@/lib/summary-cache';
 import { getStudentsKV } from '@/lib/kv-students';
-import { readCommunityTimeline, seriesFor, averagesFor } from '@/lib/community-timeline';
-import { impactOutOf10, prValueOutOf10, outOf10 } from '@/lib/display-scale';
+import { readCommunityTimeline, seriesFor } from '@/lib/community-timeline';
 import { CommunityChart } from './components/CommunityChart';
 
 export const dynamic = 'force-dynamic';
@@ -74,9 +73,6 @@ export default async function Home() {
   const totalStudents = students.length;
   const activeContributorsCount = cache?.summaries.filter((s) => s.totalPRs > 0 || (s.issuesCount ?? 0) > 0).length ?? 0;
   const totalMerged = cache?.summaries.reduce((s, c) => s + c.mergedPRs, 0) ?? 0;
-  // Average project impact and effort per merged PR, whole community, all
-  // time, from the same timeline the chart draws (lib/timeline-averages).
-  const quality = averagesFor(timeline, {});
   const totalPRs = cache?.summaries.reduce((s, c) => s + c.totalPRs, 0) ?? 0;
 
   // Top contributors in this week(top 5 from cache for the leaderboard preview card)
@@ -195,7 +191,7 @@ export default async function Home() {
 
       {/* Stats */}
       {totalPRs > 0 && (
-        <div className={`max-w-6xl mx-auto px-4 md:px-6 pt-10 grid grid-cols-2 gap-4 ${quality.impact !== null ? 'md:grid-cols-3 lg:grid-cols-6' : 'lg:grid-cols-4'}`}>
+        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
               value: totalStudents, label: 'Students tracked', tile: 'bg-brand-0 text-brand-600',
@@ -217,32 +213,12 @@ export default async function Home() {
               icon: <MergeIcon className="w-4 h-4" />,
               numClass: 'text-success-600',
             },
-            ...(quality.impact !== null
-              ? [
-                  {
-                    value: quality.impact, text: outOf10(impactOutOf10(quality.impact)), label: 'Avg impact · of 10', tile: 'bg-gold-0 text-gold-600',
-                    title: 'Average project impact per merged PR: how significant the projects are, from the repo multiplier',
-                    icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>,
-                    numClass: 'text-ink',
-                  },
-                ]
-              : []),
-            ...(quality.effort !== null
-              ? [
-                  {
-                    value: quality.effort, text: outOf10(prValueOutOf10(quality.effort)), label: 'Avg effort · of 10', tile: 'bg-brand-0 text-brand-600',
-                    title: 'Average effort per measured merged PR: what the change itself did; a typical twenty-line code change is a 5',
-                    icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>,
-                    numClass: 'text-ink',
-                  },
-                ]
-              : []),
           ].map((s) => (
-            <div key={s.label} className="bg-ground border border-line rounded-2xl shadow-card p-5 flex flex-col gap-3.5" title={'title' in s ? s.title : undefined}>
+            <div key={s.label} className="bg-ground border border-line rounded-2xl shadow-card p-5 flex flex-col gap-3.5">
               <span className={`w-9 h-9 rounded-[10px] flex items-center justify-center ${s.tile}`}>{s.icon}</span>
               <div>
                 <div className={`text-[28px] leading-none font-[650] tabular-nums tracking-[-0.01em] ${s.numClass}`}>
-                  {'text' in s ? s.text : s.value.toLocaleString('en-IN')}
+                  {s.value.toLocaleString('en-IN')}
                 </div>
                 <div className="text-[12.5px] text-ink-soft mt-1.5">{s.label}</div>
               </div>
