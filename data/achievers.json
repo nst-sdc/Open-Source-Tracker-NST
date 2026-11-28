@@ -34,13 +34,20 @@
   {
     "name": "Geetansh Goyal",
     "github": "geetxnshgoyal",
-    "headline": "GSoC 2026 @ openSUSE Project",
+    "headline": "GSoC 2026 @ openSUSE Project · openSUSE.Asia Summit 2026, Yogyakarta",
     "programs": [
       {
         "name": "GSoC",
         "year": 2026,
         "org": "openSUSE Project",
         "url": ""
+      },
+      {
+        "name": "openSUSE.Asia Summit",
+        "year": 2026,
+        "org": "Yogyakarta, Indonesia",
+        "url": "https://events.opensuse.org",
+        "kind": "conference"
       }
     ]
   },
