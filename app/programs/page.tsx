@@ -262,6 +262,7 @@ const CONFERENCES = [
   { name: 'Open Source Summit India', where: 'Mumbai', when: 'June', edition: '16 – 17 Jun 2026', support: '', link: 'https://events.linuxfoundation.org/open-source-summit-india/' },
   { name: 'KubeCon + CloudNativeCon India', where: 'Mumbai', when: 'June', edition: '18 – 19 Jun 2026', support: 'Dan Kohn scholarship covers ticket and travel; apply by early April', link: 'https://events.linuxfoundation.org/kubecon-cloudnativecon-india/' },
   { name: 'openSUSE Conference', where: 'Nuremberg', when: 'June', edition: '25 – 27 Jun 2026', support: 'Travel Support Program', link: 'https://events.opensuse.org' },
+  { name: 'openSUSE.Asia Summit', where: 'Yogyakarta in 2026', when: 'October', edition: '2027 host and dates to be announced', support: 'Five NST students attended in 2026. Call for speakers opens around April on events.opensuse.org; openSUSE Travel Support Program for accepted speakers', link: 'https://events.opensuse.org' },
   { name: 'GUADEC', where: 'A Coruña in 2026', when: 'July', edition: '16 – 21 Jul 2026', support: 'Travel sponsorship; request by mid March', link: 'https://events.gnome.org' },
   { name: 'Akademy', where: 'Graz in 2026', when: 'September', edition: '18 – 24 Sep 2026', support: 'KDE e.V. travel reimbursement', link: 'https://akademy.kde.org' },
   { name: 'IndiaFOSS', where: 'Bengaluru', when: 'September', edition: '26 – 27 Sep 2026', support: 'Free to attend', link: 'https://indiafoss.net' },
